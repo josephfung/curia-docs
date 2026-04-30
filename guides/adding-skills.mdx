@@ -1,0 +1,227 @@
+---
+title: "Build a custom skill or connect an MCP server"
+description: "Create a local skill with a manifest and TypeScript handler, or connect an MCP server — both appear in the skill registry and work identically for agents."
+---
+
+Skills are how agents interact with the outside world. Every action an agent takes — sending an email, fetching a page, writing a spreadsheet entry — goes through a skill. Curia ships with a library of built-in skills, but you'll likely want to add your own to connect internal systems, automate domain-specific workflows, or integrate services that Curia doesn't support out of the box.
+
+There are two types of skills: local skills (a directory with a manifest and a handler) and MCP skills (connections to external Model Context Protocol servers). Agents don't know or care which type they're using — the interface is identical from their perspective.
+
+## Local skills
+
+### Directory structure
+
+Create a directory under `skills/` with the skill's name:
+
+```
+skills/
+  send-slack-message/
+    skill.json      # manifest — declares inputs, outputs, sensitivity, secrets
+    handler.ts      # TypeScript implementation
+    handler.test.ts # tests
+```
+
+### The skill manifest (skill.json)
+
+The manifest describes what the skill does, what it needs, and how risky it is. Curia validates it at startup — a missing or invalid field causes a startup error.
+
+```json
+{
+  "name": "send-slack-message",
+  "description": "Post a message to a Slack channel via the Slack API",
+  "version": "1.0.0",
+  "sensitivity": "normal",
+  "action_risk": "medium",
+  "inputs": {
+    "channel": "string",
+    "text": "string",
+    "thread_ts": "string?"
+  },
+  "outputs": {
+    "ts": "string",
+    "channel": "string"
+  },
+  "permissions": [],
+  "secrets": ["slack_bot_token"],
+  "timeout": 15000
+}
+```
+
+#### Manifest fields
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | Unique skill name, used to invoke the skill |
+| `description` | Yes | Tells agents and the skill registry what this skill does |
+| `version` | Yes | Semantic version string |
+| `sensitivity` | Yes | `normal` (auto-approvable) or `elevated` (requires CEO role) |
+| `action_risk` | Yes | Risk level — determines the minimum autonomy score required |
+| `inputs` | Yes | Named input parameters with types. Append `?` for optional fields |
+| `outputs` | Yes | Named output fields returned on success |
+| `secrets` | Yes | Env var names this skill will access via `ctx.secret()` |
+| `permissions` | Yes | Declared capability requirements (use `[]` if none) |
+| `timeout` | No | Per-invocation timeout in milliseconds (default: 30000) |
+
+#### action_risk values
+
+The `action_risk` field controls which autonomy band allows this skill to run without additional gating:
+
+| Value | Minimum autonomy score | Examples |
+|---|---|---|
+| `none` | 0 | Reads, retrievals, summarization |
+| `low` | 60 | Internal state writes, memory, contacts |
+| `medium` | 70 | Outbound communications (email, Slack) |
+| `high` | 80 | Calendar writes, commitments on behalf of the CEO |
+| `critical` | 90 | Financial, destructive, or irreversible actions |
+
+### The handler
+
+Your handler exports a single `execute` function that receives a `SkillContext` and returns a `SkillResult`:
+
+```typescript
+// skills/send-slack-message/handler.ts
+import type { SkillHandler, SkillContext, SkillResult } from '../../src/skills/types.js';
+
+export const handler: SkillHandler = {
+  async execute(ctx: SkillContext): Promise<SkillResult> {
+    const { channel, text, thread_ts } = ctx.input as {
+      channel: string;
+      text: string;
+      thread_ts?: string;
+    };
+
+    const token = ctx.secret('slack_bot_token');
+
+    try {
+      const response = await fetch('https://slack.com/api/chat.postMessage', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ channel, text, thread_ts }),
+      });
+
+      const data = await response.json() as { ok: boolean; ts?: string; error?: string };
+
+      if (!data.ok) {
+        return { success: false, error: `Slack API error: ${data.error}` };
+      }
+
+      return {
+        success: true,
+        data: { ts: data.ts, channel },
+      };
+    } catch (err) {
+      return {
+        success: false,
+        error: `Failed to post to Slack: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  },
+};
+```
+
+### SkillContext reference
+
+The `ctx` object gives your handler access to inputs, secrets, logging, and caller identity:
+
+| Field | Type | Description |
+|---|---|---|
+| `ctx.input` | `Record<string, unknown>` | Validated inputs from the manifest schema |
+| `ctx.secret(name)` | `(name: string) => string` | Read an env var declared in `secrets`. Throws if undeclared. |
+| `ctx.log` | `Logger` | Scoped pino logger — use instead of `console.log` |
+| `ctx.agentPersona` | `AgentPersona \| undefined` | Display name, title, email signature of the calling agent |
+| `ctx.caller` | `CallerContext \| undefined` | Caller identity — always present for elevated skills |
+| `ctx.contactService` | `ContactService \| undefined` | Read-only contact lookups |
+
+### Secrets and environment variables
+
+Declare secrets your skill needs in the `secrets` array in `skill.json`:
+
+```json
+"secrets": ["slack_bot_token"]
+```
+
+Then add the corresponding environment variable to your `.env`:
+
+```env
+SLACK_BOT_TOKEN=xoxb-...
+```
+
+Access it in your handler via `ctx.secret('slack_bot_token')`. Secret names map to env var names with case normalization (`slack_bot_token` → `SLACK_BOT_TOKEN`). The LLM never sees the value — only your handler does.
+
+<Warning>
+  Skills must never throw. All error paths must return `{ success: false, error: '...' }` rather than throwing an exception. If an uncaught exception reaches the execution layer, it is caught and wrapped as a generic error — but this prevents proper error messaging to the LLM.
+</Warning>
+
+### SkillResult
+
+Every skill returns one of two shapes:
+
+```typescript
+// Success
+return { success: true, data: { ts: '1234567890.123456', channel: '#general' } };
+
+// Failure
+return { success: false, error: 'Could not reach Slack API: connection refused' };
+```
+
+The `data` field can be any JSON-serializable value. Keep it focused — the execution layer truncates results longer than 200,000 characters before feeding them to the LLM.
+
+## MCP skills
+
+[Model Context Protocol](https://modelcontextprotocol.io) lets you connect Curia to external tool servers — either hosted services or locally running processes. Once connected, tools from the MCP server appear in the skill registry alongside local skills and are callable the same way.
+
+### Configuring MCP servers
+
+Add MCP servers to `config/skills.yaml`:
+
+```yaml
+# config/skills.yaml
+mcp_servers:
+  - name: google-workspace
+    transport: http
+    url: https://mcp-server.example.com/mcp
+    headers:
+      Authorization: "Bearer <your-token>"
+    action_risk: low
+    permissions:
+      - workspace:read
+      - workspace:write
+
+  - name: github
+    transport: http
+    url: https://api.github.com/mcp
+    headers:
+      Authorization: "Bearer ghp_..."
+    action_risk: low
+```
+
+Supported transports are `http` (StreamableHTTP, recommended for hosted servers) and `stdio` (local subprocess).
+
+At startup, Curia connects to each configured MCP server, discovers available tools via `tools/list`, and registers them in the skill registry. Agents with `allow_discovery: true` can find and use MCP tools the same way they discover local skills.
+
+### Recommended MCP servers
+
+| Server | Purpose |
+|---|---|
+| [google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp) | Drive, Docs, Sheets — read, write, search |
+| [modelcontextprotocol/filesystem](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) | Scoped local file access |
+| [modelcontextprotocol/github](https://github.com/modelcontextprotocol/servers/tree/main/src/github) | Repo management, issues, PRs |
+| [modelcontextprotocol/brave-search](https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search) | Web search for research agents |
+
+## Making your skill discoverable
+
+Once your skill directory exists, Curia loads it automatically at startup. To make it available to agents:
+
+- Add it to an agent's `pinned_skills` for guaranteed access
+- Or leave it discoverable — agents with `allow_discovery: true` can find it via the skill registry when they need it
+
+```yaml
+# In any agent's YAML
+pinned_skills:
+  - send-slack-message
+```
+
+Or let the agent discover it on demand by searching for "Slack" or "post message" through the skill registry.

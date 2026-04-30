@@ -1,0 +1,129 @@
+---
+title: "Curia: governance-first AI executive assistant"
+description: "What Curia is, how it works, and why it was built differently — governance by architecture, persistent memory, and an autonomy engine you control."
+---
+
+Curia is a multi-agent AI platform that runs on your own server and handles the operational work that consumes an executive's time. It reads your email, manages your calendar, tracks expenses, conducts research, and responds on your behalf across Signal and email — all with your voice and your boundaries. Because it runs on your infrastructure, your data never leaves your control.
+
+<Note>
+  Curia is currently in pre-alpha. Core functionality is implemented and working; some advanced features are in progress. Check the [GitHub repository](https://github.com/josephfung/curia) for current status before deploying to production.
+</Note>
+
+## What Curia does
+
+<CardGroup cols={2}>
+  <Card title="Email & calendar" icon="envelope">
+    Reads your inbox, extracts action items and receipts, drafts replies, and manages your calendar with context about attendees and past interactions.
+  </Card>
+  <Card title="Research" icon="magnifying-glass">
+    Runs multi-session research tasks that build on previous findings, with full web search capability across days-long investigations.
+  </Card>
+  <Card title="Expense tracking" icon="receipt">
+    Extracts amounts, vendors, categories, and dates from receipts and bank notifications — categorized and summarized automatically.
+  </Card>
+  <Card title="Knowledge graph" icon="diagram-project">
+    Maintains a persistent graph of people, organizations, decisions, and events with temporal awareness and semantic search.
+  </Card>
+  <Card title="Signal messaging" icon="message">
+    Communicates via end-to-end encrypted Signal messages — the same agents, the same context, a different channel.
+  </Card>
+  <Card title="Scheduled tasks" icon="clock">
+    Works while you sleep: recurring jobs via cron, long-running tasks that survive restarts, and dynamically created reminders.
+  </Card>
+</CardGroup>
+
+## Governance first
+
+Most agent frameworks treat security as a configuration option and audit trails as an afterthought. Curia was built differently — governance is the reason it exists, not a feature added later.
+
+### Hard layer separation
+
+Five architectural layers communicate through a central message bus. Each layer declares its role at startup, and the bus enforces strict publish and subscribe rules at registration time. A channel adapter that tries to invoke a skill or write to memory gets an error — not a warning. The boundary is architectural, not policy.
+
+This means a compromised email adapter can only do what email adapters are allowed to do: pass inbound messages. It cannot invoke tools, access secrets, or modify agent state.
+
+### Append-only audit trail
+
+Every event that flows through the bus — every message received, every tool invoked, every inter-agent discussion — is written to an append-only log in Postgres before it is delivered to subscribers. Nothing is updated or deleted. Every event carries a `parent_event_id`, so you can trace the full causal chain: "This expense was categorized because this email was received, which triggered this agent, which invoked this skill."
+
+### Secrets never reach the LLM
+
+Agents access credentials through a scoped interface that validates each request against the skill's declared manifest. The LLM sees "email-parser connected to inbox" — never the actual password or API key. Every credential access is audit-logged.
+
+### Tool output sanitization
+
+All skill results are sanitized before being fed back to the LLM: XML and HTML tags stripped, outputs truncated to a configurable limit, secret-like patterns redacted. Error messages are wrapped in structured tags to prevent prompt injection. Nothing from the outside world reaches the LLM unfiltered.
+
+## Persistent memory
+
+<CardGroup cols={2}>
+  <Card title="Knowledge graph" icon="share-nodes">
+    People, organizations, projects, and decisions stored as nodes and edges in Postgres with full relationship traversal. Queries like "what decisions did we make about Project X that involved Person Y?" return real answers.
+  </Card>
+  <Card title="Temporal awareness" icon="hourglass-half">
+    Facts carry decay classes. Permanent facts never expire. Slow-decay facts (employer, residence) fade over months. Fast-decay facts (current project focus) lose confidence after weeks. Stale information is automatically deprioritized, not trusted forever.
+  </Card>
+  <Card title="Semantic search" icon="wand-magic-sparkles">
+    Entity descriptions and facts are embedded via pgvector, enabling queries like "find everything related to our fundraising strategy" even when the word "fundraising" doesn't appear in any node labels.
+  </Card>
+  <Card title="The Bullpen" icon="comments">
+    Agents coordinate with each other in structured, auditable discussion threads. Every exchange is logged, visible to you, and interruptible — like overhearing your staff collaborate at their desks.
+  </Card>
+</CardGroup>
+
+## Autonomy engine
+
+Curia operates at a configurable autonomy level — a single score from 0 to 100 that determines how independently it acts across all channels and skills. The current band is injected into every agent's system prompt, so behaviour adjusts the moment you change the score — no restart required.
+
+| Band | Score | What it means |
+|---|---|---|
+| **Full** | 90–100 | Acts independently. Flags only genuinely novel or irreversible actions. |
+| **Spot-check** | 80–89 | Proceeds on routine tasks. Notes consequential actions for your visibility. |
+| **Approval required** | 70–79 | Presents a plan and asks for confirmation before any consequential action. |
+| **Draft only** | 60–69 | Prepares drafts and plans but does not send or act without explicit instruction. |
+| **Restricted** | < 60 | Advisory only. Takes no independent action. |
+
+The default score on first deployment is **75 (Approval required)**. You control it with a natural-language command: *"Set your autonomy score to 85."*
+
+## Multi-channel
+
+Talk to your agents wherever you are. Every channel is a thin adapter that normalizes messages in and out — they all share the same security model and cannot do anything beyond passing messages.
+
+| Channel | How it works |
+|---|---|
+| **Email** | IMAP polling + SMTP via Nylas. Agents read your inbox, extract action items, and reply on your behalf. |
+| **Signal** | Via signal-cli. End-to-end encrypted messaging with your agents. |
+| **CLI** | Interactive terminal for local development and testing. |
+| **HTTP API** | REST + SSE for web dashboards, mobile apps, and programmatic access. |
+
+## Multi-provider LLM support
+
+Each agent specifies its own LLM provider and model. Configure fallbacks for resilience — if Anthropic is unavailable, the agent switches to OpenAI automatically.
+
+| Provider | Models | Use case |
+|---|---|---|
+| **Anthropic** | Claude Opus, Sonnet, Haiku | Primary — best for nuanced reasoning and long context |
+| **OpenAI** | GPT-4o, o1-pro, GPT-4o-mini | Fallback, cost optimization, embeddings |
+| **Ollama** | Llama, Mistral, Gemma, and others | Local/private — no data leaves your server |
+
+## How Curia differs from typical agent frameworks
+
+| | Typical agent framework | Curia |
+|---|---|---|
+| **Security model** | "Trust the agent" | Hard-enforced layer separation — channel adapters physically cannot invoke tools |
+| **Audit trail** | Console logs | Append-only Postgres with causal tracing across every event |
+| **Memory** | Conversation history (lost on restart) | Knowledge graph + entity memory + temporal awareness (survives restarts, ages gracefully) |
+| **Error handling** | Retry and hope | Error budgets, state continuity, pattern detection — agents resume, not restart |
+| **Agent communication** | Agents work in isolation | The Bullpen — structured, auditable, threaded inter-agent discussions |
+| **Multi-channel** | Single chat interface | Email, Signal, CLI, HTTP API — same agent, any channel |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Get started" icon="rocket" href="/quickstart">
+    Clone, configure, and run Curia in under 15 minutes.
+  </Card>
+  <Card title="Configure your instance" icon="sliders" href="/configuration">
+    Set up email accounts, tune autonomy settings, and customize security rules.
+  </Card>
+</CardGroup>

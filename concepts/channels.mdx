@@ -1,0 +1,108 @@
+---
+title: "Channels: email, Signal, CLI, and HTTP API support"
+description: "Email, Signal, CLI, and HTTP are thin adapters with trust levels. Curia normalizes all messages into a common format and gates actions by channel trust."
+---
+
+Channels are how messages get in and out of Curia. Whether you send a Signal message from your phone, an email from a colleague, or a command from the terminal, every message travels through a channel adapter that normalizes it into the same internal format. Curia's agents work with that normalized format — they never deal with email headers, Signal protocol specifics, or HTTP request objects directly. Adding a new channel means building one adapter; nothing in the core changes.
+
+## The four channels
+
+<Tabs>
+  <Tab title="Email">
+    Email is Curia's primary channel for external communication. It connects via the Nylas API, which abstracts away the differences between Gmail, Outlook, and other providers.
+
+    **Inbound:** Curia polls the Nylas Messages API every 30 seconds (configurable) for new messages. Emails are parsed, attachments extracted, and participants auto-added to your contacts.
+
+    **Outbound:** Replies and new emails are sent via the Nylas Send API. The Coordinator injects its persona's display name and email signature into every outbound message.
+
+    **Email validation:** Before processing, the email adapter checks SPF, DKIM, and DMARC headers. Messages that fail validation are tagged `sender_verified: false` in their metadata — the Coordinator uses this signal when deciding whether to act on consequential requests.
+
+    **Required secrets:** `NYLAS_API_KEY`, `NYLAS_GRANT_ID`, `NYLAS_SELF_EMAIL`
+
+    **Trust level:** Low — email From headers are trivially spoofable, and even with SPF/DKIM validation, email is the least trustworthy channel.
+  </Tab>
+  <Tab title="Signal">
+    Signal provides end-to-end encrypted messaging with strong identity guarantees. Curia connects via `signal-cli` running in JSON-RPC mode as a subprocess.
+
+    Signal supports text messages, attachments, and reactions. Conversation IDs are derived from Signal group or 1:1 conversation identifiers, so Curia maintains persistent context within each thread.
+
+    **Required secret:** `SIGNAL_PHONE_NUMBER`
+
+    **Trust level:** High — Signal identity is tied to a phone number verified by the Signal protocol. Use Signal for sensitive instructions, financial actions, or anything where you want maximum assurance.
+  </Tab>
+  <Tab title="CLI">
+    The CLI channel is an interactive terminal for local access. It reads from stdin and writes to stdout, making it ideal for setup, testing, and direct executive use when you are on the server.
+
+    Because CLI access requires SSH or physical access to the host machine, it carries the highest trust level. The Coordinator knows when you are on CLI and behaves accordingly — sharing internal details freely, asking clarifying questions without hesitation, and never applying the external-sender communication constraints it uses for email.
+
+    **Trust level:** High — CEO only.
+  </Tab>
+  <Tab title="HTTP API">
+    The HTTP API provides REST endpoints and a Server-Sent Events stream for programmatic access. This is the interface a web dashboard, mobile app, or custom integration uses to communicate with Curia.
+
+    - `POST /api/messages` — send a message and receive a response
+    - `GET /api/messages/stream` — SSE stream for real-time response streaming
+    - `GET /api/health` — health check for uptime monitors and load balancers
+
+    All HTTP API requests require a Bearer token. Tokens can be leaked, so the HTTP API carries a medium trust level — lower than CLI and Signal, higher than email.
+
+    **Trust level:** Medium.
+  </Tab>
+</Tabs>
+
+## Channel trust levels
+
+Every inbound message is tagged with the trust level of the channel it arrived on. The Coordinator uses this trust level — along with the sender's individual trust score — to decide what actions it is willing to take on that message.
+
+| Channel | Trust level | Rationale |
+|---|---|---|
+| CLI | High | Requires SSH or physical access to the host |
+| Signal | High | Strong identity via phone number + Signal protocol |
+| HTTP API | Medium | Token-authenticated, but tokens can be shared or leaked |
+| Email | Low | From headers are spoofable; even SPF/DKIM is not identity verification |
+
+Trust levels gate consequential actions. A request arriving over email to change financial settings, export data, or take irreversible action will be declined or held for verification, even if the sender's name is recognized — the Coordinator asks the sender to confirm through a higher-trust channel.
+
+## Unknown sender policy
+
+Each channel can be configured with one of two policies for messages from senders not yet in your contacts:
+
+- **`hold_and_notify`** — the message is held in a queue and you are notified via a high-trust channel (CLI or Signal). You can identify the sender, dismiss the message, or block them. Once identified, the message is replayed through normal processing.
+- **`ignore`** — messages from unknown senders are silently discarded.
+
+The default is `hold_and_notify`. When a held message is waiting, the Coordinator proactively mentions it the next time you interact: "By the way, you have a held email from `stranger@example.com` about 'Q3 Numbers'. Want me to identify them?"
+
+<Note>
+Dismissing a held message discards the message — it does not delete the sender's contact record. Their email address remains in your contacts as provisional. You can look them up later with `contact-lookup`.
+</Note>
+
+## Observation mode
+
+Observation mode lets Curia monitor the CEO's own email inbox and act as a triage layer — without ever appearing to the sender as the one responding.
+
+When observation mode is enabled for an email account, every new message in that inbox is processed through a triage protocol. Curia classifies each email into one of five categories and takes the appropriate action:
+
+| Category | What it means | What Curia does |
+|---|---|---|
+| **URGENT** | Time-sensitive — needs the CEO's attention now | Notifies the CEO on Signal or CLI. Does not reply to the sender. |
+| **ACTIONABLE** | Curia can handle it directly | Acts using its skills (calendar, contacts, etc.). No notification unless confirmation is needed. |
+| **NEEDS DRAFT** | Requires the CEO's voice | Saves a draft reply in the CEO's email client for review. Does not send. |
+| **LEAVE FOR CEO** | Personal, sensitive, or requires CEO judgment | Takes no action. The CEO handles it directly. |
+| **NOISE** | Marketing, newsletters, automated notifications | Archives the email. No notification. |
+
+In observation mode, Curia never signs its own name to a reply from the CEO's inbox. When you ask it to draft a reply to an observed email, it writes in your voice — not its own.
+
+## Channel security
+
+Channel adapters operate within a hard architectural constraint: they can pass inbound messages into the system and receive outbound messages for delivery — and nothing else. They cannot invoke skills, read memory, or trigger agent tasks directly. This is enforced at the framework level, not by policy.
+
+A compromised email adapter could flood inbound messages, but it cannot execute skills, access your data, or impersonate another layer. The boundary is structural.
+
+<CardGroup cols={2}>
+  <Card title="Email setup" icon="envelope" href="/guides/email-setup">
+    Connect your email via Nylas and configure observation mode.
+  </Card>
+  <Card title="Signal setup" icon="shield" href="/guides/signal-setup">
+    Set up Signal messaging via signal-cli.
+  </Card>
+</CardGroup>

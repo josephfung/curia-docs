@@ -1,0 +1,187 @@
+---
+title: "Skills: how agents take action in the outside world"
+description: "Skills connect Curia to the outside world. Each one declares its inputs, outputs, action risk level, and required secrets before the agent can invoke it."
+---
+
+Skills are the mechanism through which agents interact with external services and take action in the world. When Curia sends an email, searches the web, creates a calendar event, or looks up a contact, it is invoking a skill. Agents don't call APIs directly — they invoke skills, which handle authentication, validation, and output sanitization on their behalf. The LLM never sees raw credentials.
+
+## Two types of skills
+
+Curia supports two types of skills, and agents work with both using the same interface — they cannot tell the difference at runtime.
+
+<Tabs>
+  <Tab title="Local skills">
+    Local skills live in the `skills/` directory as a folder containing a manifest and handler:
+
+    ```
+    skills/
+      email-send/
+        skill.json      # manifest: name, inputs, outputs, permissions, sensitivity
+        handler.ts      # implementation
+        handler.test.ts # tests
+    ```
+
+    The manifest declares everything the execution layer needs to validate, authorize, and invoke the skill. The handler implements the actual logic.
+  </Tab>
+  <Tab title="MCP skills">
+    MCP skills connect to external [Model Context Protocol](https://modelcontextprotocol.io) servers over HTTP or stdio. At startup, Curia connects to each configured MCP server, discovers its tools via `tools/list`, and registers them in the skill registry alongside local skills.
+
+    ```yaml
+    # config/skills.yaml
+    mcp_servers:
+      - name: google-workspace
+        transport: http
+        url: https://mcp-server.example.com/mcp
+        headers:
+          Authorization: "Bearer <token>"
+        action_risk: low
+        permissions: ["workspace:read", "workspace:write"]
+    ```
+
+    Supported transports are `http` (StreamableHTTP, recommended for hosted servers) and `stdio` (local subprocess).
+  </Tab>
+</Tabs>
+
+## The skill manifest
+
+Every local skill includes a `skill.json` manifest that the execution layer validates at startup. Here is a real example from the `email-send` skill:
+
+```json
+{
+  "name": "email-send",
+  "description": "Send a new email via the configured email account",
+  "version": "1.0.0",
+  "sensitivity": "normal",
+  "action_risk": "medium",
+  "inputs": {
+    "to": "string",
+    "cc": "string?",
+    "subject": "string",
+    "body": "string"
+  },
+  "outputs": {
+    "message_id": "string",
+    "to": "string",
+    "subject": "string"
+  },
+  "permissions": [],
+  "secrets": [],
+  "timeout": 30000
+}
+```
+
+### Manifest fields
+
+| Field | Description |
+|---|---|
+| `name` | Unique identifier used by agents and the skill registry |
+| `description` | Human-readable description — shown to the LLM and in the registry |
+| `sensitivity` | `normal` or `elevated` — controls first-use approval behavior |
+| `action_risk` | Risk level used by the autonomy engine — see below |
+| `inputs` | Input schema — validated before the handler is called |
+| `outputs` | Output schema — documents what the skill returns |
+| `permissions` | Declared capabilities, validated at load time |
+| `secrets` | Env-var-backed secrets this skill may request via `ctx.secret()` |
+| `timeout` | Per-invocation timeout in milliseconds (default: 30,000) |
+
+## Action risk levels
+
+Every skill declares an `action_risk` value that indicates its potential impact on the world. This field is required — Curia will not start if any skill manifest omits it.
+
+| Level | Min autonomy score | Capability class |
+|---|---|---|
+| `none` | 0 | Read-only, no external effects (web search, summarization) |
+| `low` | 60 | Internal state writes — memory, contacts |
+| `medium` | 70 | Outbound communications — sending email or Signal messages |
+| `high` | 80 | Calendar writes, commitments made on behalf of the CEO |
+| `critical` | 90 | Financial, destructive, or irreversible actions |
+
+The autonomy engine uses these values to determine whether a given skill can run at the current autonomy score. See [Autonomy engine](/concepts/autonomy) for the full picture.
+
+## Sensitivity and first-use approval
+
+The `sensitivity` field controls what happens the first time an agent tries to use a skill it was not explicitly configured with:
+
+- **`normal`** — the skill is auto-approved if the agent has `allow_discovery: true`
+- **`elevated`** — skills like payment processing or bulk deletion require your explicit approval the first time an agent requests them; once approved for that agent, they do not ask again
+
+This means you review elevated-sensitivity skills once, not on every invocation.
+
+## Secrets: credentials the LLM never sees
+
+Skills that need API keys, passwords, or tokens declare them in their `secrets` array. At runtime, the execution layer provides a scoped `ctx.secret()` accessor:
+
+```typescript
+// Inside a skill handler
+const apiKey = ctx.secret("NYLAS_API_KEY");
+```
+
+The execution layer validates that the calling skill's manifest declared the requested secret. If a skill tries to access a secret it did not declare, the call fails. Agents and LLMs never see secret values — only the skill handler does, and only through this scoped accessor. Every secret access is audit-logged (which skill, which task, when) — but values are never written to the log.
+
+## Output sanitization
+
+Every skill result is sanitized before the LLM sees it. This prevents tool outputs from being used as injection vectors:
+
+- XML and HTML tags are stripped — they cannot be interpreted as system instructions
+- Outputs longer than 200,000 characters are truncated with a `[truncated]` marker
+- Patterns matching known secret formats (API keys, tokens, passwords) are redacted
+- Error strings are wrapped in a structured format that prevents them from being read as instructions
+
+Nothing from the outside world reaches the LLM unfiltered.
+
+## Built-in skills
+
+Curia ships with more than 50 built-in skills across several categories:
+
+<AccordionGroup>
+  <Accordion title="Email">
+    `email-send`, `email-reply`, `email-list`, `email-get`, `email-archive`, `email-draft-save` — send, reply, browse, and draft emails via the Nylas API across multiple configured accounts.
+  </Accordion>
+  <Accordion title="Calendar">
+    `calendar-list-calendars`, `calendar-list-events`, `calendar-create-event`, `calendar-update-event`, `calendar-delete-event`, `calendar-find-free-time`, `calendar-check-conflicts`, `calendar-register` — full calendar management via Nylas.
+  </Accordion>
+  <Accordion title="Contacts">
+    `contact-create`, `contact-lookup`, `contact-list`, `contact-link-identity`, `contact-set-role`, `contact-merge`, `contact-find-duplicates`, `contact-grant-permission`, `contact-revoke-permission`, `contact-unlink-identity`, `contact-set-trust` — manage contacts and their trust levels.
+  </Accordion>
+  <Accordion title="Web research">
+    `web-search`, `web-fetch`, `web-browser` — search the web via Tavily, fetch static pages, or use a full Playwright-backed browser for JavaScript-rendered sites.
+  </Accordion>
+  <Accordion title="Knowledge and memory">
+    `entity-context`, `context-for-email`, `knowledge-company-overview`, `knowledge-meeting-links`, `knowledge-travel-preferences`, `knowledge-loyalty-programs`, `query-relationships`, `delete-relationship`, `extract-facts`, `extract-relationships` — query and extend the knowledge graph.
+  </Accordion>
+  <Accordion title="Scheduling">
+    `scheduler-create`, `scheduler-list`, `scheduler-cancel`, `scheduler-report` — create and manage recurring or one-shot scheduled tasks.
+  </Accordion>
+  <Accordion title="Communication templates">
+    `template-meeting-request`, `template-reschedule`, `template-cancel`, `template-doc-request` — structured outbound email templates for common executive workflows.
+  </Accordion>
+  <Accordion title="Agent coordination">
+    `delegate`, `bullpen`, `skill-registry`, `held-messages-list`, `held-messages-process`, `signal-send` — inter-agent delegation, the Bullpen discussion space, skill discovery, and held-message management.
+  </Accordion>
+  <Accordion title="Autonomy">
+    `get-autonomy`, `set-autonomy` — read and update the global autonomy score. Pinned to the Coordinator only.
+  </Accordion>
+</AccordionGroup>
+
+## Recommended MCP integrations
+
+These MCP servers are not bundled with Curia but are documented as first-class integrations:
+
+| Server | Purpose |
+|---|---|
+| Google Workspace | Drive, Docs, Sheets, Gmail read/search/write |
+| Filesystem | Scoped local file access (read/write/search) |
+| GitHub | Repository management, issues, pull requests |
+| Brave Search | Additional web search for research agents |
+| Fetch | Web fetching with robots.txt compliance |
+
+To connect any MCP server, add it to `config/skills.yaml` using the `mcp_servers` block shown above. Curia will discover and register its tools automatically at startup.
+
+<CardGroup cols={2}>
+  <Card title="Adding skills" icon="wrench" href="/guides/adding-skills">
+    Build a local skill from scratch with a manifest and handler.
+  </Card>
+  <Card title="Autonomy engine" icon="gauge" href="/concepts/autonomy">
+    See how action_risk values gate skill execution by autonomy score.
+  </Card>
+</CardGroup>

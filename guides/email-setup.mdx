@@ -1,0 +1,144 @@
+---
+title: "Configure Curia's email channel with Nylas integration"
+description: "Configure Nylas to give Curia a dedicated email account for sending and receiving, and optionally monitor your own inbox in observation mode."
+---
+
+Curia's email channel is powered by [Nylas](https://nylas.com) — a unified API that handles the OAuth and IMAP/SMTP complexity across Gmail, Outlook, and other providers. Once connected, Curia can send emails on your behalf, draft replies for your review, read your inbox, and triage incoming messages automatically.
+
+## Single account setup
+
+The quickest way to get email working is to connect one account using three environment variables.
+
+<Steps>
+  <Step title="Create a Nylas account">
+    Sign up at [app.nylas.com](https://app.nylas.com). The free tier is sufficient for development and small deployments.
+  </Step>
+
+  <Step title="Create an application">
+    In the Nylas dashboard, create a new application and choose **Email** as the product. Once created, copy your **API key** — this becomes `NYLAS_API_KEY`.
+  </Step>
+
+  <Step title="Connect an email account">
+    Inside your application, go to **Grants** and add a new grant. This walks you through an OAuth flow to connect a Gmail, Outlook, or other email account to Nylas. After completing the flow, copy the **Grant ID** — this becomes `NYLAS_GRANT_ID`.
+
+    <Tip>
+      Use a dedicated email address for Curia (e.g., `curia@yourdomain.com`) rather than your primary inbox. Curia will read and process all incoming messages on this account.
+    </Tip>
+  </Step>
+
+  <Step title="Set your environment variables">
+    Open your `.env` file and fill in all three values:
+
+    ```env
+    NYLAS_API_KEY=nyk_v0_...
+    NYLAS_GRANT_ID=<grant-id-from-dashboard>
+    NYLAS_SELF_EMAIL=curia@yourdomain.com
+    ```
+
+    `NYLAS_SELF_EMAIL` is the address of the connected account. Curia uses it to filter self-sent messages and sign outbound emails.
+  </Step>
+
+  <Step title="Restart Curia">
+    ```bash
+    pnpm local
+    ```
+
+    The email channel activates automatically when all three Nylas variables are present. You should see the email adapter initialize in the log output.
+  </Step>
+</Steps>
+
+## Multiple email accounts
+
+For more advanced deployments — for example, a dedicated Curia account that sends directly and the CEO's personal account that requires draft review — configure named accounts in `config/local.yaml` using the `channel_accounts.email` block.
+
+```yaml
+# config/local.yaml
+channel_accounts:
+  email:
+    curia:
+      nylas_grant_id: "env:NYLAS_GRANT_ID_CURIA"
+      self_email:     "env:NYLAS_SELF_EMAIL_CURIA"
+      outbound_policy: direct
+
+    personal:
+      nylas_grant_id: "env:NYLAS_GRANT_ID_PERSONAL"
+      self_email:     "env:NYLAS_SELF_EMAIL_PERSONAL"
+      outbound_policy: autonomy_gated
+      autonomy_threshold: 80
+```
+
+Each key (`curia`, `personal`) becomes an account name that you pass to email skills via the `account` parameter.
+
+### Outbound policies
+
+Every account has an `outbound_policy` that controls how Curia handles replies and new messages from that account:
+
+| Policy | What happens |
+|---|---|
+| `direct` | Curia sends immediately. Blocked-contact and content filters still apply. |
+| `draft_gate` | Curia saves a Nylas draft for your review. You send it from your email client. |
+| `autonomy_gated` | Curia checks its global autonomy score. Above `autonomy_threshold`, it sends directly. Below, it falls back to `draft_gate`. |
+
+<Note>
+  When using `channel_accounts.email`, the single-account env vars (`NYLAS_API_KEY`, `NYLAS_GRANT_ID`, `NYLAS_SELF_EMAIL`) are no longer used. All accounts must be defined in the YAML block. You still need `NYLAS_API_KEY` in your environment — it's the application-level key shared by all accounts.
+</Note>
+
+## Observation mode
+
+Curia can monitor the CEO's inbox in addition to its own. In observation mode, Curia reads incoming messages addressed to the CEO and silently triages them — it does not act as the intended recipient or respond as itself.
+
+When a message arrives in observation mode, Curia classifies it into one of five categories and takes the appropriate action:
+
+| Category | What Curia does |
+|---|---|
+| **URGENT** | Notifies you immediately on a high-trust channel (e.g., Signal). Does not reply to the sender. |
+| **ACTIONABLE** | Takes action using available skills — calendar updates, contact lookups, etc. No notification sent. |
+| **NEEDS DRAFT** | Saves a draft reply (in your voice) to the CEO's account for your review. Does not send. |
+| **LEAVE FOR CEO** | Takes no action. No archive, no draft, no notification. You handle it yourself. |
+| **NOISE** | Archives the message. No notification. |
+
+When in doubt, Curia defaults to **LEAVE FOR CEO** rather than acting. URGENT is reserved for genuinely time-sensitive items.
+
+## Email skills
+
+Once the email channel is active, the following skills become available to Curia and any agents you configure:
+
+| Skill | What it does |
+|---|---|
+| `email-list` | List recent messages in any connected account |
+| `email-get` | Fetch the full body of a specific message by ID |
+| `email-send` | Compose and send a new email |
+| `email-reply` | Reply to an existing thread by message ID |
+| `email-draft-save` | Save a draft to a specified account for human review |
+| `email-archive` | Archive a message by ID |
+
+All email skills accept an `account` parameter to target a specific named account. Omit it to use Curia's own account.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Email channel not activating">
+    All three Nylas variables must be present. If any are missing, the channel disables itself at startup with one of these log messages:
+
+    ```
+    NYLAS_API_KEY/NYLAS_GRANT_ID not set — email channel disabled
+    NYLAS_SELF_EMAIL not set — email adapter disabled
+    ```
+
+    Check your `.env` file and restart Curia.
+  </Accordion>
+
+  <Accordion title="Messages not appearing">
+    Curia polls the Nylas Messages API every 30 seconds by default. If messages are slow to appear, confirm the email account's OAuth grant is active in the Nylas dashboard and that the grant ID matches `NYLAS_GRANT_ID`.
+
+    You can also adjust the polling interval:
+
+    ```env
+    NYLAS_POLL_INTERVAL_MS=15000
+    ```
+  </Accordion>
+
+  <Accordion title="Outbound emails going to drafts unexpectedly">
+    If you configured `autonomy_gated` as your outbound policy, check your current autonomy score. Curia sends directly only when the score is at or above `autonomy_threshold`. Ask Curia its current score ("What is your autonomy score?") and raise it if needed.
+  </Accordion>
+</AccordionGroup>

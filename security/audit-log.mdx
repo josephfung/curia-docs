@@ -1,0 +1,142 @@
+---
+title: "Curia's append-only audit trail and governance log"
+description: "Every Curia event is logged to Postgres before delivery — with full causal tracing across every message, skill call, and agent response for compliance review."
+---
+
+The audit log is Curia's primary governance instrument. Every event that flows through the message bus — every inbound message, every skill invoked, every inter-agent exchange, every outbound reply — is written to Postgres before it is delivered to any subscriber. If you ever need to answer "what happened and why," the audit log is where you look.
+
+<Note>
+  The audit log is a governance record, not a debugging tool. It answers questions like "who authorized this action?" and "what email triggered this expense entry?" — not "why did the LLM produce this output?" For operational debugging, use the structured logs written by pino.
+</Note>
+
+## Write-ahead guarantee
+
+Curia writes each event to the audit log *before* delivering it to subscribers. This is not an implementation detail — it is a guarantee.
+
+If the process crashes between logging an event and delivering it, the event is still in the log. On restart, Curia can identify and replay any events that were written but not yet delivered. You will never have a situation where Curia acted on something that left no trace.
+
+## What gets logged
+
+Every event type that flows through the bus produces an audit log entry:
+
+| Event | What it captures |
+|---|---|
+| `inbound.message` | Every message received across any channel — email, Signal, CLI, HTTP |
+| `agent.task` | Every time a message is dispatched to an agent for processing |
+| `skill.invoke` | Every skill call made by an agent, including which agent invoked it |
+| `skill.result` | The output of each skill call, after sanitization |
+| `agent.discuss` | Every inter-agent exchange in the Bullpen |
+| `agent.response` | Every response the coordinator produces |
+| `outbound.message` | Every message sent to an external recipient |
+| `memory.store` | Every write to the knowledge graph |
+| `memory.query` | Every knowledge graph query, including which results were returned |
+| `contact.resolved` | Every sender identity successfully matched to a contact |
+| `contact.unknown` | Every unknown sender, including the routing decision taken |
+| `llm.call` | Every LLM API call — model, token count, cost, and provider request ID |
+| `human.decision` | Every approval, denial, or timeout at a human-in-the-loop gate |
+| `config.change` | Agent and skill configuration changes detected at startup |
+
+## Causal tracing
+
+Every event carries a `parent_event_id` that links it to the event that caused it. This lets you reconstruct the full causal chain for any action — forward or backward.
+
+A typical chain looks like this:
+
+```
+inbound.message  (email from vendor@example.com)
+  └─ agent.task  (routed to coordinator)
+       └─ skill.invoke  (email-parser)
+            └─ skill.result  (receipt extracted: $142.50, Acme Supplies)
+                 └─ skill.invoke  (memory.store — expense node created)
+                      └─ agent.response  (coordinator confirms to CEO)
+                           └─ outbound.message  (reply sent)
+```
+
+To reconstruct this chain for any event, start from the event ID and follow `parent_event_id` references backward. Each step reveals the event that caused the current one, all the way back to the original inbound message. You can walk this chain forward or backward to understand what triggered any given action.
+
+## Append-only enforcement
+
+The audit log has no update or delete code paths anywhere in Curia. Retention policies can archive old records to cold storage, but no record is ever mutated or removed.
+
+Beyond convention, Curia maintains a cryptographic hash chain: each entry's hash is computed from its content plus the previous entry's hash. Any modification to a historical record invalidates every hash after it, making tampering detectable. This gives you a tamper-evident record that your compliance team or auditors can verify independently.
+
+## Secret access logging
+
+When a skill calls `ctx.secret()` to access a credential, the access is audit-logged before the secret value is returned. The log entry records:
+
+- Which secret was accessed (by name, not value)
+- Which skill requested it
+- Which agent and task triggered the skill
+
+Secret values are never written to the audit log. The log tells you that the email-parser skill accessed the IMAP credential — not what that credential is.
+
+## PII handling
+
+Error messages and internal strings that reach the LLM are scrubbed of PII before they are written to LLM-facing context. The audit log itself retains the full error for governance review, including any PII — this is intentional. The scrubbing is one-directional: toward the LLM, not toward your audit record.
+
+Built-in patterns that are scrubbed from LLM-facing strings:
+
+- Email addresses → `[EMAIL]`
+- Phone numbers (US and CA format) → `[PHONE]`
+- UK phone numbers → `[PHONE]`
+- Credit card numbers → `[CREDIT_CARD]`
+- US Social Security Numbers → `[SSN]`
+
+You can add organization-specific patterns in `config/local.yaml`:
+
+```yaml
+pii:
+  extra_patterns:
+    - regex: "EMP-\\d{6}"
+      replacement: "[EMPLOYEE_ID]"
+    - regex: "\\b\\d{3}[-\\s]?\\d{3}[-\\s]?\\d{3}\\b"
+      replacement: "[CA_SIN]"
+```
+
+Changes take effect on restart — no code changes required.
+
+## Data sensitivity classification
+
+Every node in the knowledge graph carries a `sensitivity` tag that controls what can be exported and under what conditions.
+
+<AccordionGroup>
+  <Accordion title="Public">
+    No export restrictions. Examples: company address, public announcements.
+  </Accordion>
+  <Accordion title="Internal">
+    The default sensitivity for new data. Can be exported to known destinations. Examples: meeting notes, project status updates.
+  </Accordion>
+  <Accordion title="Confidential">
+    Exporting more than 10 confidential items in a single operation requires explicit approval. Financial data defaults to this level. Examples: quarterly reports, contracts, HR records, personal identifiers.
+  </Accordion>
+  <Accordion title="Restricted">
+    Cannot be bulk-exported regardless of approval. Individual items require per-item confirmation. Examples: credentials, board materials, litigation records, corporate strategy documents (acquisitions, IPO plans).
+  </Accordion>
+</AccordionGroup>
+
+Sensitivity rules are evaluated in descending order — `restricted` rules are checked before `confidential`, so the most protective rule always wins. You can review the full rule set in `config/default.yaml` under `sensitivity_rules`.
+
+## Reading the audit log
+
+The audit log is stored in your Postgres database and can be queried directly for governance and compliance review. Each row contains a timestamp, event type, source layer, source ID, parent event ID, and a structured JSON payload — the exact payload shape depends on the event type.
+
+**Useful queries for governance review:**
+
+- **Trace all activity from a specific sender** — filter by the sender's email address or channel identifier in the payload
+- **Review all tool calls in a conversation** — filter by conversation ID and event types `skill.invoke` and `skill.result`
+- **Audit outbound communications** — filter for `outbound.message` events within a time window
+- **Track secret accesses** — filter for `secret.access` events to see which credentials were used, by which skill, in which task
+
+Every query starts from `timestamp` and `event_type` — add payload filters as needed for your specific review. Because every event includes a `parent_event_id`, you can reconstruct full causal chains by joining recursively or using a recursive CTE.
+
+## Retention
+
+Audit log rows are retained based on the event type:
+
+| Tier | What it covers | Hot storage | Warm storage | Cold storage |
+|---|---|---|---|---|
+| **Critical** | Approvals, denials, configuration changes, authentication | 12 months | 12–36 months | 3+ years |
+| **Standard** | All other audit events | 6 months | 6–18 months | 18 months – 3 years |
+| **Bulk** | Raw LLM prompt and response archive | 90 days | 90 days – 12 months | 12 months – 3 years |
+
+Cold storage archives to compressed files on the server's data volume. Audit log rows outlive the raw LLM content archive — you retain the governance record long after the full prompt and response data is rotated out.

@@ -1,0 +1,237 @@
+---
+title: "Create a custom agent: YAML config and handlers"
+description: "Define a specialist agent in YAML, configure its model, memory scopes, and error budgets, and optionally add a TypeScript handler for custom logic."
+---
+
+Curia ships with a Coordinator agent that handles all incoming messages and a research analyst that can dig into topics on demand. When your workflow calls for domain-specific expertise — expense tracking, contract review, investor relations — you create a specialist agent that owns that domain and lets the Coordinator delegate to it.
+
+## When to create a specialist vs. using the Coordinator directly
+
+The Coordinator can handle many tasks on its own using its pinned skills. Create a specialist agent when:
+
+- The task requires **dedicated memory scopes** (e.g., an expense tracker that remembers vendor patterns across weeks)
+- You want a **focused system prompt** that won't bloat the Coordinator's context
+- The task has a **recurring schedule** of its own (e.g., generate a weekly summary every Monday)
+- You want **separate error budgets** — caps on LLM turns and spend that are independent of the Coordinator's limits
+
+## Simple agent — YAML only
+
+Most agents need nothing more than a YAML file. Create a file in the `agents/` directory:
+
+```yaml
+# agents/expense-tracker.yaml
+name: expense-tracker
+description: Tracks and categorizes expenses from receipts and bank notifications
+
+model:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  fallback:
+    provider: openai
+    model: gpt-4o
+
+system_prompt: |
+  You are an expense tracking assistant for a CEO.
+  Extract amounts, vendors, categories, and dates from receipts and notifications.
+  Maintain running totals by category and flag anything unusual.
+
+pinned_skills:
+  - email-parser
+  - spreadsheet-writer
+
+allow_discovery: true
+
+memory:
+  scopes: [expenses, vendors, budgets]
+
+schedule:
+  - cron: "0 9 * * 1"
+    task: "Generate weekly expense summary and email it to the CEO"
+
+error_budget:
+  max_turns: 20
+  max_cost_usd: 1.00
+```
+
+Restart Curia after adding the file — agents are loaded at startup.
+
+## Required fields
+
+| Field | Description |
+|---|---|
+| `name` | Unique identifier used in the Bullpen, audit log, and the `delegate` skill |
+| `description` | One-sentence summary; the Coordinator reads this to decide when to delegate |
+| `model` | LLM provider and model name |
+| `system_prompt` | The agent's instructions |
+
+## Optional fields
+
+<AccordionGroup>
+  <Accordion title="model — provider, model, fallback">
+    Curia supports three providers. Configure a `fallback` so the agent continues working if the primary provider is unavailable:
+
+    ```yaml
+    model:
+      provider: anthropic
+      model: claude-sonnet-4-6
+      fallback:
+        provider: openai
+        model: gpt-4o
+    ```
+
+    Supported providers: `anthropic`, `openai`, `ollama`. For `ollama`, set `model` to the name of a locally pulled model (e.g., `llama3`).
+  </Accordion>
+
+  <Accordion title="pinned_skills and allow_discovery">
+    `pinned_skills` lists skills that are always available to this agent. `allow_discovery: true` lets the agent search the skill registry for capabilities beyond the pinned list:
+
+    ```yaml
+    pinned_skills:
+      - email-parser
+      - spreadsheet-writer
+
+    allow_discovery: true
+    ```
+
+    Set `allow_discovery: false` (the default) for agents that should only ever use their declared skills.
+  </Accordion>
+
+  <Accordion title="memory — scopes">
+    Memory scopes give the agent access to named segments of entity memory. An agent only reads and writes facts within its declared scopes:
+
+    ```yaml
+    memory:
+      scopes: [expenses, vendors, budgets]
+    ```
+
+    Scopes are free-form strings — you define them. Two agents sharing a scope can read each other's facts within it.
+  </Accordion>
+
+  <Accordion title="schedule — cron jobs at startup">
+    Schedule tasks that run automatically on a cron expression:
+
+    ```yaml
+    schedule:
+      - cron: "0 9 * * 1"
+        task: "Generate weekly expense summary"
+      - cron: "0 */4 * * *"
+        task: "Check inbox for new receipts"
+    ```
+
+    Cron expressions run in Curia's configured timezone (set via `TIMEZONE` in `.env`). These jobs are created in the scheduler database at startup. If the job already exists from a previous run, it is updated, not duplicated.
+  </Accordion>
+
+  <Accordion title="error_budget — max turns and cost">
+    Every agent task has hard caps. When either limit is exceeded, the task stops immediately — no infinite loops, no surprise bills:
+
+    ```yaml
+    error_budget:
+      max_turns: 20      # maximum LLM round-trips per task execution
+      max_cost_usd: 1.00 # maximum spend per task execution
+    ```
+
+    Error budgets apply per task execution — a recurring scheduled task gets a fresh budget on each run.
+  </Accordion>
+</AccordionGroup>
+
+## Full example — investor relations specialist
+
+```yaml
+# agents/investor-relations.yaml
+name: investor-relations
+description: Tracks investor communications, prepares updates, and monitors cap table events
+
+model:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  fallback:
+    provider: openai
+    model: gpt-4o
+
+system_prompt: |
+  You are an investor relations specialist for a CEO.
+  You track communications with investors, monitor for cap table events,
+  and help prepare board updates and investor briefings.
+
+  Always surface relevant past context when investors reach out.
+  Flag any unusual requests or requests that may require legal review.
+
+pinned_skills:
+  - email-list
+  - email-get
+  - email-draft-save
+  - contact-lookup
+
+allow_discovery: true
+
+memory:
+  scopes: [investors, board, fundraising]
+
+schedule:
+  - cron: "0 8 * * 1"
+    task: "Summarize investor email activity from the past week"
+
+error_budget:
+  max_turns: 30
+  max_cost_usd: 2.00
+```
+
+## Complex agents — TypeScript handler
+
+If you need custom logic that goes beyond what a system prompt can express, add a TypeScript handler alongside your YAML:
+
+```yaml
+# agents/research-analyst.yaml
+name: research-analyst
+handler: ./research-analyst.handler.ts
+description: Conducts web research and provides analysis
+
+model:
+  provider: anthropic
+  model: claude-sonnet-4-6
+
+system_prompt: |
+  You are a research analyst. When given a topic, conduct thorough research
+  and return a clear, actionable summary with sources.
+
+pinned_skills:
+  - web-fetch
+  - web-search
+  - web-browser
+```
+
+Your handler exports lifecycle hooks:
+
+```typescript
+// agents/research-analyst.handler.ts
+
+export const handler = {
+  async onTask(ctx) {
+    // Called when the agent receives a new task.
+    // Modify ctx.messages or ctx.tools before the LLM call.
+  },
+
+  async onSkillResult(ctx, skill, result) {
+    // Called after each skill invocation.
+    // Inspect or transform the result before it returns to the LLM.
+  },
+
+  async beforeRespond(ctx, response) {
+    // Called before the agent's response is sent.
+    // Return a modified response string, or undefined to use the original.
+    return response;
+  },
+};
+```
+
+## Delegating to your agent
+
+Once your agent is running, the Coordinator can delegate to it using the `delegate` skill. The Coordinator reads each agent's `description` field to decide when to route tasks. Write descriptions clearly — they function as the Coordinator's routing table.
+
+You can also test delegation directly from the CLI:
+
+```
+> Ask the investor-relations agent to summarize this week's investor emails.
+```
+
+Curia routes the task to your agent, runs it, and synthesizes the result into the Coordinator's response.

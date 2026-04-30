@@ -1,0 +1,76 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "Curia",
+  "theme": "luma",
+  "favicon": "https://media.brand.dev/288cc7c4-5cef-4376-950b-bdf0083eedae.png",
+  "colors": {
+    "primary": "#94cb04",
+    "light": "#545454"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/josephfung/curia"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "configuration"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/agents",
+              "concepts/skills",
+              "concepts/memory",
+              "concepts/channels",
+              "concepts/autonomy"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/email-setup",
+              "guides/signal-setup",
+              "guides/adding-agents",
+              "guides/adding-skills",
+              "guides/scheduling",
+              "guides/knowledge-graph"
+            ]
+          },
+          {
+            "group": "Security & Governance",
+            "pages": [
+              "security/overview",
+              "security/audit-log",
+              "security/contacts-trust"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "HTTP API",
+            "pages": [
+              "api/overview",
+              "api/messages",
+              "api/stream",
+              "api/health"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

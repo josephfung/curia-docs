@@ -1,0 +1,174 @@
+---
+title: "GET /api/messages/stream — real-time event stream"
+description: "Open a Server-Sent Events connection to receive agent responses, tool invocations, and tool results in real time, optionally filtered by conversation."
+---
+
+`GET /api/messages/stream` opens a persistent [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) (SSE) connection that delivers agent activity as it happens. Use it to build live chat interfaces, watch the agent's tool usage on long-running tasks, or power any UI that needs to react without polling.
+
+<Note>
+  This endpoint uses SSE, not WebSockets. The connection is one-directional — the server pushes events to you. To send a message, use [POST /api/messages](/api/messages) as usual, then watch events arrive on the stream.
+</Note>
+
+## Request
+
+```
+GET /api/messages/stream
+```
+
+Authentication is required. Pass your Bearer token in the `Authorization` header, or configure it via your `EventSource` wrapper (see examples below).
+
+### Query parameters
+
+<ParamField query="conversation_id" type="string">
+  Filter the stream to events belonging to a specific conversation thread. If you omit this parameter, you receive events from all active conversations. Pass the `conversation_id` you received from a prior `POST /api/messages` call to watch only that thread.
+</ParamField>
+
+## Server response headers
+
+When the connection is established, the server sends:
+
+| Header | Value |
+|---|---|
+| `Content-Type` | `text/event-stream` |
+| `Cache-Control` | `no-cache` |
+| `Connection` | `keep-alive` |
+| `X-Accel-Buffering` | `no` |
+
+The `X-Accel-Buffering: no` header disables nginx buffering so events reach your client immediately when running behind a reverse proxy.
+
+## Event types
+
+Each event is a JSON object sent as an SSE `data` field. Three event types flow through the stream:
+
+| Event type | When it fires |
+|---|---|
+| `outbound.message` | The agent has produced a complete reply |
+| `skill.invoke` | The agent is calling a tool (e.g. fetching calendar, sending email) |
+| `skill.result` | A tool call has completed and returned a result |
+
+Watching `skill.invoke` and `skill.result` events lets you show the user what the agent is doing while it works — useful for tasks that chain multiple tools together.
+
+## Connection keepalive
+
+The server sends a `:ping` comment every **30 seconds** to prevent proxies, load balancers, and CDNs from closing the idle connection. Most infrastructure has a 60–120 second idle timeout; the 30-second heartbeat keeps the connection alive through those layers without requiring any action on your end.
+
+On initial connection, the server sends `:connected` to confirm the stream is open.
+
+## Usage pattern
+
+The typical pattern is to open the SSE stream first, then POST your message. Events will arrive on the stream as the agent processes the request.
+
+<Steps>
+  <Step title="Open the SSE connection">
+    Establish the event stream before sending your message. Filter to a specific conversation if you know the ID in advance, or leave it open to receive all events.
+  </Step>
+  <Step title="POST your message">
+    Send a message via `POST /api/messages`. The endpoint returns the final agent response synchronously, but you will also see the agent's intermediate steps arrive on the stream in real time.
+  </Step>
+  <Step title="Handle incoming events">
+    Parse each `data` payload as JSON and update your UI accordingly — show tool calls as status indicators and render the `outbound.message` event as the agent's reply.
+  </Step>
+</Steps>
+
+## Examples
+
+<Tabs>
+  <Tab title="JavaScript (EventSource)">
+    The browser's built-in `EventSource` API does not support custom headers, so you need a wrapper library such as [`@microsoft/fetch-event-source`](https://github.com/Azure/fetch-event-source) for Bearer token auth in the browser. In Node.js you can pass headers directly.
+
+    ```javascript
+    // Browser — using fetch-event-source for header support
+    import { fetchEventSource } from '@microsoft/fetch-event-source';
+
+    fetchEventSource(
+      'http://localhost:3000/api/messages/stream?conversation_id=my-conv-id',
+      {
+        headers: {
+          Authorization: 'Bearer your-token-here',
+        },
+        onmessage(event) {
+          const data = JSON.parse(event.data);
+          console.log(data);
+        },
+        onerror(err) {
+          console.error('Stream error', err);
+        },
+      }
+    );
+    ```
+
+    If you are building a same-origin web app served by Curia itself (via the built-in dashboard), you can use the standard `EventSource` with session cookie auth instead:
+
+    ```javascript
+    // Same-origin dashboard — no Authorization header needed
+    const eventSource = new EventSource(
+      'http://localhost:3000/api/messages/stream?conversation_id=my-conv-id'
+    );
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log(data);
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
+    ```
+  </Tab>
+  <Tab title="curl">
+    curl keeps the connection open and prints each event as it arrives. Useful for testing.
+
+    ```bash
+    curl -N \
+      -H "Authorization: Bearer your-token-here" \
+      "http://localhost:3000/api/messages/stream?conversation_id=my-conv-id"
+    ```
+
+    The `-N` flag disables output buffering so you see events as they stream rather than waiting for the connection to close.
+  </Tab>
+  <Tab title="Node.js (fetch)">
+    ```javascript
+    const response = await fetch(
+      'http://localhost:3000/api/messages/stream?conversation_id=my-conv-id',
+      {
+        headers: {
+          Authorization: 'Bearer your-token-here',
+          Accept: 'text/event-stream',
+        },
+      }
+    );
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      // Parse SSE format: lines starting with "data: "
+      for (const line of chunk.split('\n')) {
+        if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6));
+          console.log(data);
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Example event payloads
+
+Events arrive as SSE messages with a `data` field containing a JSON string.
+
+```
+data: {"type":"skill.invoke","skillName":"get-calendar-events","conversationId":"my-conv-id"}
+
+data: {"type":"skill.result","skillName":"get-calendar-events","conversationId":"my-conv-id","success":true}
+
+data: {"type":"outbound.message","content":"You have two meetings tomorrow...","conversationId":"my-conv-id"}
+```
+
+<Tip>
+  Filter to a `conversation_id` whenever possible. An unfiltered stream carries events from all concurrent conversations, which makes client-side routing more complex and increases the data your client receives unnecessarily.
+</Tip>

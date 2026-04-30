@@ -1,0 +1,223 @@
+---
+title: "Agents: Curia's coordinator and specialist AI model"
+description: "The Coordinator agent handles every message while specialist agents work behind the scenes — the sender never knows multiple agents are involved."
+---
+
+Curia is not a single AI assistant — it is a team. A Coordinator agent serves as the unified face of that team, handling every message you or anyone else sends. Behind the scenes, specialist agents (research, expense tracking, scheduling, and more) do focused work and hand their results back to the Coordinator, which synthesizes everything into a single coherent reply. The people who email or message you never know multiple agents were involved.
+
+## The Coordinator agent
+
+Every inbound message — across every channel — routes to the Coordinator first, without exception. The Coordinator has a persona you configure: a display name, a communication tone, and an email signature. To the outside world, that persona is the only identity they see.
+
+The Coordinator decides how to handle each message:
+
+- **Handle directly** — small talk, acknowledgments, simple questions the Coordinator can answer from memory
+- **Delegate to a specialist** — complex or domain-specific tasks go to the right specialist agent, which returns results to the Coordinator
+- **Synthesize and respond** — the Coordinator assembles the specialist's work into a reply in its own voice
+
+The Coordinator's `role: coordinator` field in its YAML tells the dispatch layer to route all messages here. There is exactly one Coordinator per deployment.
+
+```yaml
+# agents/coordinator.yaml
+name: coordinator
+role: coordinator
+description: Central coordinator — routes all messages, delegates to specialists, maintains the unified persona
+model:
+  provider: anthropic
+  model: claude-sonnet-4-6
+system_prompt: |
+  You are Alex, executive assistant to the CEO.
+  You are the single point of contact for all communications.
+  You have a team of specialists you can delegate to, but you always
+  respond in your own voice. The sender should never know multiple
+  agents were involved.
+pinned_skills:
+  - entity-context
+  - delegate
+  - contact-lookup
+  - email-send
+  - email-reply
+  - calendar-list-events
+  - get-autonomy
+  - set-autonomy
+allow_discovery: true
+```
+
+## Specialist agents
+
+Specialist agents like `research-analyst` work entirely inside the system. They receive delegated tasks from the Coordinator via the Bullpen or a direct `agent.response` event, do their work using their own pinned skills and memory scopes, and return results. They never communicate with the outside world directly — their internal handles (such as `@research-analyst`) appear only in the audit log and Bullpen threads, never in outbound messages.
+
+```yaml
+# agents/research-analyst.yaml
+name: research-analyst
+role: specialist
+description: Conducts web research, summarizes findings, and provides analysis
+model:
+  provider: anthropic
+  model: claude-sonnet-4-6
+system_prompt: |
+  You are a research analyst working as part of an executive assistant team.
+  Conduct thorough research and provide clear, actionable summaries.
+  Your findings will be reviewed and presented by the team coordinator.
+pinned_skills:
+  - web-fetch
+  - web-search
+  - scheduler-create
+  - scheduler-list
+  - scheduler-cancel
+allow_discovery: false
+memory:
+  scopes: [research]
+```
+
+## Agent definition in YAML
+
+You define agents in YAML files in the `agents/` directory. No code is required for most agents. The full schema includes:
+
+```yaml
+name: expense-tracker
+description: Tracks and categorizes expenses from receipts and emails
+
+model:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  fallback:
+    provider: openai
+    model: gpt-4o
+
+system_prompt: |
+  You are an expense tracking assistant for a CEO.
+  Extract amounts, vendors, categories, and dates from receipts.
+
+pinned_skills:
+  - email-parser
+  - spreadsheet-writer
+
+allow_discovery: true
+
+memory:
+  scopes: [expenses, vendors, budgets]
+
+schedule:
+  - cron: "0 9 * * 1"
+    task: "Generate weekly expense summary"
+
+error_budget:
+  max_turns: 20
+  max_cost_usd: 1.00
+```
+
+### Key fields
+
+| Field | Description |
+|---|---|
+| `model.provider` | LLM provider: `anthropic`, `openai`, or `ollama` |
+| `model.model` | Model identifier for the chosen provider |
+| `model.fallback` | Optional fallback provider + model if the primary is unavailable |
+| `pinned_skills` | Skills always available to this agent in every task |
+| `allow_discovery` | When `true`, the agent can search the skill registry for capabilities not in its pinned list |
+| `memory.scopes` | Named memory scopes the agent can read from and write to |
+| `schedule` | Cron expressions for recurring tasks the agent runs automatically |
+| `error_budget.max_turns` | Maximum LLM round-trips per task execution — hard cap |
+| `error_budget.max_cost_usd` | Maximum dollar spend per task execution — hard cap |
+
+### Model configuration and fallback
+
+Each agent specifies its own LLM provider and model. If the primary provider is unavailable, Curia automatically switches to the configured fallback — no manual intervention required.
+
+```yaml
+model:
+  provider: anthropic
+  model: claude-sonnet-4-6
+  fallback:
+    provider: openai
+    model: gpt-4o
+```
+
+Supported providers are Anthropic (Claude), OpenAI (GPT-4o and variants), and Ollama for local models where no data leaves your server.
+
+### Error budgets
+
+Every agent task has hard caps that prevent runaway behavior — infinite loops, surprise LLM bills, or agents that spin forever on a stuck task.
+
+- `max_turns` — the maximum number of LLM round-trips for a single task execution. When exceeded, the task stops and reports an error.
+- `max_cost_usd` — the maximum estimated dollar spend for a single task. Tracked across every LLM call in the task; exceeded tasks are halted immediately.
+
+These budgets are tracked cumulatively across bursts for long-running persistent tasks.
+
+### Skill discovery
+
+When `allow_discovery: true` is set, the agent receives the built-in `skill-registry` tool in addition to its pinned skills. If the LLM determines it needs a capability not in its pinned list, it queries the registry:
+
+```text
+skill-registry({ query: "send SMS" })
+```
+
+The registry returns matching skill names and descriptions. Curia then appends the full tool schemas to the agent's working tool list for that task, so discovered skills are immediately callable.
+
+<Note>
+Skills tagged `sensitivity: elevated` — such as payment processing or bulk deletion — require human approval the first time an agent attempts to use them. Normal-sensitivity skills discovered via the registry are auto-approved.
+</Note>
+
+## TypeScript handlers
+
+For agents that need custom logic beyond what YAML configuration supports, you can add a TypeScript handler as an escape hatch. The YAML configuration stays exactly the same; you add a `handler` field pointing to your TypeScript file.
+
+```yaml
+name: research-analyst
+handler: ./research-analyst.handler.ts
+# ... all other YAML fields apply normally
+```
+
+The handler exports lifecycle hooks:
+
+```typescript
+export const onTask = async (task, ctx) => { /* before the agent starts */ };
+export const onSkillResult = async (skill, result, ctx) => { /* after each skill call */ };
+export const beforeRespond = async (response, ctx) => { /* before the final reply */ };
+```
+
+Use handlers for things like custom memory loading, domain-specific validation of skill results, or pre-processing inputs before they reach the LLM.
+
+## The Bullpen
+
+When specialist agents need to coordinate, they do so in the Bullpen — a structured, threaded discussion space that functions like an internal team channel. Any agent can open a thread addressed to other agents. The Coordinator checks for pending Bullpen threads on every task, ensuring nothing gets missed even if an agent only activates on inbound messages.
+
+Every Bullpen exchange is:
+
+- **Logged** — every message is written to the audit log with full causal tracing
+- **Visible** — you can observe all threads via the dashboard or HTTP API SSE stream
+- **Interruptible** — you can send a message to any thread via any channel to redirect, clarify, or stop a discussion
+
+Think of it as overhearing your staff coordinate at their desks — with the ability to step in at any moment.
+
+## Agent lifecycle
+
+When a message arrives, here is what happens inside Curia:
+
+<Steps>
+  <Step title="Message received">
+    The channel adapter publishes a normalized `inbound.message` event to the bus. The dispatch layer receives it and routes it to the Coordinator.
+  </Step>
+  <Step title="Context loaded">
+    The Coordinator loads its system prompt, relevant entity memory and knowledge graph context, and any pending Bullpen threads. Conversation history for this `conversation_id` is loaded from working memory.
+  </Step>
+  <Step title="LLM called">
+    The Coordinator calls its configured LLM. If the LLM decides to invoke a skill or delegate to a specialist, those requests are dispatched via the bus.
+  </Step>
+  <Step title="Skills and delegation">
+    Skill results flow back through the execution layer (sanitized and validated). Specialist agents complete their work and return results to the Coordinator.
+  </Step>
+  <Step title="Response published">
+    The Coordinator formulates a reply and publishes an `agent.response` event. The dispatch layer injects the persona's display name and email signature, then routes the outbound message back to the originating channel.
+  </Step>
+</Steps>
+
+<CardGroup cols={2}>
+  <Card title="Skills" icon="puzzle-piece" href="/concepts/skills">
+    Learn how agents interact with the outside world through local and MCP skills.
+  </Card>
+  <Card title="Memory" icon="database" href="/concepts/memory">
+    Understand how Curia remembers people, decisions, and facts across restarts.
+  </Card>
+</CardGroup>

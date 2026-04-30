@@ -1,0 +1,171 @@
+---
+title: "How Curia verifies contacts and authorizes senders"
+description: "Curia verifies every sender before acting on their behalf, using trust scores, channel authentication, and deterministic permissions that you control."
+---
+
+Every person who contacts Curia — whether through email, Signal, or the HTTP API — is treated as a contact with an assigned trust level. Before Curia takes any action on a sender's behalf, it checks who they are, how confident it is in their identity, and whether the channel they're using is trusted enough for what they're asking. These checks are deterministic: a sender either has permission or they don't.
+
+<Warning>
+  Contacts start as **provisional** until you confirm them. Provisional contacts have no permissions — Curia will acknowledge their message but will not take any actions on their behalf. You'll be notified so you can decide whether to confirm, dismiss, or block them.
+</Warning>
+
+## How trust scores work
+
+Every inbound message from an external sender carries a `messageTrustScore` between 0.0 and 1.0. Curia computes this score in the dispatch layer before the coordinator ever sees the message.
+
+The score combines three inputs:
+
+```
+messageTrustScore =
+  (channel trust weight × 0.4)
+  + (contact confidence × 0.4)
+  − (content risk penalty, up to 0.2)
+```
+
+**Channel trust** reflects what the authentication protocol can guarantee about sender identity:
+
+| Channel | Trust level | Normalized weight |
+|---|---|---|
+| CLI | High | 1.0 |
+| Signal | High | 1.0 |
+| HTTP API | Medium | 0.6 |
+| Email | Low | 0.3 |
+
+**Contact confidence** accumulates over time as signal builds — successful interactions, explicit confirmation by you, verified identity links. A brand-new email sender has zero contact confidence. A CEO-verified Signal contact may carry 0.95.
+
+**Content risk** reduces the score when the dispatch layer detects injection-like patterns in the message body. Clean messages incur no penalty.
+
+### Score examples
+
+| Sender | Score | Why |
+|---|---|---|
+| Brand-new email sender | ~0.12 | Low channel trust (0.3 × 0.4) + zero contact confidence |
+| CEO-verified Signal contact | ~0.80 | High channel trust (1.0 × 0.4) + high confidence (0.95 × 0.4) |
+| Unknown Signal sender | ~0.40 | High channel trust + zero contact confidence |
+| Known email contact (long history) | ~0.52 | Low channel trust + high confidence |
+
+## Action thresholds
+
+The coordinator checks the sender's `messageTrustScore` before taking action. If the score falls below the threshold for the requested action, the request is declined.
+
+| Action category | Minimum score | What this means |
+|---|---|---|
+| Information queries | 0.2 | Any authenticated message qualifies |
+| Scheduling | 0.5 | Medium trust channel or a known email contact |
+| Data export | 0.8 | High-trust channel and a verified contact |
+| Financial actions | 0.8 | High-trust channel and a verified contact |
+
+These thresholds are configured in `config/default.yaml` under `trust_policy` and can be adjusted without a code change.
+
+<Note>
+  Trust thresholds do not apply to you (the CEO). Messages arriving via CLI, or from a contact with the `ceo` role, are always trusted regardless of score. Curia never explains the trust system or mentions scores to external senders.
+</Note>
+
+## Email sender verification
+
+Email is the highest-risk channel because From headers can be spoofed. Curia adds an extra layer on top of the trust score: SPF, DKIM, and DMARC validation.
+
+Your email provider performs these checks at the server level. The email channel adapter reads the `Authentication-Results` headers on every inbound message and maps them to a `senderVerified` flag:
+
+- `senderVerified: true` — SPF, DKIM, and DMARC all pass
+- `senderVerified: false` — any check fails, or headers are absent (fails closed)
+
+When a message arrives with `senderVerified: false`, the coordinator will not take consequential actions — financial, data, or access changes — without confirmation via a verified channel like Signal or CLI.
+
+## Handling unknown senders
+
+When Curia receives a message from someone not in your contacts, it follows the **hold and notify** policy for email and Signal: the message is held in a queue, and Curia mentions it to you at the next opportunity.
+
+<Steps>
+  <Step title="Message arrives from an unknown sender">
+    The dispatch layer looks up the sender's channel identifier (`email address`, `Signal number`) in the contacts database. No match is found. The message is placed in the held messages queue. An audit event is written with the sender identifier, channel, and routing decision.
+  </Step>
+  <Step title="Curia notifies you">
+    At the next conversation, Curia mentions the oldest held message: "By the way, you have a held email from `stranger@example.com` about 'Q3 Numbers'. Want me to identify them?"
+
+    Curia surfaces one held message at a time — not a list — to avoid interrupting the conversation flow. You can ask for the full list at any time.
+  </Step>
+  <Step title="You decide what to do">
+    You have three options for each held message:
+
+    - **Identify** — tell Curia who the sender is. Curia creates a confirmed contact and replays the held message through normal processing with full contact context.
+    - **Dismiss** — discard the message. The sender's provisional contact record is preserved in case they reach out again.
+    - **Block** — discard the message and mark the sender as blocked. Future messages from this sender are dropped without acknowledgment.
+  </Step>
+  <Step title="Confirmed contacts can act">
+    Once you confirm a contact, they gain the permissions assigned to their role. If they send another message, it is processed normally — no more holds.
+  </Step>
+</Steps>
+
+## Adding contacts proactively
+
+You don't have to wait for someone to reach out. Tell Curia about people directly in conversation:
+
+> "Add Sarah Chen, CFO at Acme. Her email is sarah.chen@acme.com and she's on Signal at +15550001111."
+
+Curia creates a contact record, links both channel identities as verified, and assigns the CFO role with its default permissions. You can also update existing contacts:
+
+> "Jenna's new work email is jenna.torres@acme.com."
+
+> "Grant Jenna permission to send emails on my behalf."
+
+All contact mutations are confirmed with you before they're written, and every change is audit-logged.
+
+## Contact deduplication
+
+Curia runs a weekly background scan for likely duplicate contacts — for example, "Jenna Torres" and "J. Torres" who share the same email address. When potential duplicates are detected, Curia presents them to you for review:
+
+> "I noticed two contacts that look like the same person:
+> - Jenna Torres (CFO, verified email jenna@acme.com)
+> - J. Torres (no role, email jenna@acme.com)
+>
+> I'd merge them into Jenna Torres (CFO). Want me to proceed?"
+
+Curia never auto-merges contacts. You confirm every merge.
+
+## How authorization works
+
+Authorization runs through a three-layer check on every request from a non-CEO sender:
+
+1. **Per-contact overrides** — explicit grants and denials you've set for this specific contact. These always win over role defaults.
+  2. **Role defaults** — the default permissions and denials for the contact's role (CFO, board member, direct report, advisor, etc.).
+3. **Channel trust gate** — even if role and overrides permit an action, the channel must be trusted enough. Financial and data actions require a high-trust channel.
+
+The outcome is one of: `Allowed`, `Denied`, `Blocked by channel trust`, or `Needs CEO decision`.
+
+```
+Verified contact requests an action
+         │
+         ▼
+1. Check per-contact overrides
+   → Explicit grant? → Allow
+   → Explicit denial? → Deny
+   → No override? → continue
+         │
+         ▼
+2. Check role defaults
+   → In default_permissions? → Allow
+   → In default_deny? → Deny
+   → Not listed? → Escalate to CEO
+         │
+         ▼
+3. Check channel trust gate
+   → Channel trust meets action requirement? → Allow
+   → Channel trust too low? → Escalate to CEO
+```
+
+<Warning>
+  Authorization is deterministic. The coordinator cannot override the permission system, even if a request seems reasonable. If the system says "Denied," the action is denied — Curia declines politely and, if appropriate, lets the sender know they can reach out through a more secure channel.
+</Warning>
+
+## Self-claimed identities
+
+If someone messages on a new channel and claims to be an existing contact ("Hi, it's Jenna"), that identity is tagged `self_claimed` and treated as unverified until you confirm it. Curia never auto-promotes self-claimed identities to verified status. An unverified identity is gated the same as an unknown sender for any consequential action.
+
+## Contact statuses at a glance
+
+| Status | Who | Permissions |
+|---|---|---|
+| **Provisional** | New contacts — not yet confirmed by you | None. Curia acknowledges but takes no action. |
+| **Confirmed** | Contacts you've verified or that arrived from authoritative sources (CRM, calendar) | Role defaults + any per-contact overrides |
+| **Blocked** | Contacts you've blocked | None. Messages are dropped without response. |

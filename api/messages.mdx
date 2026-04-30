@@ -1,0 +1,161 @@
+---
+title: "POST /api/messages — send a message to your agent"
+description: "Send a message to the Coordinator agent and receive a synchronous response. Supports conversation threading and returns the agent reply within 120 seconds."
+---
+
+`POST /api/messages` is the primary way to interact with Curia programmatically. You send a message, Curia routes it to the Coordinator agent, and the response comes back in the same HTTP reply — no streaming required. If you want to watch the agent's progress in real time (for example, to see which tools it is calling), use [GET /api/messages/stream](/api/stream) alongside this endpoint.
+
+## Request
+
+```
+POST /api/messages
+```
+
+The request body must be JSON. Set `Content-Type: application/json` on every call.
+
+### Request body
+
+<ParamField body="content" type="string" required>
+  The message text to send to the Coordinator. Must be a non-empty string. The body limit for the entire request is 64 KiB; messages approaching that size will be rejected with `413`.
+</ParamField>
+
+<ParamField body="conversation_id" type="string">
+  An identifier for the conversation thread. Pass the same value across multiple requests to continue an existing conversation — the agent uses this to retrieve prior context from memory. If you omit this field, Curia generates a new ID (prefixed `http-`) and returns it in the response. Save it if you want to continue the thread later.
+</ParamField>
+
+<ParamField body="sender_id" type="string" default="http-user">
+  An identifier for the sender. Defaults to `http-user` if not provided. Use this to distinguish between different callers in your logs or when building multi-user integrations.
+</ParamField>
+
+### Example request
+
+```bash
+curl -X POST http://localhost:3000/api/messages \
+  -H "Authorization: Bearer your-token-here" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "What meetings do I have tomorrow?"}'
+```
+
+To continue an existing conversation, include the `conversation_id` from a previous response:
+
+```bash
+curl -X POST http://localhost:3000/api/messages \
+  -H "Authorization: Bearer your-token-here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Can you move the 10am one to 2pm?",
+    "conversation_id": "http-abc123..."
+  }'
+```
+
+## Response
+
+A successful response has HTTP status `200` and a JSON body.
+
+### Response fields
+
+<ResponseField name="conversation_id" type="string" required>
+  The conversation thread ID. If you provided one in the request, this echoes it back. If you did not, this is the newly generated ID — save it to continue the thread in future requests.
+</ResponseField>
+
+<ResponseField name="content" type="string" required>
+  The agent's reply as plain text.
+</ResponseField>
+
+<ResponseField name="agent_id" type="string" required>
+  The identifier of the agent that handled the request. Currently always `"coordinator"`.
+</ResponseField>
+
+### Example response
+
+```json
+{
+  "conversation_id": "http-abc123...",
+  "content": "You have two meetings tomorrow: a 10am product sync and a 3pm investor call.",
+  "agent_id": "coordinator"
+}
+```
+
+## Conversation threading
+
+Each `conversation_id` represents a persistent thread. The agent retrieves relevant memory from that thread when formulating its reply, so passing the same ID lets you have a multi-turn conversation without repeating context.
+
+<Steps>
+  <Step title="Start a new conversation">
+    Omit `conversation_id`. Curia generates one and returns it in the response.
+
+    ```bash
+    curl -X POST http://localhost:3000/api/messages \
+      -H "Authorization: Bearer your-token-here" \
+      -H "Content-Type: application/json" \
+      -d '{"content": "Summarize my emails from this morning."}'
+    ```
+  </Step>
+  <Step title="Save the conversation ID">
+    Extract `conversation_id` from the response and store it in your client.
+
+    ```json
+    { "conversation_id": "http-f47ac10b-58cc-4372-a567-0e02b2c3d479", "content": "...", "agent_id": "coordinator" }
+    ```
+  </Step>
+  <Step title="Continue the thread">
+    Pass the saved `conversation_id` on your next request.
+
+    ```bash
+    curl -X POST http://localhost:3000/api/messages \
+      -H "Authorization: Bearer your-token-here" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "content": "Which of those needs a reply today?",
+        "conversation_id": "http-f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      }'
+    ```
+  </Step>
+</Steps>
+
+## Error responses
+
+<AccordionGroup>
+  <Accordion title="400 — missing or empty content">
+    The `content` field was absent or contained only whitespace.
+
+    ```json
+    { "error": "Missing required field: content (non-empty string)" }
+    ```
+  </Accordion>
+  <Accordion title="401 — unauthorized">
+    The `Authorization` header was missing or the Bearer token did not match.
+
+    ```json
+    { "error": "Unauthorized — provide a valid Bearer token" }
+    ```
+  </Accordion>
+  <Accordion title="413 — message too large">
+    The request body exceeded the 64 KiB limit. Shorten your message.
+
+    ```json
+    { "error": "request body is too large" }
+    ```
+  </Accordion>
+  <Accordion title="429 — rate limited">
+    You have exceeded the 200 requests per minute global limit.
+
+    ```json
+    { "error": "Rate limit exceeded, retry in 1 minute" }
+    ```
+  </Accordion>
+  <Accordion title="504 — timeout">
+    The agent did not produce a response within 120 seconds. This can happen if the agent is waiting for a slow external tool. Retry your request or break the task into smaller steps.
+
+    ```json
+    { "error": "Response timeout" }
+    ```
+  </Accordion>
+  <Accordion title="500 — internal error">
+    An unexpected error occurred while publishing your message to the internal bus. Check your Curia server logs for details.
+
+    ```json
+    { "error": "A description of what went wrong." }
+    ```
+  </Accordion>
+</AccordionGroup>

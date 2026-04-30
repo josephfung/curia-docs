@@ -1,0 +1,127 @@
+---
+title: "Autonomy engine: tuning Curia's independence level"
+description: "One number from 0 to 100 controls how independently Curia acts, across all channels and skills. Say the number and it takes effect on the very next action."
+---
+
+Curia's autonomy engine gives you a single dial to control how independently your AI team operates. A score from 0 to 100 determines whether Curia acts on its own, asks before acting, drafts without sending, or sticks to pure advice. The score applies across all agents, channels, and skills — one setting, consistent behavior everywhere. You can read it or change it at any time with a plain-English instruction.
+
+## The five autonomy bands
+
+The score maps to one of five named bands. Each band has a precise behavioral description that is injected into the Coordinator's system prompt on every task, so Curia self-governs in real time — no restart required.
+
+| Band | Score range | Behavior |
+|---|---|---|
+| **Full** | 90–100 | Acts independently. No confirmation needed for standard operations. Flags only genuinely novel, irreversible, or high-stakes actions where the cost of pausing is justified. |
+| **Spot-check** | 80–89 | Proceeds on routine tasks. Notes consequential actions — sending email, creating commitments — in its response so you maintain visibility without being asked. |
+| **Approval Required** | 70–79 | Presents a plan and asks for explicit confirmation before any consequential action. Routine reporting, summarization, and information retrieval proceed without approval. |
+| **Draft Only** | 60–69 | Prepares drafts, plans, and analysis but does not send, publish, schedule, or act without an explicit go-ahead. Surfaces work for your review; execution requires a direct instruction. |
+| **Restricted** | < 60 | Advisory only. Presents options and analysis. Takes no independent action whatsoever. Every step with an external effect requires an explicit instruction from you. |
+
+<Note>
+Curia defaults to **75 (Approval Required)** on first deployment. This is a conservative starting point — Curia confirms before taking consequential actions until you decide to extend more independence.
+</Note>
+
+## How action_risk connects to autonomy
+
+Every skill declares an `action_risk` level in its manifest. This field establishes the minimum autonomy score at which that skill can be invoked without explicit confirmation.
+
+| action_risk value | Minimum score | Skill examples |
+|---|---|---|
+| `none` | 0 | Web search, reading email, summarizing content |
+| `low` | 60 | Writing to memory, updating contacts |
+| `medium` | 70 | Sending email, sending Signal messages |
+| `high` | 80 | Creating calendar events, making commitments on your behalf |
+| `critical` | 90 | Financial actions, bulk deletions, irreversible operations |
+
+At the current Phase 1 implementation, the autonomy score governs Curia's behavior through prompt injection — the behavioral description for the active band is included in the system prompt on every task. Phase 2 will add hard execution gates that block skill invocations when the live score is below the skill's declared floor.
+
+<Warning>
+The `action_risk` field is required on all skill manifests. Curia will not start if any skill omits it.
+</Warning>
+
+## Checking your current score
+
+You can ask Curia about its autonomy score from any channel using plain language:
+
+<Tip>
+Ask Curia directly: **"What is your current autonomy score?"**
+
+Curia will report its score, the current band name, what that means in practice, and the last few score changes with timestamps.
+</Tip>
+
+Example response:
+
+```
+Autonomy score: 75 — Approval Required
+
+At this level, I'll confirm before taking consequential actions like
+sending email or creating commitments, but can proceed independently
+on research and summarization.
+
+Recent changes:
+  2026-04-03  75 → 75  (approval-required)  "starting point"  — ceo
+```
+
+## Changing your score
+
+<Tip>
+Tell Curia: **"Set your autonomy score to 85"** from the CLI, Signal, or any channel you trust.
+
+You can add an optional reason: "Set your autonomy score to 85 — I want you to proceed on routine emails without asking."
+</Tip>
+
+Score changes take effect immediately on the next task — no restart required. The Coordinator loads the current score from Postgres at the start of every task, so a change you make mid-session applies on the very next action.
+
+<Warning>
+Only the CEO can change the autonomy score. The `set-autonomy` skill requires a CEO-level caller context. Requests from external email senders or unverified contacts will be rejected.
+</Warning>
+
+## Score history
+
+Every change to the autonomy score is written to an append-only history record in Postgres. No entry is ever updated or deleted. The history records:
+
+- The new score and band
+- The previous score
+- Who made the change (`ceo` or, in a future release, `system` for automatic adjustments)
+- An optional reason you provided
+- The timestamp
+
+This gives you a complete audit trail of how Curia's independence has evolved over time, and why.
+
+## How to calibrate your score
+
+A practical approach for new deployments:
+
+<Steps>
+  <Step title="Start at 75 (the default)">
+    Approval Required means Curia asks before sending anything or making commitments. This gives you full visibility into what it would do without any risk of surprises.
+  </Step>
+  <Step title="Watch it work for a week">
+    Pay attention to which confirmations feel unnecessary. If Curia is asking about things you always say yes to, your score is too low for your comfort level.
+  </Step>
+  <Step title="Move to 80–85 when you're comfortable">
+    Spot-check lets Curia proceed on routine tasks while still noting consequential actions in its responses. You stay informed without being interrupted.
+  </Step>
+  <Step title="Reserve 90+ for high-trust workflows">
+    Full autonomy is appropriate when you have established that Curia handles a class of tasks reliably and you don't need to review each one. Consider using it for specific recurring tasks before applying it globally.
+  </Step>
+</Steps>
+
+## What's coming
+
+Phase 3 of the autonomy engine will implement automatic score adjustment based on performance metrics:
+
+- **Competence** (45%) — task success rate, accuracy of information retrieved, follow-through on commitments
+- **Commitment** (35%) — reliability on recurring tasks, consistency with stated preferences
+- **Compatibility** (20%) — alignment with your communication style and decision patterns
+
+Automatic adjustments require a minimum of 30 actions before any change, apply time-decay weighting so recent behavior matters more, and cannot increase the score if factual errors or overconfidence penalties are active. All automatic changes are written to the audit record with the reason noted, so you can see exactly what changed and why.
+
+<CardGroup cols={2}>
+  <Card title="Skills and action_risk" icon="puzzle-piece" href="/concepts/skills">
+    See how skill risk levels are declared in the manifest.
+  </Card>
+  <Card title="Security overview" icon="shield" href="/security/overview">
+    Understand the broader governance and audit framework Curia operates within.
+  </Card>
+</CardGroup>

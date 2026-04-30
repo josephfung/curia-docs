@@ -1,0 +1,299 @@
+---
+title: "Set up Curia from minimum to full configuration"
+description: "Clone, configure, and start your Curia instance in three tiers — minimum setup gets the CLI working; full setup adds email, search, and Signal messaging."
+---
+
+Getting Curia running takes around 15 minutes for the minimum setup. The guide is organized into three tiers: a minimum configuration that gets the CLI and web app working, a recommended tier that adds email and semantic search, and a full tier that adds web research and Signal messaging. Complete each tier before moving to the next.
+
+| Tier | What you add | What you get |
+|---|---|---|
+| **1 — Minimum** | Anthropic + Postgres | Agents running, CLI and web app working |
+| **2 — Recommended** | Nylas + OpenAI | Email channel active, semantic search and entity memory working |
+| **3 — Full** | Tavily + Signal | Web research skill, encrypted Signal messaging |
+
+## Prerequisites
+
+Before you start, install the following:
+
+- **Node.js 22 or later** — verify with `node --version`
+- **Docker and Docker Compose** — Postgres runs in Docker; install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI
+- **pnpm** — install with `npm install -g pnpm`
+
+<Tabs>
+  <Tab title="Tier 1 — Minimum">
+
+Tier 1 gives you a fully running Curia instance accessible via the CLI and web app. Agents are live and responding; email and embeddings are not yet connected.
+
+<Steps>
+  <Step title="Clone and install">
+    Clone the repository and install dependencies:
+
+    ```bash
+    git clone https://github.com/josephfung/curia.git
+    cd curia
+    pnpm install
+    ```
+  </Step>
+
+  <Step title="Configure your environment">
+    Copy the example environment file:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Open `.env` and fill in the values below. Leave everything else at its default for now.
+
+    **Postgres** — credentials for the Docker Compose container. You can use any values you like; they just need to match each other:
+
+    ```env
+    DB_USER=curia
+    DB_PASSWORD=curia_dev
+    DATABASE_URL=postgres://curia:curia_dev@localhost:5432/curia
+    ```
+
+    **Anthropic** — your API key from [console.anthropic.com](https://console.anthropic.com). This powers all agents:
+
+    ```env
+    ANTHROPIC_API_KEY=sk-ant-...
+    ```
+
+    **HTTP API token** — a secret for authenticating API requests. Generate any random string:
+
+    ```env
+    API_TOKEN=your-secret-token-here
+    ```
+
+    **Web app** — required to access the knowledge graph browser at `http://localhost:3000`. Generate any long random string:
+
+    ```env
+    WEB_APP_BOOTSTRAP_SECRET=replace-with-a-long-random-secret
+    ```
+
+    **Your email and timezone** — your primary email prevents your first message from being held as an unknown sender. The IANA timezone is used to resolve relative dates ("next Friday") in agent prompts:
+
+    ```env
+    CEO_PRIMARY_EMAIL=you@yourdomain.com
+    TIMEZONE=America/Toronto
+    ```
+  </Step>
+
+  <Step title="Start Postgres">
+    Start the Postgres container with pgvector:
+
+    ```bash
+    docker compose up -d
+    ```
+
+    The first run pulls the image; subsequent starts are fast. Confirm the container is healthy:
+
+    ```bash
+    docker compose ps
+    ```
+  </Step>
+
+  <Step title="Start Curia">
+    ```bash
+    pnpm local
+    ```
+
+    On first run, Curia applies all database migrations and then starts the full stack. You should see log output as the bus, agents, and channels initialize.
+  </Step>
+
+  <Step title="Verify">
+    **CLI:** In the terminal where Curia is running, type a message at the prompt to interact with it directly.
+
+    **Web app:** Open `http://localhost:3000` in your browser. Enter your `WEB_APP_BOOTSTRAP_SECRET` when prompted. Once authenticated, the knowledge graph browser is available.
+
+    <Note>
+      Checkpoint: Curia is running. Agents are live, the CLI is working, and the web app is accessible. Stop here or continue to Tier 2 to add the email channel and semantic search.
+    </Note>
+  </Step>
+</Steps>
+
+  </Tab>
+  <Tab title="Tier 2 — Recommended">
+
+Tier 2 adds the email channel and knowledge graph embeddings — a realistic environment close to how Curia is actually used in production. Complete Tier 1 before continuing.
+
+### Nylas (email)
+
+Curia uses [Nylas](https://nylas.com) as its email layer — a unified API that handles IMAP and SMTP complexity and provides a consistent interface across Gmail, Outlook, and other providers.
+
+<Steps>
+  <Step title="Create a Nylas account">
+    Sign up at [app.nylas.com](https://app.nylas.com). The free tier is sufficient for development.
+  </Step>
+
+  <Step title="Create an application">
+    In the Nylas dashboard, create a new application and choose **Email** as the product. Once created, copy your **API key** — this is your `NYLAS_API_KEY`.
+  </Step>
+
+  <Step title="Connect an email account">
+    In your application, go to **Grants** and add a new grant. This connects an email account (Gmail, Outlook, and others) to your Nylas application via OAuth. Use the address you want Curia to read and send from.
+
+    After completing the OAuth flow, copy the **Grant ID** that appears in your dashboard — this is your `NYLAS_GRANT_ID`.
+
+    <Warning>
+      Use a dedicated email account rather than your primary inbox for development. Curia reads and processes all incoming messages.
+    </Warning>
+  </Step>
+
+  <Step title="Set the Nylas environment variables">
+    Add these three variables to your `.env`. All three must be present for the email channel to activate:
+
+    ```env
+    NYLAS_API_KEY=nyk_v0_...
+    NYLAS_GRANT_ID=<grant-id-from-dashboard>
+    NYLAS_SELF_EMAIL=curia@yourdomain.com
+    ```
+
+    `NYLAS_SELF_EMAIL` is the address Curia reads and sends from — it filters self-sent messages and signs outbound emails.
+  </Step>
+
+  <Step title="Restart Curia">
+    ```bash
+    pnpm local
+    ```
+
+    The email channel activates automatically when all three Nylas variables are present.
+
+    <Note>
+      Checkpoint: The email channel is active and Curia is reading your connected inbox. Continue to set up embeddings, or stop here if you don't need semantic search.
+    </Note>
+  </Step>
+</Steps>
+
+### OpenAI (embeddings)
+
+OpenAI's `text-embedding-3-small` model powers entity memory and semantic search in the knowledge graph. Without it, knowledge graph lookups are exact-match only.
+
+Get an API key from [platform.openai.com](https://platform.openai.com) and add it to `.env`:
+
+```env
+OPENAI_API_KEY=sk-...
+```
+
+Restart Curia (`pnpm local`) to pick up the change.
+
+<Note>
+  Checkpoint: Email channel active, knowledge graph fully functional with semantic search. This is the recommended baseline for most deployments.
+</Note>
+
+  </Tab>
+  <Tab title="Tier 3 — Full">
+
+Tier 3 adds web research capability and Signal messaging. Complete Tier 2 before continuing.
+
+### Tavily (web search)
+
+Tavily powers the `web-search` skill, which lets agents research topics and look up current information during tasks.
+
+<Steps>
+  <Step title="Get a Tavily API key">
+    Sign up at [tavily.com](https://tavily.com) and copy your API key from the dashboard.
+  </Step>
+
+  <Step title="Set the environment variable">
+    Add the key to your `.env`:
+
+    ```env
+    TAVILY_API_KEY=tvly-...
+    ```
+
+    No restart required if Curia is already running — the skill picks up the key on next use.
+  </Step>
+</Steps>
+
+### Signal
+
+Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Docker Compose manages the socket path automatically — the only thing you need to provide is your phone number.
+
+<Steps>
+  <Step title="Bootstrap signal-cli">
+    Signal requires registering a phone number with signal-cli and seeding the `signal-data` Docker volume with the resulting credentials. Refer to your deployment documentation for the bootstrap procedure.
+  </Step>
+
+  <Step title="Set the environment variable">
+    Set your E.164-formatted phone number — the number you registered via `signal-cli register` and `signal-cli verify`:
+
+    ```env
+    SIGNAL_PHONE_NUMBER=+12223334444
+    ```
+
+    Do not set `SIGNAL_SOCKET_PATH` — the deployment layer manages this automatically.
+  </Step>
+
+  <Step title="Restart Curia">
+    ```bash
+    pnpm local
+    ```
+
+    The Signal channel activates when `SIGNAL_PHONE_NUMBER` is set and the `signal-data` volume is populated.
+
+    <Note>
+      Checkpoint: All three tiers complete. Curia is running with email, web search, and Signal messaging.
+    </Note>
+  </Step>
+</Steps>
+
+  </Tab>
+</Tabs>
+
+## First-time setup
+
+Once Curia is running, open the web app at `http://localhost:3000` and complete the setup wizard. It walks you through naming your instance, setting its persona and voice, and configuring the CEO profile it operates on behalf of. This takes a few minutes and makes every subsequent interaction significantly more useful.
+
+After setup, start a conversation from the CLI:
+
+```bash
+pnpm local
+```
+
+Type a message at the prompt. You're talking to Curia.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="macOS: HTTPS requests fail with 'unable to get local issuer certificate'">
+    Node installed via nvm or fnm bundles its own CA store and doesn't trust macOS system certificates. Export your system certs and point Node at them:
+
+    ```bash
+    security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain > ~/.config/curia/macos-ca-certs.pem
+    ```
+
+    Then uncomment this line in `.env`:
+
+    ```env
+    NODE_EXTRA_CA_CERTS=/Users/yourname/.config/curia/macos-ca-certs.pem
+    ```
+  </Accordion>
+
+  <Accordion title="Postgres connection refused">
+    Confirm the Docker container is running:
+
+    ```bash
+    docker compose ps
+    ```
+
+    If the container is healthy but Curia can't connect, verify that the credentials in `.env` match the values in `docker-compose.yml`.
+  </Accordion>
+
+  <Accordion title="Email channel not activating">
+    All three Nylas variables must be present: `NYLAS_API_KEY`, `NYLAS_GRANT_ID`, and `NYLAS_SELF_EMAIL`. If any are missing, the channel disables itself at startup. Check the startup logs for one of these messages:
+
+    - `NYLAS_API_KEY/NYLAS_GRANT_ID not set — email channel disabled` — the API key or grant ID is missing
+    - `NYLAS_SELF_EMAIL not set — email adapter disabled` — the first two variables are set but `NYLAS_SELF_EMAIL` is missing
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Configure your instance" icon="sliders" href="/configuration">
+    Set up multiple email accounts, tune the autonomy engine, and customize security rules.
+  </Card>
+  <Card title="Core concepts" icon="lightbulb" href="/concepts/agents">
+    Understand how agents, skills, memory, and channels fit together.
+  </Card>
+</CardGroup>

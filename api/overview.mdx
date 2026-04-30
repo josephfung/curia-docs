@@ -1,0 +1,99 @@
+---
+title: "Curia HTTP API — overview, auth, and all endpoints"
+description: "The Curia HTTP API is a REST and SSE interface for programmatic access. Authenticate with a Bearer token; the base URL defaults to http://localhost:3000."
+---
+
+The Curia HTTP API gives you programmatic access to your assistant from web dashboards, mobile apps, and any integration that speaks HTTP. It exposes a small set of REST endpoints and a Server-Sent Events stream so you can send messages and watch agent activity in real time — all secured with a Bearer token you configure yourself.
+
+## Base URL
+
+The API listens on port `3000` by default. You can change this by setting `HTTP_PORT` in your `.env` file.
+
+```
+http://localhost:3000
+```
+
+For production deployments behind a reverse proxy, replace `localhost:3000` with your domain or internal service address.
+
+## Authentication
+
+Set `API_TOKEN` in your `.env` file to enable authentication. Every request (except `GET /api/health`) must include the token in the `Authorization` header:
+
+```
+Authorization: Bearer <your-token>
+```
+
+If `API_TOKEN` is not set, authentication is disabled — useful for local development, but not recommended for any network-accessible deployment.
+
+<Note>
+  The HTTP channel carries **medium trust**. It is suited for information queries, scheduling requests, and read-only operations. Actions that require higher trust — such as financial transactions or irreversible operations — must originate from the Signal or CLI channel. If you send a medium-trust request that triggers a high-trust action, Curia will ask you to confirm via a trusted channel before proceeding.
+</Note>
+
+### Example authenticated request
+
+```bash
+curl http://localhost:3000/api/messages \
+  -X POST \
+  -H "Authorization: Bearer your-token-here" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "What is on my calendar today?"}'
+```
+
+If the token is missing or incorrect, the API returns:
+
+```json
+{ "error": "Unauthorized — provide a valid Bearer token" }
+```
+
+## Available endpoints
+
+<CardGroup cols={2}>
+  <Card title="POST /api/messages" icon="paper-plane" href="/api/messages">
+    Send a message to the Coordinator agent and receive a synchronous response. Supports conversation threading via `conversation_id`.
+  </Card>
+  <Card title="GET /api/messages/stream" icon="signal" href="/api/stream">
+    Open a Server-Sent Events connection to receive agent responses, tool invocations, and tool results in real time.
+  </Card>
+  <Card title="GET /api/health" icon="heart-pulse" href="/api/health">
+    Returns the health status of the Curia instance. No authentication required. Use this for uptime monitors and load balancer probes.
+  </Card>
+  <Card title="GET /api/agents/status" icon="robot">
+    Returns a snapshot of all registered agents and their current state. Requires Bearer token authentication.
+  </Card>
+</CardGroup>
+
+### Dashboard-only endpoints
+
+The following endpoints are used by the built-in web dashboard. They authenticate via session cookie (set by the `/auth` exchange) rather than a Bearer token, and require `WEB_APP_BOOTSTRAP_SECRET` to be configured.
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/jobs` | List scheduled jobs, with optional `status` and `agent_id` filters |
+| `GET /api/jobs/:id` | Get a single scheduled job by ID |
+| `POST /api/jobs` | Create a new scheduled job |
+| `PATCH /api/jobs/:id` | Update or unsuspend a scheduled job |
+| `DELETE /api/jobs/:id` | Cancel (soft-delete) a scheduled job |
+| `GET /api/kg/*` | Knowledge graph browser — nodes, edges, search, and chat |
+
+## Rate limiting
+
+The API enforces a global limit of **200 requests per minute**. Stricter per-route limits apply to authentication endpoints to prevent brute-force attacks. When you exceed the limit, the API returns `429 Too Many Requests`.
+
+## Error responses
+
+All errors follow the same JSON format:
+
+```json
+{ "error": "A human-readable description of the problem." }
+```
+
+| Status | Meaning |
+|---|---|
+| `200` | Success |
+| `400` | Bad request — a required field is missing or invalid |
+| `401` | Unauthorized — token missing or incorrect |
+| `413` | Payload too large — message body exceeds the 64 KiB limit |
+| `429` | Rate limited — slow down and retry |
+| `500` | Internal server error — check your Curia logs |
+| `503` | Service degraded — typically a database connectivity issue |
+| `504` | Gateway timeout — the agent did not respond within 120 seconds |

@@ -1,0 +1,90 @@
+---
+title: "Security and governance in Curia — six layers explained"
+description: "Curia's security model enforces hard architectural boundaries, an append-only audit trail, and exec-grade governance by design — not by policy."
+---
+
+Curia was built for executives who cannot afford to run AI agents on trust alone. Rather than relying on configuration or policies that can be bypassed, Curia enforces security at the architectural level — each layer of the system is physically prevented from doing things it shouldn't, not merely discouraged. The result is an AI assistant your board can scrutinize, not just your IT team.
+
+## How Curia compares to a typical agent framework
+
+| | Typical agent framework | Curia |
+|---|---|---|
+| **Security model** | Trust the agent | Hard-enforced layer separation — channel adapters cannot invoke tools |
+| **Audit trail** | Console logs | Append-only Postgres with causal tracing across every event |
+| **Memory** | Conversation history (lost on restart) | Knowledge graph with temporal awareness — survives restarts |
+| **Error handling** | Retry and hope | Error budgets, state continuity, pattern detection |
+| **Agent communication** | Agents work in isolation | Structured, auditable, threaded inter-agent discussions |
+| **Multi-channel** | Single chat interface | Email, Signal, CLI, HTTP API — same security model everywhere |
+
+## Security pillars
+
+<CardGroup cols={2}>
+  <Card title="Hard layer separation" icon="shield-halved">
+    Every component declares its layer at startup. The message bus enforces which event types each layer can publish or subscribe to — at registration time, not at runtime. A compromised email adapter can flood inbound messages, but it cannot invoke a skill, write to memory, or execute code. The boundary is architectural: attempting to publish an unauthorized event throws an error, not a warning.
+  </Card>
+  <Card title="Append-only audit trail" icon="scroll">
+    Every event that flows through the bus is written to Postgres **before** it is delivered to any subscriber. No UPDATE, no DELETE — ever. If the process crashes mid-delivery, the event is still in the log. Every event carries a `parent_event_id` so you can trace the full causal chain from any action back to the message that triggered it.
+  </Card>
+  <Card title="Secrets never reach the LLM" icon="key">
+    Agents never see passwords, API keys, or tokens. Skills access secrets through a scoped `ctx.secret()` interface, validated against each skill's declared manifest. The LLM sees "email-parser connected to inbox" — never the IMAP password. Every secret access is audit-logged: which secret, which skill, which agent, which task.
+  </Card>
+  <Card title="Tool output sanitization" icon="filter">
+    All skill results are sanitized before being fed back into LLM context. XML and HTML tags are stripped, outputs are truncated to a configurable limit, secret-like patterns are redacted, and error messages are wrapped in structured tags to prevent prompt injection. Nothing from the outside world reaches the LLM unfiltered.
+  </Card>
+  <Card title="Intent drift detection" icon="crosshairs">
+    Long-running tasks store an intent anchor — the original task description — at creation time. On each execution burst, the system compares current progress against that anchor. If the agent has drifted from its goal, the task is **paused**, not merely flagged. In unattended mode, drift detection blocks execution; it does not advise.
+  </Card>
+  <Card title="Error budgets" icon="gauge">
+    Every agent task runs under hard caps: maximum LLM round-trips, maximum dollar spend, and maximum consecutive errors. When a budget is exceeded, the task stops. No infinite loops, no surprise bills, no runaway agents. Budgets are defined per-agent in YAML and cannot be overridden at runtime.
+  </Card>
+  <Card title="Prompt injection defense" icon="bug-slash">
+    Inbound message content is treated as data, not instructions. The dispatch layer strips instruction-like patterns and tags high-risk messages with a `risk_score` before the LLM sees them. The coordinator's system prompt explicitly instructs it not to follow instructions embedded in user messages. Even if an injection succeeds at the coordinator level, architectural containment limits what a tricked agent can actually do.
+  </Card>
+  <Card title="Outbound safety" icon="paper-plane">
+    All outbound messages — regardless of which skill or agent produced them — pass through a single outbound gateway before being sent. A deterministic content filter checks for system prompt fragments, internal field names, secret patterns, and contact data leakage. Display names in inbound emails are validated against the verified sender address to prevent spoofing.
+  </Card>
+</CardGroup>
+
+## Layer boundaries at a glance
+
+The message bus enforces these boundaries at registration time. No layer can escape its permissions — not through configuration, not at runtime.
+
+| Layer | What it can do |
+|---|---|
+| **Channel** | Receive inbound messages from external channels; deliver outbound messages back to those channels. Cannot invoke skills or read memory. |
+| **Dispatch** | Route messages to agents; send replies back to channels. Cannot invoke skills directly. |
+| **Agent** | Call skills, produce responses, coordinate with other agents. Cannot directly access channels or external APIs. |
+| **Execution** | Receive skill invocations and return results. Cannot initiate messages or access channels. |
+| **System** | Full access across all layers — reserved for the audit logger, scheduler, and memory engine only. |
+
+<Note>
+  No user-defined agent or skill ever runs at the system layer. That layer is reserved exclusively for Curia's trusted infrastructure components.
+</Note>
+
+## What this means in practice
+
+If an attacker sends a malicious email crafted to trick Curia into exfiltrating data, the attack must survive all of the following:
+
+1. **Display name sanitization** — the email's From header is checked against the verified sender address
+  2. **Injection pattern detection** — the dispatch layer scans for instruction-like patterns in the message body and adjusts the trust score accordingly
+3. **Trust score gating** — an email from an unknown sender scores around 0.12, well below the 0.8 threshold required for data export actions
+4. **Coordinator's prompt injection defense** — explicit directives instruct the coordinator to treat message content as data, not instructions
+5. **Architectural containment** — even a tricked coordinator can only delegate to specialist agents and invoke skills; it cannot directly access the filesystem, database, or external APIs
+6. **Skill permission validation** — the execution layer validates that the invoked skill has declared the permissions needed for the requested action
+7. **Outbound content filter** — any outbound message is checked for leaked system context or internal data before being sent
+
+Each layer independently reduces the probability of a successful attack. No single layer is the last line of defense.
+
+## Related pages
+
+<CardGroup cols={3}>
+  <Card title="Audit log" icon="scroll" href="/security/audit-log">
+    How the append-only audit trail works and how to use it for compliance review.
+  </Card>
+  <Card title="Contact trust" icon="user-shield" href="/security/contacts-trust">
+    How Curia verifies senders and controls what they can request.
+  </Card>
+  <Card title="Autonomy engine" icon="gauge" href="/concepts/autonomy">
+    How the autonomy score controls how independently Curia acts.
+  </Card>
+</CardGroup>

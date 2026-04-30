@@ -1,0 +1,95 @@
+{
+  "projectType": "saas",
+  "projectName": "Curia",
+  "projectDescription": "A governance-first multi-agent AI executive assistant that runs on your own server, managing email, calendar, contacts, research, and scheduling — with a full audit trail and configurable autonomy.",
+  "theme": "luma",
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "configuration"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/agents",
+              "concepts/skills",
+              "concepts/memory",
+              "concepts/channels",
+              "concepts/autonomy"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/email-setup",
+              "guides/signal-setup",
+              "guides/adding-agents",
+              "guides/adding-skills",
+              "guides/scheduling",
+              "guides/knowledge-graph"
+            ]
+          },
+          {
+            "group": "Security & Governance",
+            "pages": [
+              "security/overview",
+              "security/audit-log",
+              "security/contacts-trust"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "HTTP API",
+            "pages": [
+              "api/overview",
+              "api/messages",
+              "api/stream",
+              "api/health"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Multi-agent AI executive assistant with a unified coordinator persona",
+    "Governance-first architecture with hard layer separation and append-only audit trail",
+    "Persistent knowledge graph with temporal awareness and semantic search",
+    "Multi-channel support: Email (via Nylas), Signal, CLI, and HTTP API",
+    "Configurable autonomy engine with five behavioral bands (0–100 score)",
+    "Scheduled and long-running tasks with intent drift detection",
+    "Secrets never reach the LLM — scoped secret access with full audit logging",
+    "MCP (Model Context Protocol) skill integration for external tool connectivity",
+    "Single-tenant, self-hosted — all data stays on your own server",
+    "Multi-provider LLM support: Anthropic, OpenAI, Ollama with automatic fallback"
+  ],
+  "publicApiSurface": [
+    "POST /api/messages — send a message and receive an agent response",
+    "GET /api/messages/stream — SSE stream for real-time agent events",
+    "GET /api/health — health check endpoint",
+    "GET /api/kg/* — knowledge graph browser endpoints",
+    "agents/*.yaml — agent definition schema (YAML)",
+    "skills/*/skill.json — skill manifest schema",
+    "config/local.yaml — deployment configuration overrides",
+    "SkillHandler interface — TypeScript interface for custom skill implementation",
+    "SkillContext interface — injected context available to skill handlers",
+    "ChannelAdapter interface — TypeScript interface for custom channel adapters",
+    "Autonomy score: get-autonomy / set-autonomy skills (CEO-controlled, 0–100)",
+    "scheduler-create / scheduler-list / scheduler-cancel skills (cron and one-shot jobs)"
+  ]
+}

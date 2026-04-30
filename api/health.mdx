@@ -1,0 +1,106 @@
+---
+title: "GET /api/health — instance health check endpoint"
+description: "Returns the live status of your Curia instance including database connectivity, registered agents, and loaded skills. No authentication required."
+---
+
+`GET /api/health` tells you whether your Curia instance is running and healthy. It checks database connectivity, reports which agents and skills are loaded, and returns how long the server has been up. Because no authentication is required, you can point any uptime monitor or load balancer health probe directly at this endpoint without managing tokens.
+
+## Request
+
+```
+GET /api/health
+```
+
+No `Authorization` header is needed. The endpoint is intentionally open so monitoring infrastructure can reach it without credentials.
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+## Response
+
+### Response fields
+
+<ResponseField name="status" type="string" required>
+  Overall health of the instance. Either `"ok"` (all systems nominal) or `"degraded"` (at least one subsystem has a problem — typically the database).
+</ResponseField>
+
+<ResponseField name="database" type="string" required>
+  Database connectivity status. Either `"connected"` (a `SELECT 1` probe succeeded) or `"disconnected"` (the probe failed). When this is `"disconnected"`, `status` will be `"degraded"` and the HTTP response code will be `503`.
+</ResponseField>
+
+<ResponseField name="agents" type="string[]" required>
+  The names of all agents registered at startup. Use this to verify that your agent configuration loaded correctly.
+</ResponseField>
+
+<ResponseField name="skills" type="string[]" required>
+  The names of all skills loaded at startup. Use this to confirm that skill manifests were found and parsed successfully.
+</ResponseField>
+
+<ResponseField name="uptime" type="number" required>
+  Seconds since the HTTP server started. This resets to `0` on each restart.
+</ResponseField>
+
+### Healthy response (200)
+
+```json
+{
+  "status": "ok",
+  "database": "connected",
+  "agents": ["coordinator", "researcher"],
+  "skills": ["get-calendar-events", "send-email", "web-search"],
+  "uptime": 3842
+}
+```
+
+### Degraded response (503)
+
+When the database is unreachable, the endpoint returns `503 Service Unavailable`:
+
+```json
+{
+  "status": "degraded",
+  "database": "disconnected",
+  "agents": ["coordinator", "researcher"],
+  "skills": ["get-calendar-events", "send-email", "web-search"],
+  "uptime": 120
+}
+```
+
+<Warning>
+  A `503` response does not mean Curia has crashed. The server is still accepting requests, but agent actions that depend on the database (memory retrieval, knowledge graph queries, scheduled jobs) will fail. Fix your database connection and the endpoint will return `200` again on the next probe.
+</Warning>
+
+## HTTP status codes
+
+| Status | Meaning |
+|---|---|
+| `200` | Instance is healthy — database connected, all systems nominal |
+| `503` | Instance is degraded — database connectivity probe failed |
+
+## Use cases
+
+<CardGroup cols={2}>
+  <Card title="Load balancer health probe" icon="server">
+    Configure your load balancer (AWS ALB, nginx, HAProxy) to probe `GET /api/health` every 10–30 seconds. Route traffic only to instances that return `200`.
+  </Card>
+  <Card title="Uptime monitoring" icon="chart-line">
+    Add the health endpoint to Uptime Robot, Better Uptime, or any HTTP monitor. Set an alert when the status code changes from `200` or when `"status"` is not `"ok"`.
+  </Card>
+  <Card title="Deployment verification" icon="circle-check">
+    After deploying a new version, poll the health endpoint until it returns `200` before switching traffic. A non-`200` response during startup usually means the database migration has not completed yet.
+  </Card>
+  <Card title="Startup readiness check" icon="hourglass">
+    In container orchestration (Kubernetes, ECS), use this endpoint as a readiness probe. Curia is ready to serve traffic once the database reports `"connected"`.
+  </Card>
+</CardGroup>
+
+## Monitoring tips
+
+<Tip>
+  Check the `agents` and `skills` arrays after every deployment. If an agent or skill you expect is missing from the list, the corresponding configuration file likely has a syntax error that prevented it from loading. Fix the config and restart — no code change needed.
+</Tip>
+
+<Info>
+  The `uptime` field counts seconds since the HTTP server process started, not since the last successful request or the last time the database was healthy. Use your process manager or container runtime for absolute uptime tracking.
+</Info>

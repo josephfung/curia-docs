@@ -1,0 +1,199 @@
+---
+title: "Schedule recurring and one-shot tasks in Curia"
+description: "Set up recurring cron jobs in agent YAML, create one-shot reminders via conversation, and understand how long-running tasks survive restarts."
+---
+
+Curia's scheduler lets your agents work while you're not around. You can declare recurring jobs directly in an agent's YAML file, ask Curia to create them conversationally, or create them programmatically via the HTTP API. All jobs are backed by Postgres — they survive restarts and process crashes without losing state.
+
+## Recurring jobs in agent YAML
+
+The simplest way to schedule work is to declare it in an agent's YAML file. Jobs defined here are created at startup and updated automatically if the config changes:
+
+```yaml
+# agents/expense-tracker.yaml
+schedule:
+  - cron: "0 9 * * 1"
+    task: "Generate weekly expense summary and email it to the CEO"
+
+  - cron: "0 */4 * * *"
+    task: "Check inbox for new receipts"
+```
+
+Cron expressions run in Curia's configured timezone (set via `TIMEZONE` in `.env`). If you need a specific job to run in a different timezone, the scheduler-create skill accepts an optional `timezone` parameter.
+
+### Common cron patterns
+
+| Expression | When it fires |
+|---|---|
+| `0 9 * * 1` | Every Monday at 9:00 AM |
+| `0 8 * * 1-5` | Weekdays at 8:00 AM |
+| `0 */4 * * *` | Every 4 hours |
+| `0 9 1 * *` | First day of each month at 9:00 AM |
+| `30 17 * * 5` | Every Friday at 5:30 PM |
+
+## Creating jobs via conversation
+
+You don't need to edit YAML to schedule tasks. Ask Curia in plain language and it creates the job for you:
+
+```
+> Remind me every Friday afternoon to review the week's expense reports.
+```
+
+```
+> Set up a weekly check every Monday morning to scan for any urgent investor emails.
+```
+
+```
+> Run a competitor pricing check the first Monday of every month.
+```
+
+Curia translates your request into a cron expression, creates the job in the scheduler, and confirms the schedule with you. For recurring jobs, it also stores an **intent anchor** — a short description of what the task is meant to accomplish — to prevent the job from drifting from its original purpose over multiple runs.
+
+## One-shot jobs
+
+To schedule something for a specific time rather than a recurring schedule, specify a date and time:
+
+```
+> Remind me tomorrow at 10 AM to send the board deck.
+```
+
+```
+> Follow up with the investor contact on June 15th at 9 AM.
+```
+
+One-shot jobs fire once and are marked complete. They don't carry an intent anchor because there's no multi-run drift risk.
+
+## Managing scheduled jobs
+
+<Tabs>
+  <Tab title="Via conversation">
+    ```
+    > What scheduled jobs are running?
+    > Cancel the weekly expense summary job.
+    > Show me all jobs for the expense-tracker agent.
+    ```
+
+    Curia uses `scheduler-list` and `scheduler-cancel` internally to handle these requests.
+  </Tab>
+  <Tab title="Via HTTP API">
+    ```bash
+    # List all jobs
+    curl -H "Authorization: Bearer $API_TOKEN" \
+      http://localhost:3000/api/jobs
+
+    # Cancel a specific job
+    curl -X DELETE \
+      -H "Authorization: Bearer $API_TOKEN" \
+      http://localhost:3000/api/jobs/<job-id>
+    ```
+  </Tab>
+</Tabs>
+
+## Scheduler skills
+
+Agents can manage jobs programmatically using these built-in skills:
+
+| Skill | What it does |
+|---|---|
+| `scheduler-create` | Create a cron or one-shot job with optional `intent_anchor` |
+| `scheduler-list` | List jobs filtered by status or agent |
+| `scheduler-cancel` | Cancel a job by ID |
+| `scheduler-report` | Write a summary of a completed run for use by the next execution |
+
+The `scheduler-create` skill accepts these inputs:
+
+```typescript
+{
+  task: string;           // What to do when the job fires
+  cron_expr?: string;     // Cron expression for recurring jobs
+  run_at?: string;        // ISO 8601 timestamp for one-shot jobs
+  agent_id?: string;      // Which agent to run the task (default: coordinator)
+  intent_anchor?: string; // Required for recurring jobs to prevent drift
+  timezone?: string;      // IANA timezone override (e.g., "America/Vancouver")
+  error_budget?: {        // Caps for this specific job
+    max_turns?: number;
+    max_cost_usd?: number;
+  };
+}
+```
+
+<Note>
+  Provide `intent_anchor` for every recurring (`cron_expr`) job. Write it as a description of what the job is meant to accomplish — not which tools to call. Good: "Summarize investor email activity from the past week and alert the CEO to anything requiring follow-up." Bad: "Call email-list then filter by sender domain."
+
+  Do not provide `intent_anchor` for one-shot (`run_at`) jobs.
+</Note>
+
+## Long-running tasks
+
+Some tasks take too long to complete in a single LLM session — a multi-day research project, a large inbox triage, a complex financial reconciliation. Curia handles these through burst execution.
+
+When an agent creates a persistent task, Curia:
+
+1. Writes the task to Postgres with the original intent anchor and an initial progress record
+2. Creates a scheduled job that fires the next burst
+3. On each burst: the agent loads its progress from working memory, does a chunk of work, saves updated progress, and schedules the next burst
+4. The process continues until the task is marked complete or the error budget is exhausted
+
+The agent doesn't stay running between bursts. All state lives in Postgres — if Curia restarts mid-task, the next burst picks up exactly where the last one stopped.
+
+## Intent drift detection
+
+For recurring and long-running tasks, Curia monitors whether each execution burst is still aligned with the original intent anchor. After each burst, it compares what the agent is doing against the anchor. If the task has drifted significantly, Curia **pauses the job** and notifies you — it doesn't just log a warning.
+
+This prevents agents from gradually evolving their behavior over multiple runs in ways that no single execution looks suspicious but collectively represent significant deviation.
+
+You can configure drift detection sensitivity in `config/default.yaml`:
+
+```yaml
+intentDrift:
+  enabled: true
+  checkEveryNBursts: 1
+  minConfidenceToPause: high  # high | medium | low
+```
+
+`high` (the default) pauses only on clear, unambiguous deviations. `low` pauses whenever any drift is detected.
+
+## Error budgets on scheduled tasks
+
+The same `max_turns` and `max_cost_usd` limits that apply to interactive tasks apply to scheduled tasks. Each burst gets a fresh budget allocation:
+
+```yaml
+# In agent YAML
+error_budget:
+  max_turns: 20
+  max_cost_usd: 1.00
+```
+
+Or per-job when creating via `scheduler-create`:
+
+```typescript
+scheduler_create({
+  task: "Run competitor analysis",
+  cron_expr: "0 9 * * 1",
+  intent_anchor: "Monitor competitor pricing and product changes weekly.",
+  error_budget: {
+    max_turns: 30,
+    max_cost_usd: 2.00
+  }
+})
+```
+
+When a budget is exceeded, the burst stops cleanly. The job itself remains scheduled — the next burst gets a fresh budget.
+
+## Job status and observability
+
+The health endpoint reports the number of active and suspended jobs:
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+Jobs that fail 3 consecutive times are automatically **suspended**. Curia notifies you when a job suspends. To resume a suspended job, use the HTTP API:
+
+```bash
+curl -X PATCH \
+  -H "Authorization: Bearer $API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "pending"}' \
+  http://localhost:3000/api/jobs/<job-id>
+```
