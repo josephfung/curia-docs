@@ -1,6 +1,10 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "name": "Curia",
+  "logo": {
+    "light": "/assets/logo-curia-wordmark-dark.svg",
+    "dark": "/assets/logo-curia-wordmark-light.svg"
+  },
   "theme": "luma",
   "favicon": "https://media.brand.dev/288cc7c4-5cef-4376-950b-bdf0083eedae.png",
   "colors": {
