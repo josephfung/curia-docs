@@ -20,57 +20,110 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
+        "tab": "Core Concepts",
         "groups": [
-          {
-            "group": "Get Started",
-            "pages": [
-              "introduction",
-              "quickstart",
-              "configuration"
-            ]
-          },
           {
             "group": "Core Concepts",
             "pages": [
-              "concepts/agents",
-              "concepts/skills",
-              "concepts/memory",
-              "concepts/channels",
-              "concepts/autonomy"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "guides/email-setup",
-              "guides/signal-setup",
-              "guides/adding-agents",
-              "guides/adding-skills",
-              "guides/scheduling",
-              "guides/knowledge-graph"
-            ]
-          },
-          {
-            "group": "Security & Governance",
-            "pages": [
-              "security/overview",
-              "security/audit-log",
-              "security/contacts-trust"
+              "core-concepts/introduction",
+              "core-concepts/architecture",
+              "core-concepts/layers-model",
+              "core-concepts/memory",
+              "core-concepts/contacts-trust",
+              "core-concepts/autonomy",
+              "core-concepts/dreaming",
+              "core-concepts/scheduling",
+              "core-concepts/releases"
             ]
           }
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "Get Started",
         "groups": [
           {
-            "group": "HTTP API",
+            "group": "Get Started",
             "pages": [
-              "api/overview",
-              "api/messages",
-              "api/stream",
-              "api/health"
+              "get-started/installation",
+              "get-started/configuration",
+              "get-started/deployment",
+              "get-started/playbooks"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Agents",
+        "groups": [
+          {
+            "group": "Agents",
+            "pages": [
+              "agents/how-agents-work",
+              "agents/built-in-agents",
+              "agents/building-custom-agents"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Skills",
+        "groups": [
+          {
+            "group": "Skills",
+            "pages": [
+              "skills/how-skills-work",
+              "skills/built-in-skills",
+              "skills/building-custom-skills"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Channels",
+        "groups": [
+          {
+            "group": "Channels",
+            "pages": [
+              "channels/how-channels-work",
+              "channels/email-setup",
+              "channels/signal-setup",
+              "channels/cli",
+              "channels/http",
+              "channels/building-custom-channels"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Security",
+        "groups": [
+          {
+            "group": "Security",
+            "pages": [
+              "security/overview",
+              "security/autonomy-engine",
+              "security/audit-log",
+              "security/redaction"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "References",
+        "groups": [
+          {
+            "group": "References",
+            "pages": [
+              "references/configuration",
+              "references/agent-manifest-schema",
+              "references/skill-manifest-schema",
+              "references/channel-config-schema",
+              "references/http-api",
+              "references/http-api-messages",
+              "references/http-api-stream",
+              "references/http-api-health",
+              "references/memory-schemas",
+              "references/releases"
             ]
           }
         ]
