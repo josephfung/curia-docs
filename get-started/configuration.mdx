@@ -1,0 +1,149 @@
+---
+title: "Initial configuration"
+description: "Set up environment variables, LLM providers, email, and Signal for your Curia deployment."
+---
+
+Curia uses two configuration layers: a `config/default.yaml` file that ships with the repository and defines all defaults, and a `config/local.yaml` file that you create to override specific values for your deployment. Secrets — API keys, credentials, and tokens — always go in `.env`, never in YAML files.
+
+<Warning>
+  All configuration changes take effect on restart unless noted otherwise. Run `pnpm local` after editing any config file or `.env` to apply changes.
+</Warning>
+
+## How configuration works
+
+When Curia starts, it merges `config/local.yaml` on top of `config/default.yaml`. Any key you set in `local.yaml` overrides its default. Keys you omit stay at their default values. You never need to copy the entire `default.yaml` — only override what you need.
+
+```yaml
+# config/local.yaml — only include what you want to change
+dispatch:
+  rate_limit:
+    max_per_sender: 30
+
+intentDrift:
+  minConfidenceToPause: medium
+```
+
+## Environment variables
+
+Secrets and deployment-specific values go in `.env`. The most important ones are listed below.
+
+<AccordionGroup>
+  <Accordion title="Authentication and access">
+    | Variable | Required | Description |
+    |---|---|---|
+    | `API_TOKEN` | Yes | Bearer token for all HTTP API requests. Set to any long random string. |
+    | `WEB_APP_BOOTSTRAP_SECRET` | Yes | Secret for accessing the knowledge graph browser at `/`. Set to any long random string. |
+    | `CEO_PRIMARY_EMAIL` | Yes | Your primary email address. Ensures your messages are never held as an unknown sender at startup. |
+    | `TIMEZONE` | Yes | IANA timezone (e.g. `America/Toronto`). Used to resolve relative dates in agent prompts. |
+
+    ```env
+    API_TOKEN=your-secret-token-here
+    WEB_APP_BOOTSTRAP_SECRET=replace-with-a-long-random-secret
+    CEO_PRIMARY_EMAIL=you@yourdomain.com
+    TIMEZONE=America/Toronto
+    ```
+  </Accordion>
+
+  <Accordion title="LLM providers">
+    | Variable | Required | Description |
+    |---|---|---|
+    | `ANTHROPIC_API_KEY` | Yes | Powers all agents. Get your key from [console.anthropic.com](https://console.anthropic.com). |
+    | `OPENAI_API_KEY` | Recommended | Required for knowledge graph embeddings (`text-embedding-3-small`) and semantic search. |
+
+    ```env
+    ANTHROPIC_API_KEY=sk-ant-...
+    OPENAI_API_KEY=sk-...
+    ```
+
+    Ollama requires no API key — configure the endpoint in your agent YAML instead.
+  </Accordion>
+
+  <Accordion title="Email (Nylas)">
+    All three variables must be set for the email channel to activate. If any are missing, the channel disables itself at startup.
+
+    | Variable | Description |
+    |---|---|
+    | `NYLAS_API_KEY` | Application API key from the Nylas dashboard. |
+    | `NYLAS_GRANT_ID` | Identifier for the connected email account (from Nylas Grants). |
+    | `NYLAS_SELF_EMAIL` | The email address Curia reads and sends from. |
+
+    ```env
+    NYLAS_API_KEY=nyk_v0_...
+    NYLAS_GRANT_ID=<grant-id>
+    NYLAS_SELF_EMAIL=curia@yourdomain.com
+    ```
+
+    For multiple email accounts with per-account outbound policies, see [Multiple email accounts](#multiple-email-accounts) below.
+  </Accordion>
+
+  <Accordion title="Signal">
+    | Variable | Description |
+    |---|---|
+    | `SIGNAL_PHONE_NUMBER` | Your E.164 phone number (e.g. `+12223334444`). Must match the number registered via `signal-cli register` + `verify`. |
+
+    ```env
+    SIGNAL_PHONE_NUMBER=+12223334444
+    ```
+
+    Do not set `SIGNAL_SOCKET_PATH` — the deployment layer manages this automatically.
+  </Accordion>
+
+  <Accordion title="Web search">
+    | Variable | Description |
+    |---|---|
+    | `TAVILY_API_KEY` | API key from [tavily.com](https://tavily.com). Powers the `web-search` skill. |
+
+    ```env
+    TAVILY_API_KEY=tvly-...
+    ```
+
+    No restart required — the skill picks up the key on next use.
+  </Accordion>
+</AccordionGroup>
+
+## Multiple email accounts
+
+The default Nylas setup connects a single email account via environment variables. To connect multiple accounts — each with its own outbound behaviour — define them in `config/local.yaml` using `channel_accounts.email`.
+
+Each account has a logical name, a Nylas grant ID, a self-email address, and an outbound policy.
+
+**Outbound policies:**
+
+| Policy | Behaviour |
+|---|---|
+| `direct` | Send immediately. Content filter and blocked-contact checks are always enforced. |
+| `draft_gate` | Save the reply as a Nylas draft for your review before sending. |
+| `autonomy_gated` | Check the global autonomy score. If the score meets `autonomy_threshold`, send directly; otherwise fall back to `draft_gate`. |
+
+```yaml
+# config/local.yaml
+channel_accounts:
+  email:
+    curia:
+      nylas_grant_id: "env:NYLAS_GRANT_ID_CURIA"
+      self_email:     "env:NYLAS_SELF_EMAIL_CURIA"
+      outbound_policy: direct
+
+    personal:
+      nylas_grant_id: "env:NYLAS_GRANT_ID_PERSONAL"
+      self_email:     "env:NYLAS_SELF_EMAIL_PERSONAL"
+      outbound_policy: autonomy_gated
+      autonomy_threshold: 80
+```
+
+Use `env:VAR_NAME` to reference environment variables rather than inlining credential values directly in the YAML file.
+
+<Note>
+  When `channel_accounts.email` is present in `config/local.yaml`, the single-account env-var mode (`NYLAS_API_KEY` / `NYLAS_GRANT_ID` / `NYLAS_SELF_EMAIL`) is ignored.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Set up email" icon="envelope" href="/channels/email-setup">
+    Connect your inbox and configure per-account outbound policies.
+  </Card>
+  <Card title="Full configuration reference" icon="book" href="/references/configuration">
+    Every configurable setting: rate limits, security rules, knowledge graph decay, and more.
+  </Card>
+</CardGroup>

@@ -1,6 +1,6 @@
 ---
-title: "Autonomy engine: tuning Curia's independence level"
-description: "One number from 0 to 100 controls how independently Curia acts, across all channels and skills. Say the number and it takes effect on the very next action."
+title: "Autonomy"
+description: "One number from 0 to 100 controls how independently Curia acts, across all channels and skills."
 ---
 
 Curia's autonomy engine gives you a single dial to control how independently your AI team operates. A score from 0 to 100 determines whether Curia acts on its own, asks before acting, drafts without sending, or sticks to pure advice. The score applies across all agents, channels, and skills — one setting, consistent behavior everywhere. You can read it or change it at any time with a plain-English instruction.
@@ -20,24 +20,6 @@ The score maps to one of five named bands. Each band has a precise behavioral de
 <Note>
 Curia defaults to **75 (Approval Required)** on first deployment. This is a conservative starting point — Curia confirms before taking consequential actions until you decide to extend more independence.
 </Note>
-
-## How action_risk connects to autonomy
-
-Every skill declares an `action_risk` level in its manifest. This field establishes the minimum autonomy score at which that skill can be invoked without explicit confirmation.
-
-| action_risk value | Minimum score | Skill examples |
-|---|---|---|
-| `none` | 0 | Web search, reading email, summarizing content |
-| `low` | 60 | Writing to memory, updating contacts |
-| `medium` | 70 | Sending email, sending Signal messages |
-| `high` | 80 | Creating calendar events, making commitments on your behalf |
-| `critical` | 90 | Financial actions, bulk deletions, irreversible operations |
-
-At the current Phase 1 implementation, the autonomy score governs Curia's behavior through prompt injection — the behavioral description for the active band is included in the system prompt on every task. Phase 2 will add hard execution gates that block skill invocations when the live score is below the skill's declared floor.
-
-<Warning>
-The `action_risk` field is required on all skill manifests. Curia will not start if any skill omits it.
-</Warning>
 
 ## Checking your current score
 
@@ -76,18 +58,6 @@ Score changes take effect immediately on the next task — no restart required. 
 Only the CEO can change the autonomy score. The `set-autonomy` skill requires a CEO-level caller context. Requests from external email senders or unverified contacts will be rejected.
 </Warning>
 
-## Score history
-
-Every change to the autonomy score is written to an append-only history record in Postgres. No entry is ever updated or deleted. The history records:
-
-- The new score and band
-- The previous score
-- Who made the change (`ceo` or, in a future release, `system` for automatic adjustments)
-- An optional reason you provided
-- The timestamp
-
-This gives you a complete audit trail of how Curia's independence has evolved over time, and why.
-
 ## How to calibrate your score
 
 A practical approach for new deployments:
@@ -107,19 +77,9 @@ A practical approach for new deployments:
   </Step>
 </Steps>
 
-## What's coming
-
-Phase 3 of the autonomy engine will implement automatic score adjustment based on performance metrics:
-
-- **Competence** (45%) — task success rate, accuracy of information retrieved, follow-through on commitments
-- **Commitment** (35%) — reliability on recurring tasks, consistency with stated preferences
-- **Compatibility** (20%) — alignment with your communication style and decision patterns
-
-Automatic adjustments require a minimum of 30 actions before any change, apply time-decay weighting so recent behavior matters more, and cannot increase the score if factual errors or overconfidence penalties are active. All automatic changes are written to the audit record with the reason noted, so you can see exactly what changed and why.
-
 <CardGroup cols={2}>
-  <Card title="Skills and action_risk" icon="puzzle-piece" href="/concepts/skills">
-    See how skill risk levels are declared in the manifest.
+  <Card title="Autonomy engine mechanics" icon="gears" href="/security/autonomy-engine">
+    How action_risk levels, execution gates, and automatic score adjustment work under the hood.
   </Card>
   <Card title="Security overview" icon="shield" href="/security/overview">
     Understand the broader governance and audit framework Curia operates within.
