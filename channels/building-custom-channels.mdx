@@ -1,8 +1,116 @@
 ---
 title: "Building custom channels"
-description: "How to create a new channel integration for Curia — implementing the channel interface, handling inbound and outbound messages, and registering with the dispatch layer."
+description: "How to create a new channel integration — implementing a channel adapter, declaring trust levels, and registering with the message bus."
 ---
 
-{/* TODO: This page needs to be written. Source from the curia codebase's channel interface/adapter pattern. Cover: the channel interface contract, how to handle inbound message ingestion, outbound message delivery, channel-specific configuration, trust level declaration, and registration in the dispatch layer. */}
+A channel adapter is the bridge between an external messaging platform and Curia's internal message bus. Every channel — CLI, HTTP, Email, Signal — follows the same pattern: receive platform messages, normalize them into bus events, and deliver outbound responses back through the platform API.
 
-This page is under construction.
+## The channel adapter pattern
+
+Every channel adapter:
+
+1. **Registers with the bus** as `layer: "channel"` — this limits it to publishing only `inbound.message` and `inbound.event` types (the hard security boundary)
+2. **Subscribes to `outbound.message`** events — to deliver responses back through the platform
+3. **Normalizes inbound messages** into the standard `inbound.message` event payload
+4. **Declares a trust level** — high, medium, or low — based on the identity guarantees of the platform
+
+## Implementation steps
+
+<Steps>
+  <Step title="Create the adapter directory">
+    Create a new directory under `src/channels/<name>/` with an adapter file:
+
+    ```
+    src/channels/my-channel/
+      adapter.ts
+    ```
+  </Step>
+  <Step title="Register with the bus">
+    Register your adapter as a channel-layer module. The bus will enforce that you can only publish channel-allowed event types.
+
+    ```typescript
+    bus.register({
+      id: 'my-channel-adapter',
+      layer: 'channel',
+    });
+    ```
+  </Step>
+  <Step title="Handle inbound messages">
+    When your platform delivers a message, normalize it into an `inbound.message` event and publish it on the bus:
+
+    ```typescript
+    bus.publish({
+      type: 'inbound.message',
+      payload: {
+        channel: 'my-channel',
+        channelTrust: 'medium',
+        conversationId: 'my-channel:<unique-conversation-id>',
+        sender: {
+          displayName: 'Sender Name',
+          channelIdentity: { type: 'my-channel', value: 'sender-id' },
+        },
+        text: messageContent,
+      },
+    });
+    ```
+
+    The `channelTrust` field declares your channel's trust level. Choose based on the identity guarantees your platform provides:
+
+    | Trust level | When to use |
+    |---|---|
+    | `high` | Strong identity verification (local access, E2E encryption with phone verification) |
+    | `medium` | Token-based or OAuth authentication |
+    | `low` | Weak identity guarantees (email addresses can be spoofed) |
+  </Step>
+  <Step title="Handle outbound messages">
+    Subscribe to `outbound.message` events and deliver them through your platform's API:
+
+    ```typescript
+    bus.subscribe('outbound.message', async (event) => {
+      if (event.payload.channel !== 'my-channel') return;
+      await myPlatformApi.sendMessage(
+        event.payload.conversationId,
+        event.payload.text,
+      );
+    });
+    ```
+
+    Filter by channel name so you only handle messages destined for your channel.
+  </Step>
+  <Step title="Add configuration">
+    Add a config section to `config/default.yaml` for any channel-specific settings (API keys, polling intervals, etc.). Use `env:VAR_NAME` references for secrets.
+  </Step>
+  <Step title="Wire it up">
+    Add your adapter to the bootstrap sequence in `src/index.ts` so it starts with the rest of the system.
+  </Step>
+</Steps>
+
+## What the dispatch layer handles for you
+
+You don't need to implement any of these in your adapter — they're handled by the dispatch layer after your `inbound.message` is published:
+
+- **Contact resolution** — the dispatcher resolves the sender to a contact record
+- **Trust scoring** — your `channelTrust` value is combined with contact confidence and injection risk
+- **Rate limiting** — global and per-sender limits are enforced
+- **Prompt injection scanning** — inbound text is checked against detection patterns
+- **PII redaction** — outbound messages are redacted based on channel-specific policies
+
+## Testing
+
+Write tests for your adapter covering:
+
+- Inbound message normalization (platform format → bus event)
+- Outbound message delivery (bus event → platform API call)
+- Authentication and connection handling
+- Error recovery (platform API failures, connection drops)
+
+Integration tests should use a real bus instance to verify that your events flow through the full dispatch pipeline correctly.
+
+<CardGroup cols={2}>
+  <Card title="How channels work" icon="arrows-split-up-and-left" href="/channels/how-channels-work">
+    Channel routing, trust levels, and the dispatch pipeline in detail.
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/core-concepts/architecture">
+    How channel adapters fit into the five-layer bus architecture.
+  </Card>
+</CardGroup>

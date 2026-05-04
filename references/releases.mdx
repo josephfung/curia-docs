@@ -1,8 +1,51 @@
 ---
 title: "Releases"
-description: "Curia release changelog — version history, breaking changes, and migration notes."
+description: "Curia release history, version changelog, and migration notes."
 ---
 
-{/* TODO: This page needs to be written. Link to GitHub releases page, include a summary of recent versions with notable changes, and document any breaking changes or migration steps between versions. */}
+Curia is in active pre-alpha development. The API surface and feature set are evolving rapidly until v1.0.0.
 
-This page is under construction.
+## Changelog
+
+The full changelog with every addition, change, fix, and breaking change is maintained in the repository:
+
+<Card title="CHANGELOG.md" icon="clock" href="https://github.com/josephfung/curia/blob/main/CHANGELOG.md">
+  Complete version history with categorized entries (Added, Changed, Fixed, Removed, Security).
+</Card>
+
+## GitHub Releases
+
+Each version is published as a GitHub Release with condensed release notes:
+
+<Card title="GitHub Releases" icon="github" href="https://github.com/josephfung/curia/releases">
+  All releases with downloadable artifacts and prose release notes.
+</Card>
+
+## Planned milestones
+
+Upcoming work is tracked via GitHub Milestones. Priorities are subject to change as the project evolves.
+
+<Card title="GitHub Milestones" icon="flag" href="https://github.com/josephfung/curia/milestones">
+  Milestone progress, target dates, and linked issues.
+</Card>
+
+## Versioning policy
+
+Curia follows [Semantic Versioning](https://semver.org):
+
+| Change type | Bump | Examples |
+|---|---|---|
+| New skill, agent, or channel | Minor (`0.X.0`) | Adding web-search, adding Signal channel |
+| New capability shipped for the first time | Minor (`0.X.0`) | Autonomy engine, entity context enrichment |
+| Completing a partially-shipped feature | Patch (`0.x.Y`) | Context summarization, audit log hardening |
+| Bug fix, small improvement | Patch (`0.x.Y`) | Fixing a skill error path |
+| Breaking change to public API surface | Minor + changelog note | Renaming a SkillContext field |
+
+**Public API surfaces** (changes called out explicitly even pre-1.0):
+- `skill.json` manifest schema
+- `SkillHandler` / `SkillContext` / `SkillResult` TypeScript interfaces
+- Agent YAML schema (`agents/*.yaml` fields)
+- Bus event type definitions (`src/bus/events.ts`)
+- Channel adapter interface
+
+**v1.0.0** is reserved for when these surfaces are stable enough to commit to — API stability plus production deployment.

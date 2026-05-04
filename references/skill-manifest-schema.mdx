@@ -1,8 +1,152 @@
 ---
 title: "Skill manifest schema"
-description: "Complete YAML schema reference for Curia skill definitions — all fields, types, defaults, action_risk levels, and validation rules."
+description: "Complete JSON schema reference for Curia skill definitions — all fields, action_risk levels, capabilities, and entity enrichment."
 ---
 
-{/* TODO: This page needs to be written. Source from the curia repo's skill schema/types. Present the schema as an annotated YAML reference with descriptions for each field, including action_risk levels and their meaning. Cross-link to security/autonomy-engine for how action_risk connects to the autonomy score. */}
+Skill definitions live in `skills/<name>/skill.json`. Each manifest declares what the skill does, what it needs, and its security classification.
 
-This page is under construction.
+## Schema reference
+
+```json
+{
+  "name": "string",
+  "description": "string",
+  "version": "string",
+  "sensitivity": "normal | elevated",
+  "action_risk": "none | low | medium | high | critical | number",
+  "inputs": {
+    "field_name": "type_string",
+    "optional_field": "type_string?"
+  },
+  "outputs": {
+    "field_name": "type_string"
+  },
+  "permissions": ["string"],
+  "secrets": ["string"],
+  "timeout": 30000,
+  "capabilities": ["string"],
+  "entity_enrichment": {
+    "param": "string",
+    "default": "caller | agent"
+  }
+}
+```
+
+## Field details
+
+### `name`
+
+Unique identifier for the skill. Must match the directory name under `skills/`. Convention: lowercase kebab-case.
+
+### `action_risk`
+
+**Required.** The minimum [autonomy score](/core-concepts/autonomy) required to invoke this skill without explicit CEO approval. Curia will not start if any skill omits this field.
+
+| Label | Minimum score | Use for |
+|---|---|---|
+| `none` | 0 | Read-only operations with no side effects — web search, reading email, summarizing |
+| `low` | 60 | Internal state writes — memory, contacts, configuration |
+| `medium` | 70 | Outbound communications — sending email, Signal messages |
+| `high` | 80 | Calendar writes, commitments on behalf of the CEO |
+| `critical` | 90 | Financial, destructive, or irreversible operations |
+
+A raw number (0–100) can be used for precision (e.g., `75` for a skill that should unlock just above "approval required" but below "spot-check"). Numbers outside [0, 100] produce a validation error at load time.
+
+### `sensitivity`
+
+| Value | Meaning |
+|---|---|
+| `normal` | Can be auto-approved based on autonomy score |
+| `elevated` | Requires human approval on first use, regardless of autonomy score |
+
+### `inputs` and `outputs`
+
+Shorthand type declarations for skill parameters and return values. Field names map to type strings:
+
+| Type string | Meaning |
+|---|---|
+| `"string"` | Required string |
+| `"string?"` | Optional string |
+| `"number"` | Required number |
+| `"boolean"` | Required boolean |
+| `"object"` | Required object (any shape) |
+
+For MCP-sourced skills, the full JSON Schema from the MCP server's `tools/list` response is used directly instead of this shorthand.
+
+### `permissions`
+
+Array of permission names this skill requires. Validated at load time.
+
+### `secrets`
+
+Array of environment variable names this skill needs access to via `ctx.secret()`. Only secrets declared here are accessible — the skill cannot read arbitrary environment variables.
+
+### `timeout`
+
+Per-invocation timeout in milliseconds. Default: `30000` (30 seconds).
+
+### `capabilities`
+
+Declares which privileged services this skill needs from the execution layer. Only known capability names are accepted — the loader validates against a fixed allowlist at startup and rejects unknown names.
+
+| Capability | Service provided |
+|---|---|
+| `bus` | Event bus access |
+| `agentRegistry` | Agent registry for delegation |
+| `outboundGateway` | Outbound message delivery (email, Signal) |
+| `heldMessages` | Held message service |
+| `schedulerService` | Job scheduling |
+| `entityMemory` | Knowledge graph read/write |
+| `nylasCalendarClient` | Calendar operations via Nylas |
+| `autonomyService` | Autonomy score management |
+| `executiveProfileService` | CEO writing voice profile |
+| `browserService` | Playwright browser for web interaction |
+| `bullpenService` | Inter-agent discussion threads |
+| `skillSearch` | Search the skill registry |
+
+Services not listed here (`contactService`, `entityContextAssembler`, `agentPersona`) are universal — available to every skill without declaration.
+
+### `entity_enrichment`
+
+Optional. When declared, the execution layer automatically assembles entity context before invoking the skill handler, injecting it into `ctx.entityContext`.
+
+| Field | Description |
+|---|---|
+| `param` | The input key containing contact/entity IDs to enrich |
+| `default` | What to use when the input is not provided: `"caller"` (the message sender) or `"agent"` (the agent's own contact) |
+
+## Example
+
+```json
+{
+  "name": "email-send",
+  "description": "Send a new email to specified recipients.",
+  "version": "1.0.0",
+  "sensitivity": "normal",
+  "action_risk": "medium",
+  "inputs": {
+    "to": "string",
+    "cc": "string?",
+    "subject": "string",
+    "body": "string"
+  },
+  "outputs": {
+    "message_id": "string",
+    "to": "string",
+    "subject": "string"
+  },
+  "permissions": [],
+  "secrets": [],
+  "timeout": 30000,
+  "capabilities": ["outboundGateway"]
+}
+```
+
+<CardGroup cols={2}>
+  <Card title="Built-in skills" icon="puzzle-piece" href="/skills/built-in-skills">
+    Catalog of all skills Curia ships with.
+  </Card>
+  <Card title="Autonomy engine" icon="gears" href="/security/autonomy-engine">
+    How action_risk connects to the autonomy score.
+  </Card>
+</CardGroup>

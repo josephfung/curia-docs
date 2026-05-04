@@ -1,8 +1,88 @@
 ---
 title: "Redaction"
-description: "How Curia redacts sensitive data from LLM-facing content — built-in PII patterns, custom patterns, and where redaction is applied."
+description: "How Curia redacts sensitive data from outbound messages — built-in PII patterns, per-channel policies, and the redaction pipeline."
 ---
 
-{/* TODO: This page needs to be written. Source from the curia codebase's redaction/PII filtering implementation. Cover: what's redacted by default (email, phone, CC, SSN), where redaction is applied (LLM-facing error messages, audit log entries), how to add custom PII patterns (cross-link to references/configuration for the pii.extra_patterns YAML), and the design principle of redacting at the boundary rather than at rest. */}
+Curia's PII redactor sits between agent responses and channel delivery. Before any outbound message reaches a recipient, it scans for sensitive data and replaces detected patterns with labelled tokens like `[REDACTED: CREDIT_CARD]`. The redactor is channel-aware — different channels can allow different types of information through.
 
-This page is under construction.
+## What's redacted by default
+
+The redactor detects these PII patterns in all outbound messages:
+
+| Pattern | Example | Replacement |
+|---|---|---|
+| Email addresses | `alice@example.com` | `[REDACTED: EMAIL]` |
+| Phone numbers | `+1-555-234-5678` | `[REDACTED: PHONE]` |
+| Credit card numbers | `4111 1111 1111 1111` | `[REDACTED: CREDIT_CARD]` |
+| US Social Security numbers | `123-45-6789` | `[REDACTED: SSN]` |
+| Custom patterns | Configured per deployment | Configurable replacement |
+
+You can add custom PII patterns for data types specific to your deployment (employee IDs, national ID numbers, etc.) via `pii.extra_patterns` in `config/local.yaml`. See the [configuration reference](/references/configuration) for details.
+
+## The redaction pipeline
+
+When an outbound message is ready for delivery, the redactor evaluates it in this order:
+
+<Steps>
+  <Step title="Kill switch check">
+    If `outbound_redaction.enabled` is `false`, the message passes through unmodified. This is an emergency override, not a recommended configuration.
+  </Step>
+  <Step title="CEO bypass">
+    If the recipient is the CEO (matched by contact UUID, resolved at startup), the message passes through unredacted. The CEO always sees full content.
+  </Step>
+  <Step title="Trust override">
+    If the recipient's trust level is in the `trust_override` list (e.g., `['ceo', 'high']`), the message passes through. This allows high-trust contacts to receive unredacted content.
+  </Step>
+  <Step title="PII detection">
+    The message content is scanned for all built-in and custom PII patterns.
+  </Step>
+  <Step title="Channel policy filtering">
+    Detected patterns are filtered against the channel's allow list. For example, the email channel policy might allow phone numbers through while redacting credit cards.
+  </Step>
+  <Step title="Replacement">
+    Remaining patterns are replaced with labelled tokens (e.g., `[REDACTED: CREDIT_CARD]`). Replacements are applied end-to-start to preserve character positions.
+  </Step>
+  <Step title="Audit event">
+    An `outbound.pii_redacted` event is published to the audit log recording the pattern label, channel, and replacement token. The original matched value is intentionally **not** stored in the audit event.
+  </Step>
+</Steps>
+
+## Per-channel policies
+
+Different channels may have different sensitivity requirements. Configure per-channel allow lists to control which PII types pass through unredacted on each channel:
+
+```yaml
+# config/local.yaml
+outbound_redaction:
+  enabled: true
+  trust_override: ['ceo', 'high']
+  default: 'block'           # block PII on channels without an explicit policy
+  channel_policies:
+    email:
+      allow: ['email', 'phone']   # email addresses and phone numbers pass through
+    signal:
+      allow: ['phone']            # only phone numbers pass through
+```
+
+With this configuration:
+- **Email** — email addresses and phone numbers are allowed; credit cards and SSNs are redacted
+- **Signal** — phone numbers are allowed; everything else is redacted
+- **CLI** — CEO bypass applies (CEO always sees full content)
+- **Any other channel** — all PII is redacted (the `default: 'block'` policy)
+
+## Design principles
+
+**Fail-closed** — the redactor does not swallow errors. If redaction fails, the outbound gateway catches the error and decides whether to block delivery rather than sending unredacted content.
+
+**No original values stored** — the audit event records *what type* of PII was redacted and *what it was replaced with*, but intentionally does not store the original matched value. This prevents the audit log itself from becoming a PII repository.
+
+**CEO identification by UUID** — the CEO bypass uses a contact UUID resolved once at startup from `CEO_PRIMARY_EMAIL`, not a mutable database field. This is tamper-resistant — contact management code paths cannot accidentally grant CEO-level bypass to another contact.
+
+<CardGroup cols={2}>
+  <Card title="Security overview" icon="shield" href="/security/overview">
+    The broader security architecture and audit framework.
+  </Card>
+  <Card title="Configuration reference" icon="book" href="/references/configuration">
+    Custom PII patterns and security rule configuration.
+  </Card>
+</CardGroup>

@@ -1,8 +1,62 @@
 ---
 title: "HTTP channel"
-description: "Using the HTTP API as a messaging channel to interact with Curia programmatically."
+description: "Interact with Curia programmatically via REST API and server-sent events."
 ---
 
-{/* TODO: This page needs to be written. Cover: how to send messages via the HTTP API, how responses are delivered (polling vs SSE streaming), authentication, and how the HTTP channel relates to the full API reference. Cross-link to references/http-api for endpoint details. */}
+The HTTP channel exposes Curia as a REST API with real-time streaming via server-sent events (SSE). It's built on Fastify and provides both synchronous request/response and asynchronous event streaming.
 
-This page is under construction.
+## Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/messages` | POST | Send a message to Curia |
+| `/api/messages/stream` | GET | Subscribe to real-time events via SSE |
+| `/api/health` | GET | Health check (no auth required) |
+| `/api/agents/status` | GET | Agent status information |
+
+For full endpoint documentation including request/response formats, see the [HTTP API reference](/references/http-api).
+
+## Authentication
+
+All API endpoints (except `/api/health`) require a Bearer token in the `Authorization` header:
+
+```
+Authorization: Bearer <your-API_TOKEN>
+```
+
+The token is the `API_TOKEN` value from your `.env` file. The web app uses session-based authentication with the `WEB_APP_BOOTSTRAP_SECRET` instead.
+
+## Trust level
+
+| Property | Value |
+|---|---|
+| **Trust level** | Medium |
+| **Reasoning** | Bearer token authentication — stronger than email but weaker than local access or phone-verified Signal |
+
+Messages from the HTTP channel pass through the full dispatch pipeline including trust scoring. The medium trust level means HTTP requests start with a moderate trust baseline, modified by contact confidence and injection risk.
+
+## Streaming
+
+The SSE endpoint (`/api/messages/stream`) delivers real-time events as they occur:
+
+- Agent responses
+- Skill invocations and results
+- System events
+
+This enables building real-time interfaces on top of Curia without polling.
+
+## When to use the HTTP channel
+
+- **Building integrations** — connect external tools or services to Curia
+- **Custom frontends** — build a web UI or mobile app that talks to Curia
+- **Automation** — trigger Curia actions from scripts, cron jobs, or other systems
+- **Webhooks** — forward events from external services into Curia for processing
+
+<CardGroup cols={2}>
+  <Card title="HTTP API reference" icon="book" href="/references/http-api">
+    Complete endpoint documentation with request/response formats.
+  </Card>
+  <Card title="How channels work" icon="arrows-split-up-and-left" href="/channels/how-channels-work">
+    Channel routing, trust levels, and the dispatch pipeline.
+  </Card>
+</CardGroup>

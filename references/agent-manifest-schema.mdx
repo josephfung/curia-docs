@@ -1,8 +1,111 @@
 ---
 title: "Agent manifest schema"
-description: "Complete YAML schema reference for Curia agent definitions — all fields, types, defaults, and validation rules."
+description: "Complete YAML schema reference for Curia agent definitions — all fields, types, defaults, and configuration options."
 ---
 
-{/* TODO: This page needs to be written. Source from the curia repo's agent schema/types (likely a Zod schema or TypeBox definition). Present the schema as an annotated YAML reference with descriptions for each field, required vs optional, defaults, and example values. */}
+Agent definitions live in `agents/<name>.yaml`. Each file defines an agent's identity, model configuration, system prompt, and skill access.
 
-This page is under construction.
+## Schema reference
+
+```yaml
+# agents/<name>.yaml
+
+# Required — unique identifier for this agent
+name: string
+
+# Required — "coordinator" or "specialist"
+role: coordinator | specialist
+
+# Required — human-readable description of the agent's purpose
+description: string
+
+# Required — LLM model configuration
+model:
+  provider: anthropic | openai | ollama   # LLM provider
+  model: string                            # model identifier (e.g. "claude-sonnet-4-6")
+
+# Required — the system prompt injected on every task
+# Supports ${variable} interpolation for runtime values
+system_prompt: |
+  Multi-line system prompt text...
+
+# Required — skills this agent can always invoke
+# Skills not in this list are only available if allow_discovery is true
+pinned_skills:
+  - skill-name-1
+  - skill-name-2
+
+# Optional — whether the agent can discover and invoke skills not in pinned_skills
+# Default: false
+allow_discovery: boolean
+
+# Optional — inject the list of available specialist agents into the system prompt
+# Used by the coordinator to know which specialists it can delegate to
+# Default: false
+inject_specialists: boolean
+
+# Optional — custom handler for agent-specific logic
+# Path relative to the agent YAML file
+handler: ./custom-handler.ts
+
+# Optional — memory scope configuration
+# Scopes isolate this agent's working memory from other agents
+memory:
+  scopes:
+    - scope-name
+```
+
+## Field details
+
+### `name`
+
+Unique identifier used for routing, delegation, and logging. Must be unique across all agent definitions. Convention: lowercase kebab-case.
+
+### `role`
+
+| Value | Meaning |
+|---|---|
+| `coordinator` | Receives all inbound messages. Only one coordinator should exist. |
+| `specialist` | Receives tasks only via delegation from the coordinator or other agents. |
+
+### `model`
+
+The LLM provider and model used for this agent's reasoning. Currently supported providers:
+
+| Provider | Example models |
+|---|---|
+| `anthropic` | `claude-sonnet-4-6`, `claude-haiku-4-5-20251001` |
+| `openai` | `gpt-4o`, `gpt-4o-mini` |
+| `ollama` | Any locally-hosted model |
+
+### `system_prompt`
+
+The prompt injected at the start of every task. Supports runtime variable interpolation using `${variable}` syntax:
+
+| Variable | Value |
+|---|---|
+| `${office_identity_block}` | Agent persona (name, title, signature) from office identity config |
+| `${executive_voice_block}` | CEO's writing voice profile |
+| `${agent_contact_id}` | The agent's own contact UUID |
+| `${available_specialists}` | List of specialist agents available for delegation |
+
+### `pinned_skills`
+
+Array of skill names this agent can always invoke. Skills must be registered in the skill registry. If a skill in this list doesn't exist at startup, a warning is logged but the agent still starts.
+
+### `allow_discovery`
+
+When `true`, the agent can use the `skill-registry` skill to search for and invoke skills not in its `pinned_skills` list. The coordinator typically has this enabled; specialists typically do not (they operate with a fixed, auditable skill set).
+
+### `memory.scopes`
+
+Memory scopes isolate an agent's working memory. Each scope is an independent namespace — facts stored in one scope are not visible to agents using a different scope. The coordinator uses no explicit scope (it shares the default scope). Specialists like `email-triage` and `research-analyst` use their own scopes to prevent cross-contamination.
+
+<CardGroup cols={2}>
+  <Card title="Built-in agents" icon="users" href="/agents/built-in-agents">
+    The agents Curia ships with and how they work together.
+  </Card>
+  <Card title="Building custom agents" icon="plus" href="/agents/building-custom-agents">
+    Step-by-step guide to creating a new agent.
+  </Card>
+</CardGroup>

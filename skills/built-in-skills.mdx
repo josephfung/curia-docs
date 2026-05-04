@@ -1,8 +1,132 @@
 ---
 title: "Built-in skills"
-description: "Catalog of the skills Curia ships with — what each does, its action_risk level, and which agents use it."
+description: "Catalog of the skills Curia ships with — organized by category, with action_risk levels and descriptions."
 ---
 
-{/* TODO: This page needs to be written. Source from skill manifest YAML files in the curia repo (src/skills/ or similar). For each built-in skill, document: name, description, action_risk level, which agents have access, input/output format, and any configuration options. */}
+Curia ships with 50+ skills organized into functional categories. Every skill declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it without explicit CEO approval.
 
-This page is under construction.
+## Contact management
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `contact-create` | low | Create a new contact record |
+| `contact-lookup` | none | Look up a contact by name (supports partial matching) |
+| `contact-list` | none | List all contacts |
+| `contact-rename` | low | Rename a contact |
+| `contact-set-role` | low | Set a contact's role (e.g., CFO, board member) |
+| `contact-set-trust` | low | Set a contact's trust level |
+| `contact-link-identity` | low | Link a channel identity (email, phone) to a contact |
+| `contact-unlink-identity` | low | Remove a channel identity from a contact |
+| `contact-grant-permission` | low | Grant a specific permission to a contact |
+| `contact-revoke-permission` | low | Revoke a permission from a contact |
+| `contact-merge` | low | Merge duplicate contacts (supports dry-run preview) |
+| `contact-find-duplicates` | none | Scan for potential duplicate contacts |
+
+## Email
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `email-send` | medium | Send a new email to specified recipients |
+| `email-reply` | medium | Reply to an existing email thread |
+| `email-list` | none | List recent messages in an inbox |
+| `email-get` | none | Fetch the full body of a specific message |
+| `email-draft-save` | low | Save a draft reply for CEO review |
+| `send-draft` | medium | Send a previously saved draft |
+| `email-archive` | low | Archive a message |
+| `context-for-email` | none | Assemble context for composing an email |
+
+## Calendar
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `calendar-list-calendars` | none | List all registered calendars |
+| `calendar-register` | low | Register a new calendar |
+| `calendar-list-events` | none | List events in a date range |
+| `calendar-create-event` | high | Create a new calendar event |
+| `calendar-update-event` | high | Update an existing event |
+| `calendar-delete-event` | high | Delete a calendar event |
+| `calendar-find-free-time` | none | Find available time slots |
+| `calendar-check-conflicts` | none | Check for scheduling conflicts |
+
+## Memory and knowledge graph
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `memory-store` | low | Store a fact in the knowledge graph |
+| `memory-query` | none | Query the knowledge graph |
+| `query-relationships` | none | Look up stored relationships for an entity |
+| `delete-relationship` | low | Remove a relationship from the knowledge graph |
+| `entity-context` | none | Assemble entity context (facts, relationships, history) for a contact |
+| `extract-facts` | low | Extract structured facts from text (system skill) |
+| `extract-relationships` | low | Extract relationships from text (system skill) |
+
+## Scheduling
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `scheduler-create` | high | Create a recurring or one-shot scheduled task |
+| `scheduler-list` | none | List active scheduled jobs |
+| `scheduler-cancel` | high | Cancel a scheduled job |
+| `scheduler-report` | none | Generate a report on scheduled task activity (system skill) |
+
+## Communication
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `signal-send` | medium | Send a Signal message |
+| `bullpen` | low | Open or contribute to an inter-agent discussion thread |
+
+## Web research
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `web-search` | none | Search the web via Tavily |
+| `web-fetch` | none | Fetch and extract content from a URL |
+| `web-browser` | none | Interact with JavaScript-rendered pages via Playwright |
+
+## Templates
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `template-meeting-request` | medium | Generate a meeting request email |
+| `template-reschedule` | medium | Generate a reschedule request |
+| `template-cancel` | medium | Generate a cancellation notice |
+| `template-doc-request` | medium | Generate a document request |
+
+## Autonomy
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `get-autonomy` | none | Read the current autonomy score and history |
+| `set-autonomy` | critical | Change the autonomy score (CEO only) |
+
+## Knowledge bases
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `knowledge-company-overview` | none | Retrieve company overview information |
+| `knowledge-meeting-links` | none | Look up meeting links and video call URLs |
+| `knowledge-travel-preferences` | none | Retrieve travel preferences |
+| `knowledge-loyalty-programs` | none | Look up loyalty program details |
+
+## System and utility
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `delegate` | none | Delegate a task to a specialist agent |
+| `held-messages-list` | none | List messages held for CEO review |
+| `held-messages-process` | low | Process a held message (identify, dismiss, or block) |
+| `executive-profile-get` | none | Get the CEO's writing voice profile |
+| `executive-profile-update` | low | Update the CEO's writing voice profile |
+| `config-store` | low | Read or write operational configuration |
+| `image-generate` | low | Generate an image |
+| `skill-registry` | none | Search all registered skills by keyword |
+
+<CardGroup cols={2}>
+  <Card title="Building custom skills" icon="plus" href="/skills/building-custom-skills">
+    How to create, test, and register a new skill.
+  </Card>
+  <Card title="Skill manifest schema" icon="book" href="/references/skill-manifest-schema">
+    Complete reference for the skill.json manifest format.
+  </Card>
+</CardGroup>
