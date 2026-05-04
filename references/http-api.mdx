@@ -48,13 +48,13 @@ If the token is missing or incorrect, the API returns:
 ## Available endpoints
 
 <CardGroup cols={2}>
-  <Card title="POST /api/messages" icon="paper-plane" href="/api/messages">
+  <Card title="POST /api/messages" icon="paper-plane" href="/references/http-api-messages">
     Send a message to the Coordinator agent and receive a synchronous response. Supports conversation threading via `conversation_id`.
   </Card>
-  <Card title="GET /api/messages/stream" icon="signal" href="/api/stream">
+  <Card title="GET /api/messages/stream" icon="signal" href="/references/http-api-stream">
     Open a Server-Sent Events connection to receive agent responses, tool invocations, and tool results in real time.
   </Card>
-  <Card title="GET /api/health" icon="heart-pulse" href="/api/health">
+  <Card title="GET /api/health" icon="heart-pulse" href="/references/http-api-health">
     Returns the health status of the Curia instance. No authentication required. Use this for uptime monitors and load balancer probes.
   </Card>
   <Card title="GET /api/agents/status" icon="robot">

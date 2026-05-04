@@ -40,11 +40,15 @@ Messages below the trust score floor (default: 0.2) are held regardless of chann
 
 ### Layer 3: Agent autonomy
 
-The Coordinator agent receives the task with the current [autonomy score](/core-concepts/autonomy) injected into its system prompt. The autonomy band determines how independently the agent can act:
+The Coordinator agent receives the task with the current [autonomy score](/core-concepts/autonomy) injected into its system prompt. The score maps to one of five bands that determine how independently the agent can act:
 
-- At **Full** (90–100): proceeds on standard operations without confirmation
-- At **Approval Required** (70–79): presents a plan and asks before any consequential action
-- At **Restricted** (< 60): advisory only, takes no independent action
+| Band | Score range | Behavior |
+|---|---|---|
+| Full | 90–100 | Proceeds on standard operations without confirmation |
+| Spot-check | 80–89 | Proceeds on routine tasks, notes consequential actions |
+| Approval Required | 70–79 | Presents a plan and asks before any consequential action |
+| Draft Only | 60–69 | Prepares drafts but does not send without explicit go-ahead |
+| Restricted | < 60 | Advisory only, takes no independent action |
 
 This is a behavioral governance layer — the agent self-governs based on the band description. The autonomy score applies uniformly across all agents, channels, and skills.
 
