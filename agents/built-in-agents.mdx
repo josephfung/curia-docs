@@ -1,0 +1,92 @@
+---
+title: "Built-in agents"
+description: "The agents Curia ships with — what each does, when it's invoked, and how the coordinator dispatches to specialists."
+---
+
+Curia ships with a small team of specialized agents. The **Coordinator** is the central router — every inbound message goes to it first. It handles most tasks directly and delegates to specialist agents when their expertise is needed.
+
+## Coordinator
+
+The Coordinator is Curia's primary agent. It receives every inbound message, maintains the unified persona, and decides whether to handle a task itself or delegate to a specialist.
+
+| Field | Value |
+|---|---|
+| **Role** | coordinator |
+| **Model** | Claude Sonnet |
+| **Skills** | 50+ pinned skills (contacts, email, calendar, memory, scheduling, web research, autonomy, and more) |
+| **Discovery** | Enabled — can find and invoke skills not in its pinned list |
+
+**What it handles directly:**
+- Conversational messages and questions
+- Contact management (create, lookup, merge, permissions)
+- Email reading, sending, replying, and drafting
+- Calendar operations (list, create, update, delete events, find free time)
+- Scheduling recurring and one-shot tasks
+- Knowledge graph queries and memory storage
+- Autonomy score management
+- Web research (search, fetch, browse)
+- Held message processing for unknown senders
+
+**Key behaviors:**
+- Adapts its communication style based on who it's talking to — candid with the CEO, professional and opaque with external contacts
+- Never exposes internal system details, tool names, or agent architecture to non-CEO users
+- Enforces authorization decisions from the dispatch layer (provisional contacts, blocked senders, permission denials)
+- Respects trust score thresholds before taking action on external requests
+- Delegates observation-mode email triage to the Email Triage specialist
+
+## Email Triage
+
+A specialist agent that triages the CEO's inbound email when running in observation mode. The Coordinator delegates observation-mode emails to it automatically.
+
+| Field | Value |
+|---|---|
+| **Role** | specialist |
+| **Model** | Claude Sonnet |
+| **Skills** | email-list, email-get, email-archive, email-draft-save, entity-context, bullpen |
+| **Discovery** | Disabled |
+
+**Classification categories** (evaluated in priority order):
+
+| Category | Action taken |
+|---|---|
+| **URGENT** | Opens a Bullpen thread to alert the Coordinator. Does not reply to the sender. |
+| **ACTIONABLE** | Opens a Bullpen thread mentioning the capable specialist with a handoff summary. |
+| **NEEDS DRAFT** | Saves a draft reply in the CEO's inbox for review before sending. |
+| **LEAVE FOR CEO** | Takes no action — the email is left for the CEO to handle. |
+| **NOISE** | Archives the message (receipts, newsletters, automated notifications). |
+
+Before classifying, the Email Triage agent checks for standing instructions on the sender (via entity-context) — per-sender rules override the default triage protocol.
+
+## Research Analyst
+
+A specialist agent for conducting web research and providing analysis.
+
+| Field | Value |
+|---|---|
+| **Role** | specialist |
+| **Model** | Claude Sonnet |
+| **Skills** | web-search, web-fetch, scheduler-create, scheduler-list, scheduler-cancel |
+| **Discovery** | Disabled |
+
+**Research workflow:**
+1. Uses web-search (Tavily) with multiple queries to cover different angles
+2. Follows up on important sources with web-fetch for full content
+3. Synthesizes findings into clear, concise summaries for an executive audience
+4. Highlights key takeaways and concerns with source attribution
+
+The Coordinator delegates to the Research Analyst when a request requires multi-source web research rather than a simple lookup.
+
+## How delegation works
+
+When the Coordinator receives a task that requires specialist expertise, it uses the `delegate` skill to hand the task to the appropriate agent. The specialist works independently, using only its pinned skills, and returns its findings to the Coordinator. The Coordinator then synthesizes the specialist's response into its own voice — the user never sees that multiple agents were involved.
+
+On synchronous channels (CLI, Signal, HTTP), the Coordinator sends a brief acknowledgment before delegating ("This will take a few minutes — I'll reply when it's ready"). On asynchronous channels (email), delegation happens silently.
+
+<CardGroup cols={2}>
+  <Card title="Building custom agents" icon="plus" href="/agents/building-custom-agents">
+    How to create, configure, and register a new agent.
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/core-concepts/architecture">
+    How agents fit into the five-layer message bus architecture.
+  </Card>
+</CardGroup>

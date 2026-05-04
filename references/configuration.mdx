@@ -1,0 +1,152 @@
+---
+title: "Configuration reference"
+description: "Complete reference for all Curia configuration options in config/local.yaml — rate limits, security rules, knowledge graph decay, intent drift, and more."
+---
+
+This page documents every configurable setting in `config/local.yaml`. For initial setup and environment variables, see [Initial configuration](/get-started/configuration).
+
+## Rate limiting
+
+Curia enforces two independent rate limits in the dispatch layer to protect against message flooding from malfunctioning channels, abusive senders, or compromised integrations.
+
+- **Global limit** — total messages per window across all senders, enforced before any policy-gate processing
+- **Per-sender limit** — messages per sender per window, enforced after policy gates
+
+Excess messages are dropped silently. Violations are audit-logged as `message.rejected` events with reason `global_rate_limited` or `sender_rate_limited`.
+
+```yaml
+# config/local.yaml
+dispatch:
+  rate_limit:
+    window_ms: 60000       # 1-minute fixed window
+    max_per_sender: 15     # messages per sender per window
+    max_global: 100        # total messages per window across all senders
+```
+
+## Working memory summarization
+
+When a conversation grows long, Curia automatically condenses older turns into a summary to prevent silent context-window overflow. You can tune when summarization triggers and how much recent context is preserved.
+
+```yaml
+# config/local.yaml
+workingMemory:
+  summarization:
+    threshold: 20   # number of turns that triggers a summarization pass
+    keepWindow: 10  # most-recent turns to retain as active after summarization
+```
+
+Constraints: `threshold` must be 2 or greater, `keepWindow` must be 1 or greater, and `keepWindow` must be less than `threshold`.
+
+## Skill output length
+
+All skill results are sanitized and truncated before being fed to the LLM. Raise this limit if you routinely hit it on large-payload skills (search results, page crawls, long calendar lists). Lower it to reduce LLM context pressure on installations with many concurrent agents.
+
+```yaml
+# config/local.yaml
+skillOutput:
+  maxLength: 200000   # characters (~50k tokens at 4 chars/token)
+```
+
+## Security rules
+
+<AccordionGroup>
+  <Accordion title="Extra injection patterns">
+    Curia checks all inbound messages against a set of built-in prompt injection patterns. You can add your own patterns without changing any code.
+
+    Built-in patterns include: "ignore previous instructions", "you are now", "system:", "act as", and others.
+
+    ```yaml
+    # config/local.yaml
+    security:
+      extra_injection_patterns:
+        - regex: "forget everything above"
+          label: "forget everything above"
+        - regex: "new\\s+persona"
+          label: "new persona"
+    ```
+
+    <Warning>
+      Avoid patterns with unbounded nested quantifiers such as `(a+)+` or `(.+)+`. These can cause catastrophic backtracking on adversarial input and may freeze the Node.js event loop. Prefer simple bounded patterns. These patterns run on every inbound message.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Trust score weights">
+    Each inbound message receives a trust score based on the channel it arrived on, the confidence of the sender's contact record, and any detected injection risk. You can adjust the relative weights of these factors.
+
+    ```yaml
+    # config/local.yaml
+    security:
+      trust_score:
+        channel_weight: 0.4       # weight of channel trust level
+        contact_weight: 0.4       # weight of sender contact confidence
+        max_risk_penalty: 0.2     # maximum penalty for detected injection risk
+
+      trust_score_floor: 0.2      # messages below this score are held regardless of channel policy
+    ```
+
+    Channel trust levels normalize as: `high = 1.0`, `medium = 0.6`, `low = 0.3`.
+  </Accordion>
+
+  <Accordion title="Custom PII patterns">
+    Curia redacts common PII from LLM-facing error messages by default: email addresses, phone numbers, credit card numbers, and US Social Security numbers. Add custom patterns for PII types specific to your deployment.
+
+    ```yaml
+    # config/local.yaml
+    pii:
+      extra_patterns:
+        - regex: "EMP-\\d{6}"
+          replacement: "[EMPLOYEE_ID]"
+        - regex: "\\b\\d{3}[-\\s]?\\d{3}[-\\s]?\\d{3}\\b"
+          replacement: "[CA_SIN]"
+    ```
+
+    <Warning>
+      Avoid patterns with unbounded nested quantifiers. These patterns run on every LLM-facing error message.
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+## Knowledge graph decay
+
+Curia's dream engine runs a nightly background pass that reduces the confidence of facts in the knowledge graph based on their decay class. When a fact's confidence falls below the archive threshold, it is soft-deleted — it no longer appears in queries but is retained in the audit log.
+
+```yaml
+# config/local.yaml
+dreaming:
+  decay:
+    intervalMs: 86400000       # how often the decay pass runs (default: daily)
+    archiveThreshold: 0.05     # confidence below which facts are archived
+    halfLifeDays:
+      permanent: null          # permanent facts are never touched by the decay pass
+      slow_decay: 180          # employer, residence — reliable for months
+      fast_decay: 21           # coffee preference, current focus — unreliable after weeks
+```
+
+## Intent drift detection
+
+For long-running scheduled tasks, Curia periodically compares the agent's current progress against the original task description. If the agent has drifted significantly from its goal, the task is paused and you are notified. In unattended mode, drift detection blocks — it does not just advise.
+
+```yaml
+# config/local.yaml
+intentDrift:
+  enabled: true
+  checkEveryNBursts: 1          # check on every burst (raise to reduce LLM call frequency)
+  minConfidenceToPause: high    # high | medium | low
+```
+
+**Confidence thresholds:**
+
+| Value | Behaviour |
+|---|---|
+| `high` | Pause only on egregious, unambiguous deviations. Fewest false positives. (Default) |
+| `medium` | Pause on probable deviations. Some false positives expected. |
+| `low` | Pause whenever any drift is detected, regardless of LLM confidence. |
+
+## Autonomy engine
+
+The autonomy score is stored in Postgres and controlled via natural-language commands or the CLI — you do not set it in a config file. Ask Curia directly:
+
+- *"What is your current autonomy score?"*
+- *"Set your autonomy score to 85."*
+
+The score defaults to **75 (Approval Required)** on first deployment. Changes take effect immediately without a restart. See [Autonomy](/core-concepts/autonomy) for the full band reference and [Autonomy engine](/security/autonomy-engine) for the governance mechanics.

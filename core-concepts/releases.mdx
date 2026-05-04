@@ -1,0 +1,37 @@
+---
+title: "Releases and roadmap"
+description: "Where to find Curia's release history, changelog, and planned milestones."
+---
+
+Curia is in active pre-alpha development. The API surface, configuration format, and feature set are evolving rapidly. Until the v1.0.0 release, expect breaking changes between minor versions.
+
+## Release history
+
+All releases are published on GitHub with detailed changelogs:
+
+<CardGroup cols={2}>
+  <Card title="GitHub Releases" icon="github" href="https://github.com/josephfung/curia/releases">
+    Full release notes, version history, and downloadable artifacts.
+  </Card>
+  <Card title="Changelog" icon="clock" href="https://github.com/josephfung/curia/blob/main/CHANGELOG.md">
+    Detailed changelog with every addition, change, fix, and breaking change.
+  </Card>
+</CardGroup>
+
+## Roadmap
+
+Planned work is tracked via GitHub Milestones. These are subject to change — priorities shift as the project evolves and real-world usage reveals what matters most.
+
+<Card title="GitHub Milestones" icon="flag" href="https://github.com/josephfung/curia/milestones">
+  Planned milestones, target dates, and progress tracking.
+</Card>
+
+## Versioning
+
+Curia follows [Semantic Versioning](https://semver.org) with these guidelines:
+
+- **Patch** (`0.x.Y`) — bug fixes, small improvements, completing partially-shipped features
+- **Minor** (`0.X.0`) — new skills, agents, channels, or brand-new capabilities
+- **1.0.0** — reserved for when the public API surfaces (skill manifests, agent YAML schema, bus event types, channel adapter interface) are stable enough to commit to
+
+Pre-1.0, breaking changes are called out explicitly in the changelog even though semver technically allows them in minor versions.

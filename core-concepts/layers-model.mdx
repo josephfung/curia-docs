@@ -1,0 +1,100 @@
+---
+title: "The layers model"
+description: "How Curia's governance layers compose — from channel trust to dispatch policy, coordinator autonomy checks, and skill-level action risk."
+---
+
+Every message that enters Curia passes through multiple governance layers before any action is taken. Each layer adds a different kind of protection, and they compose — a message must satisfy every layer to result in an action. No single layer is the "security layer"; security is the cumulative effect of all five working together.
+
+## Layer-by-layer governance
+
+### Layer 1: Channel trust
+
+Each channel declares a trust level based on the strength of its identity guarantees:
+
+| Channel | Trust level | Reasoning |
+|---|---|---|
+| CLI | High | Local access, no network exposure |
+| Signal | High | Phone number + end-to-end encryption |
+| HTTP API | Medium | Bearer token authentication |
+| Email | Low | Email addresses are easily spoofed |
+
+The channel trust level is the first input to the dispatch layer's trust scoring calculation. A message from a high-trust channel starts with an advantage; a message from email starts at a deficit and must compensate through sender identity.
+
+### Layer 2: Dispatch policy
+
+The Dispatch layer applies several policy gates before a message reaches any agent:
+
+**Trust scoring** — each inbound message receives a composite trust score based on three weighted factors:
+
+| Factor | Default weight | What it measures |
+|---|---|---|
+| Channel trust | 0.4 | How trustworthy the channel is (from Layer 1) |
+| Contact confidence | 0.4 | How well Curia knows the sender (confirmed, provisional, or unknown) |
+| Injection risk penalty | 0.2 max | Whether prompt injection patterns were detected |
+
+Messages below the trust score floor (default: 0.2) are held regardless of channel policy.
+
+**Rate limiting** — global and per-sender rate limits protect against flooding. Excess messages are dropped silently and audit-logged.
+
+**Prompt injection scanning** — inbound messages are checked against built-in and configurable injection patterns. Detected injection risk reduces the trust score.
+
+### Layer 3: Agent autonomy
+
+The Coordinator agent receives the task with the current [autonomy score](/core-concepts/autonomy) injected into its system prompt. The score maps to one of five bands that determine how independently the agent can act:
+
+| Band | Score range | Behavior |
+|---|---|---|
+| Full | 90–100 | Proceeds on standard operations without confirmation |
+| Spot-check | 80–89 | Proceeds on routine tasks, notes consequential actions |
+| Approval Required | 70–79 | Presents a plan and asks before any consequential action |
+| Draft Only | 60–69 | Prepares drafts but does not send without explicit go-ahead |
+| Restricted | < 60 | Advisory only, takes no independent action |
+
+This is a behavioral governance layer — the agent self-governs based on the band description. The autonomy score applies uniformly across all agents, channels, and skills.
+
+### Layer 4: Skill action risk
+
+Every skill declares an `action_risk` level in its manifest, establishing the minimum autonomy score required to execute it:
+
+| action_risk | Minimum score | Examples |
+|---|---|---|
+| `none` | 0 | Web search, reading email |
+| `low` | 60 | Writing to memory, updating contacts |
+| `medium` | 70 | Sending email, sending Signal messages |
+| `high` | 80 | Creating calendar events, making commitments |
+| `critical` | 90 | Financial actions, irreversible operations |
+
+If the current autonomy score is below the skill's declared floor, the execution layer blocks the invocation. This is a hard gate — unlike the autonomy band (which guides agent behavior through the prompt), skill gating is enforced architecturally.
+
+### Layer 5: Outbound safety
+
+Before a response leaves through any channel, the outbound safety pipeline applies:
+
+- **PII redaction** — sensitive data (email addresses, phone numbers, credit card numbers, SSNs, plus custom patterns) is replaced with labelled tokens like `[REDACTED: CREDIT_CARD]`. Redaction policies are configurable per channel — some channels may allow phone numbers through while redacting credit cards.
+- **Content filtering** — deterministic rules prevent certain classes of content from being sent (display name sanitization, caller verification). An LLM-as-judge gateway for content review is planned.
+
+## How the layers compose
+
+Consider a message arriving via email from an unknown sender, with the autonomy score at 75:
+
+1. **Channel trust**: Email = low trust (0.3)
+2. **Dispatch policy**: Unknown sender = low contact confidence. Trust score falls below floor → message is **held** for CEO review. Flow stops here.
+
+Now consider the same message arriving via Signal from a confirmed contact:
+
+1. **Channel trust**: Signal = high trust (1.0)
+2. **Dispatch policy**: Confirmed contact = high confidence. Trust score passes. Rate limits pass. No injection detected. Message proceeds.
+3. **Agent autonomy**: Score 75 = Approval Required. Agent will present a plan before any consequential action.
+4. **Skill action risk**: Agent wants to send an email reply (action_risk: medium, min score 70). Score 75 >= 70 → skill executes.
+5. **Outbound safety**: Email reply passes through PII redaction per email channel policy before sending.
+
+The system is designed so that each layer can be reasoned about independently, but their composition provides defense in depth. Removing any single layer would leave a category of risk unaddressed.
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/core-concepts/architecture">
+    The five-layer architecture and message bus pattern in detail.
+  </Card>
+  <Card title="Autonomy" icon="gauge" href="/core-concepts/autonomy">
+    How the 0–100 autonomy score controls Curia's independence level.
+  </Card>
+</CardGroup>

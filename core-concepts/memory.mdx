@@ -1,0 +1,205 @@
+---
+title: "Memory and the knowledge graph"
+description: "How Curia stores knowledge across sessions — four memory tiers, temporal confidence, semantic search, and the knowledge graph browser."
+---
+
+Most AI tools forget everything when you close the window. Curia does not. All state — conversation history, facts about people, decisions made, and relationships between entities — lives in Postgres and survives process restarts, server reboots, and upgrades. When you come back to a topic days or weeks later, Curia picks up where it left off. It also knows which facts it should trust less as time passes, so stale information doesn't mislead it.
+
+## Four memory tiers
+
+Curia's memory system has four distinct tiers, each serving a different purpose and operating at a different timescale.
+
+### Working memory
+
+Working memory holds the active context for an ongoing conversation or task. Every turn in a conversation, every intermediate tool result, and every in-progress calculation lives here, scoped to a task ID. When a conversation goes quiet, working memory expires after a configurable TTL (default: one hour of inactivity). For long-running persistent tasks, it is kept alive across execution bursts.
+
+Working memory is stored in Postgres — not in the process. If the server restarts mid-task, the agent reloads exactly where it left off.
+
+**Context summarization** — when a conversation exceeds 20 turns, the oldest turns are summarized into a condensed narrative and archived. The originals remain in Postgres but are not loaded into the LLM's context window. The summary preserves key decisions, entities discussed, and any commitments or action items.
+
+### The Bullpen
+
+The Bullpen is a structured, threaded discussion space for inter-agent coordination and CEO participation. Any agent can open a thread addressed to other agents. Every exchange flows through the bus with the same security model as any other event.
+
+- **You can observe** all threads via the dashboard or HTTP API SSE stream
+- **You can intervene** by sending a message to any thread from any channel — it arrives as a user-typed `agent.discuss` event with `sender: "user"`
+- **You can start threads** — ask a question that multiple agents contribute answers to
+
+Every Bullpen message is written to the audit log with full causal tracing. Nothing happens invisibly.
+
+### Entity memory
+
+Entity memory is a specialized query pattern over the knowledge graph, optimized for answering "what do I know about this person or thing?" An agent asks for the entity by name and gets back connected facts with confidence scores and freshness indicators.
+
+Facts are stored as `fact` nodes in the knowledge graph, linked to their subject entity by edges. The query layer assembles the most relevant, highest-confidence facts and surfaces them in priority order. "The CEO prefers morning meetings" and "the CEO's current focus is Q3 fundraising" are both entity memory facts — one permanent, one that should fade if it isn't recently confirmed.
+
+### Knowledge graph
+
+The knowledge graph is Curia's long-term memory: a network of nodes and edges stored in Postgres, traversable across arbitrary relationship chains.
+
+<CardGroup cols={2}>
+  <Card title="Nodes" icon="circle">
+    People, organizations, projects, events, decisions, and concepts — each with a label, properties, and an embedding for semantic search.
+  </Card>
+  <Card title="Edges" icon="arrow-right">
+    Typed relationships between nodes — `works_on`, `attended`, `decided`, `relates_to`, and others that Curia infers from context.
+  </Card>
+  <Card title="Entity facts" icon="list">
+    Configurable facts about nodes — "prefers morning meetings", "board meetings are quarterly, first Thursday" — with confidence scores and decay classes.
+  </Card>
+  <Card title="Decisions" icon="check-circle">
+    Explicit decision nodes linked to the people who made them, the projects they concern, and the events where they occurred.
+  </Card>
+</CardGroup>
+
+**Relationship types** — edges represent typed relationships that Curia infers from email threads, calendar events, and conversation context:
+
+| Relationship type | Meaning |
+|---|---|
+| `works_on` | A person is working on a project |
+| `decided` | A person or group made a decision |
+| `attended` | A person attended an event |
+| `relates_to` | A general association between two nodes |
+| `reports_to` | Organizational hierarchy |
+| `invested_in` | An organization or person invested in another |
+
+You can query relationships conversationally — Curia uses the `query-relationships` skill to look up all stored relationships for any entity by name.
+
+## Temporal awareness
+
+Not all facts age the same way. Curia assigns every node and edge a `decay_class` that controls how confidence should evolve over time:
+
+| Decay class | Half-life | Examples |
+|---|---|---|
+| `permanent` | Never decays | Legal name, date of birth, birth city |
+| `slow_decay` | ~180 days | Employer, job title, city of residence |
+| `fast_decay` | ~21 days | Coffee preference, current project focus, travel schedule |
+
+Every memory entry also carries:
+
+- `created_at` — when it was first recorded
+- `last_confirmed_at` — the last time evidence reinforced this fact
+- `confidence` — a 0–1 float that decreases over time based on decay class
+- `source` — which agent, channel, or interaction created it
+
+This means Curia knows not just what it believes, but why it believes it and how recently that belief was confirmed. When Curia encounters new evidence that confirms a fact, `last_confirmed_at` updates and confidence rises again. Stale facts lose confidence over time rather than being trusted indefinitely.
+
+## How Curia populates the graph
+
+The knowledge graph grows automatically from several sources:
+
+- **Emails**: Participant extraction from From/To/CC headers auto-creates contact nodes and infers organizational relationships
+- **Conversation context**: When you mention people, projects, or decisions in conversation, Curia extracts and stores structured facts
+- **Explicit corrections**: You can tell Curia new facts directly — "Mark Chen is now our CFO" — and it updates the graph with proper source attribution
+- **Calendar events**: Attendees and events create and reinforce relationship nodes
+
+## Memory validation
+
+Agents writing to memory pass through validation gates designed to prevent pollution of the knowledge graph.
+
+**Deduplication** — before creating a new fact node, the system checks for existing nodes about the same entity with a similar label (cosine similarity > 0.92). If a near-duplicate exists, the system updates `last_confirmed_at` and merges properties instead of creating a duplicate.
+
+**Contradiction detection** — if a new fact contradicts an existing one (for example, "the CEO lives in Toronto" when "the CEO lives in Kitchener" already exists), the system compares confidence scores:
+
+- New fact has lower confidence → write rejected, conflict logged
+- New fact has higher confidence → existing fact updated, old value preserved in `properties.previous_values` for audit
+- Equal confidence → flagged for your review via the alert channel
+
+**Write rate limiting** — agents are capped at 50 memory writes per task execution. Exceeded writes are dropped with a warning in the audit log. This prevents runaway agents from polluting the knowledge graph.
+
+## Semantic search
+
+Key facts and node descriptions are embedded using `text-embedding-3-small` (1536 dimensions) and stored in a pgvector HNSW index. This powers natural-language queries across the knowledge graph even when exact keywords don't match:
+
+```
+find everything related to fundraising
+```
+
+```
+show me people connected to the Q3 board meeting
+```
+
+```
+investors who attended the Series A close
+```
+
+Semantic search matches nodes whose embeddings are similar to your query — even when the exact words don't appear in any node labels. Embeddings are generated when a node or fact is created, and regenerated when its properties change significantly.
+
+<Note>
+  Semantic search requires `OPENAI_API_KEY` to be set. Without it, the graph browser falls back to exact-match label and property search.
+</Note>
+
+## The knowledge graph browser
+
+Curia ships with a web-based knowledge graph browser for exploring everything it has learned.
+
+### Accessing the browser
+
+Open [http://localhost:3000](http://localhost:3000) in your browser. You'll be prompted for your `WEB_APP_BOOTSTRAP_SECRET` — the value you set in `.env` when you configured Curia. After authenticating, the knowledge graph browser is available at `/kg`.
+
+<Info>
+  If `WEB_APP_BOOTSTRAP_SECRET` is not set in your environment, the knowledge graph API is intentionally disabled. Set the variable and restart Curia to enable it.
+</Info>
+
+### Browsing and searching
+
+The main graph view shows nodes and their relationships. Use the search bar to find specific people or topics:
+
+- **Search by name**: Type a name or partial name to find matching nodes
+- **Filter by type**: Filter to `person`, `organization`, `project`, `event`, `decision`, or `concept`
+- **Select a node**: Click any node to center the view on it and expand its neighbors
+
+When you select a node, Curia loads its neighborhood — the nodes directly connected to it, up to 3 hops deep. The `depth` parameter in the URL controls traversal depth if you want to explore further.
+
+Click a `person` or `organization` node to open its entity memory panel, showing all recorded facts with confidence scores, sources, and decay classes.
+
+### Correcting the graph
+
+The graph isn't always right. When Curia records something incorrect, tell it directly:
+
+```
+> That relationship is wrong — Mark Chen doesn't report to Sarah. Remove it.
+```
+
+```
+> Alice isn't at Acme Corp anymore. She joined Beacon Capital last month.
+```
+
+Curia uses `delete-relationship` to remove incorrect edges and updates entity facts when you provide corrections. Every correction is audit-logged with your confirmation as the source.
+
+When Curia detects a potential duplicate contact — two nodes that appear to represent the same person — it surfaces the conflict and walks you through a merge decision before making any changes. It never auto-merges without your confirmation.
+
+## What persists across restarts
+
+Everything. Curia uses no in-process state that is lost on restart:
+
+<AccordionGroup>
+  <Accordion title="Conversations">
+    Working memory is in Postgres. An active conversation resumes exactly where it left off after a restart, including tool results and intermediate calculations.
+  </Accordion>
+  <Accordion title="Long-running tasks">
+    Persistent tasks store their progress, intent anchor, and remaining error budget in Postgres. The scheduler resumes them on the next execution burst.
+  </Accordion>
+  <Accordion title="Knowledge graph and entity memory">
+    All nodes, edges, embeddings, confidence scores, and temporal metadata are in Postgres. The graph grows indefinitely across deployments.
+  </Accordion>
+  <Accordion title="Bullpen threads">
+    All inter-agent discussions are persisted in Postgres. Pending threads are surfaced to agents on their next activation.
+  </Accordion>
+  <Accordion title="Autonomy score and history">
+    The current autonomy score and its full change history are persisted in Postgres. Score changes take effect immediately — no restart needed.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+Curia requires PostgreSQL 16 or later with the pgvector extension. All memory tiers share the same Postgres instance. See the [installation guide](/get-started/installation) for database configuration.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Agents" icon="users" href="/agents/how-agents-work">
+    See how agents load and write to memory during task execution.
+  </Card>
+  <Card title="Dreaming" icon="moon" href="/core-concepts/dreaming">
+    How the dream engine processes memory overnight — decay passes, confidence updates, and autonomy adjustments.
+  </Card>
+</CardGroup>

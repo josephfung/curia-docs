@@ -6,7 +6,7 @@ description: "Open a Server-Sent Events connection to receive agent responses, t
 `GET /api/messages/stream` opens a persistent [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) (SSE) connection that delivers agent activity as it happens. Use it to build live chat interfaces, watch the agent's tool usage on long-running tasks, or power any UI that needs to react without polling.
 
 <Note>
-  This endpoint uses SSE, not WebSockets. The connection is one-directional — the server pushes events to you. To send a message, use [POST /api/messages](/api/messages) as usual, then watch events arrive on the stream.
+  This endpoint uses SSE, not WebSockets. The connection is one-directional — the server pushes events to you. To send a message, use [POST /api/messages](/references/http-api-messages) as usual, then watch events arrive on the stream.
 </Note>
 
 ## Request

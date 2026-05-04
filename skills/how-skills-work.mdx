@@ -96,7 +96,7 @@ Every skill declares an `action_risk` value that indicates its potential impact 
 | `high` | 80 | Calendar writes, commitments made on behalf of the CEO |
 | `critical` | 90 | Financial, destructive, or irreversible actions |
 
-The autonomy engine uses these values to determine whether a given skill can run at the current autonomy score. See [Autonomy engine](/concepts/autonomy) for the full picture.
+The autonomy engine uses these values to determine whether a given skill can run at the current autonomy score. See [Autonomy engine](/core-concepts/autonomy) for the full picture.
 
 ## Sensitivity and first-use approval
 
@@ -178,10 +178,10 @@ These MCP servers are not bundled with Curia but are documented as first-class i
 To connect any MCP server, add it to `config/skills.yaml` using the `mcp_servers` block shown above. Curia will discover and register its tools automatically at startup.
 
 <CardGroup cols={2}>
-  <Card title="Adding skills" icon="wrench" href="/guides/adding-skills">
+  <Card title="Building custom skills" icon="wrench" href="/skills/building-custom-skills">
     Build a local skill from scratch with a manifest and handler.
   </Card>
-  <Card title="Autonomy engine" icon="gauge" href="/concepts/autonomy">
+  <Card title="Autonomy" icon="gauge" href="/core-concepts/autonomy">
     See how action_risk values gate skill execution by autonomy score.
   </Card>
 </CardGroup>

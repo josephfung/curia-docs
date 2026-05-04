@@ -1,0 +1,44 @@
+---
+title: "CLI channel"
+description: "Using the command-line interface to interact with Curia locally — the simplest and highest-trust channel."
+---
+
+The CLI channel is Curia's simplest channel — a readline-based interface that runs directly in the terminal where Curia is started. Because it requires local access to the server, it carries the highest trust level.
+
+## How it works
+
+When you run `pnpm local`, Curia starts all services and presents a text prompt. Type a message and press Enter to interact with Curia directly. Responses appear in the same terminal.
+
+The CLI adapter publishes `inbound.message` events on the bus, just like every other channel. Your messages pass through the same dispatch pipeline — trust scoring, rate limiting, injection scanning — before reaching the Coordinator. The only difference is the channel trust level: CLI is always **high**.
+
+## Trust level
+
+| Property | Value |
+|---|---|
+| **Trust level** | High |
+| **Reasoning** | Local access only — no network exposure, no identity spoofing |
+| **Sender identity** | Always treated as the CEO (`contactId: "primary-user"`) |
+
+Because the CLI is local-only, messages from it bypass the trust score thresholds that apply to external channels. You never need to worry about held messages or provisional contact restrictions when using the CLI.
+
+## When to use the CLI
+
+- **Development and testing** — the fastest way to interact with Curia during development
+- **Administrative tasks** — checking autonomy score, managing contacts, processing held messages
+- **Troubleshooting** — direct access with full trust, useful when debugging channel-specific issues
+- **Initial setup** — the CLI is available immediately after `pnpm local`, before any external channels are configured
+
+## Limitations
+
+- **Single session** — one conversation at a time, tied to a fixed conversation ID
+- **No persistence across restarts** — the readline session ends when Curia stops (but working memory persists in Postgres, so context from previous CLI conversations is retained)
+- **Local only** — requires terminal access to the machine running Curia
+
+<CardGroup cols={2}>
+  <Card title="How channels work" icon="arrows-split-up-and-left" href="/channels/how-channels-work">
+    Channel routing, trust levels, and how messages flow through the dispatch layer.
+  </Card>
+  <Card title="Deployment" icon="server" href="/get-started/deployment">
+    Get Curia running so you can use the CLI.
+  </Card>
+</CardGroup>

@@ -1,0 +1,55 @@
+---
+title: "Autonomy engine"
+description: "How Curia's autonomy score governs skill execution through action_risk levels, audit trails, and planned automatic adjustment."
+---
+
+This page covers the governance mechanics of Curia's autonomy engine — how the score controls what skills can execute, how changes are audited, and what's planned for automatic adjustment. For the conceptual overview and calibration guidance, see [Autonomy](/core-concepts/autonomy).
+
+## How action_risk connects to autonomy
+
+Every skill declares an `action_risk` level in its manifest. This field establishes the minimum autonomy score at which that skill can be invoked without explicit confirmation.
+
+| action_risk value | Minimum score | Skill examples |
+|---|---|---|
+| `none` | 0 | Web search, reading email, summarizing content |
+| `low` | 60 | Writing to memory, updating contacts |
+| `medium` | 70 | Sending email, sending Signal messages |
+| `high` | 80 | Creating calendar events, making commitments on your behalf |
+| `critical` | 90 | Financial actions, bulk deletions, irreversible operations |
+
+At the current Phase 1 implementation, the autonomy score governs Curia's behavior through prompt injection — the behavioral description for the active band is included in the system prompt on every task. Phase 2 will add hard execution gates that block skill invocations when the live score is below the skill's declared floor.
+
+<Warning>
+The `action_risk` field is required on all skill manifests. Curia will not start if any skill omits it.
+</Warning>
+
+## Score history
+
+Every change to the autonomy score is written to an append-only history record in Postgres. No entry is ever updated or deleted. The history records:
+
+- The new score and band
+- The previous score
+- Who made the change (`ceo` or, in a future release, `system` for automatic adjustments)
+- An optional reason you provided
+- The timestamp
+
+This gives you a complete audit trail of how Curia's independence has evolved over time, and why.
+
+## Automatic score adjustment
+
+The autonomy scoring pass runs as part of the [dream engine](/core-concepts/dreaming) and evaluates Curia's recent actions to adjust the autonomy score based on performance metrics:
+
+- **Competence** (45%) — task success rate, accuracy of information retrieved, follow-through on commitments
+- **Commitment** (35%) — reliability on recurring tasks, consistency with stated preferences
+- **Compatibility** (20%) — alignment with your communication style and decision patterns
+
+Automatic adjustments require a minimum of 30 actions before any change, apply time-decay weighting so recent behavior matters more, and cannot increase the score if factual errors or overconfidence penalties are active. All automatic changes are written to the audit record with the reason noted, so you can see exactly what changed and why.
+
+<CardGroup cols={2}>
+  <Card title="Skills and action_risk" icon="puzzle-piece" href="/skills/how-skills-work">
+    See how skill risk levels are declared in the manifest.
+  </Card>
+  <Card title="Audit & logging" icon="clipboard-list" href="/security/audit-log">
+    The append-only audit trail that records all system actions.
+  </Card>
+</CardGroup>

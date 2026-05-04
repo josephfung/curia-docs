@@ -1,0 +1,103 @@
+---
+title: "Dreaming"
+description: "How Curia's dream engine runs background maintenance — knowledge graph decay, confidence updates, and autonomy score adjustments."
+---
+
+The Dream Engine is Curia's background maintenance system, named after the neuroscience analogy: sleep is when the brain consolidates short-term experiences into long-term memory and prunes weak connections. Curia's dream engine runs periodic passes on the knowledge graph when the system is not actively serving a conversation.
+
+## What the dream engine does
+
+The dream engine currently runs two independent passes on configurable intervals:
+
+### Memory decay pass
+
+Every fact and relationship in the [knowledge graph](/core-concepts/memory) has a confidence score that starts at 1.0 and decays over time based on its decay class. The decay pass applies this aging using a half-life model:
+
+```
+new_confidence = current_confidence × 0.5^(days_since_last_confirmed / half_life_days)
+```
+
+| Decay class | Half-life | Effect |
+|---|---|---|
+| `permanent` | Never | Confidence never decreases — birth dates, legal names |
+| `slow_decay` | ~180 days | Halves every 6 months — employer, city of residence |
+| `fast_decay` | ~21 days | Halves every 3 weeks — coffee preference, current project focus |
+
+When a fact's confidence falls below the archive threshold (default: 0.05), it is **soft-deleted** — `archived_at` is set, and the fact no longer appears in queries. The data is retained in the database for audit purposes and can be restored if later re-confirmed.
+
+Edges follow their endpoints: when a node is archived, all edges pointing to or from it are archived in the same pass. Edges also decay and archive independently based on their own confidence.
+
+The entire decay pass runs inside a single database transaction — partial failures leave no torn state.
+
+### Autonomy scoring pass
+
+The scoring pass evaluates Curia's recent actions to compute a capability score that can nudge the [autonomy score](/core-concepts/autonomy) up or down. It processes unscored entries in the autonomy action log:
+
+- **Deterministic scoring** — approval outcomes (CEO approved or rejected an action) are scored directly
+- **LLM-as-judge scoring** — task success and failure outcomes are evaluated by an LLM judge for quality
+
+The composite capability score weights three dimensions:
+
+| Dimension | Weight | What it measures |
+|---|---|---|
+| Competence | 45% | Task success rate, accuracy, follow-through |
+| Commitment | 35% | Reliability on recurring tasks, consistency |
+| Compatibility | 20% | Alignment with communication style and preferences |
+
+Automatic adjustments require a minimum of 30 scored actions, apply time-decay weighting (recent behavior matters more), and cannot increase the score if factual errors or overconfidence penalties are active. All changes are written to the autonomy audit record.
+
+<Note>
+The decay pass and scoring pass run on independent intervals so a slow scoring pass (waiting on an LLM judge response) never blocks the decay pass from running.
+</Note>
+
+## When it runs
+
+The dream engine starts automatically with Curia and runs on configurable intervals:
+
+- **Decay pass**: defaults to every 24 hours (`dreaming.decay.intervalMs: 86400000`)
+- **Scoring pass**: runs on its own interval, independent of the decay cadence
+
+Both passes log their results at startup and after each run, including counts of nodes/edges decayed and archived, and pass duration.
+
+## Configuration
+
+```yaml
+# config/local.yaml
+dreaming:
+  decay:
+    intervalMs: 86400000       # how often the decay pass runs (default: daily)
+    archiveThreshold: 0.05     # confidence at or below this → archived
+    halfLifeDays:
+      permanent: null          # never decays
+      slow_decay: 180          # halves every 6 months
+      fast_decay: 21           # halves every 3 weeks
+```
+
+See the [configuration reference](/references/configuration) for the full set of options.
+
+## Re-confirmation
+
+Decay is not a one-way street. When Curia encounters evidence that reinforces an existing fact — you mention someone's employer in conversation, an email confirms a relationship — the fact's `last_confirmed_at` timestamp updates and confidence rises. The next decay pass uses this refreshed timestamp as its reference point, effectively resetting the decay clock.
+
+This means actively relevant facts stay fresh automatically, while facts Curia hasn't heard about in months gracefully fade from its working knowledge.
+
+## Future passes
+
+The dream engine is designed to host additional maintenance passes as sibling methods, each with their own config key and interval:
+
+| Pass | Purpose | Status |
+|---|---|---|
+| Memory decay | Confidence aging and archival | Implemented |
+| Autonomy scoring | Capability evaluation and score adjustment | Implemented |
+| Decay warning | Notify before archiving important nodes | Planned |
+| Contradiction resolution | Detect and resolve conflicting facts | Planned |
+| Working-memory synthesis | Consolidate conversation insights into long-term memory | Planned |
+
+<CardGroup cols={2}>
+  <Card title="Memory and the knowledge graph" icon="brain" href="/core-concepts/memory">
+    How the knowledge graph stores facts, relationships, and temporal metadata.
+  </Card>
+  <Card title="Autonomy" icon="gauge" href="/core-concepts/autonomy">
+    The 0–100 score that the scoring pass can adjust.
+  </Card>
+</CardGroup>

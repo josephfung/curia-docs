@@ -3,7 +3,7 @@ title: "POST /api/messages — send a message to your agent"
 description: "Send a message to the Coordinator agent and receive a synchronous response. Supports conversation threading and returns the agent reply within 120 seconds."
 ---
 
-`POST /api/messages` is the primary way to interact with Curia programmatically. You send a message, Curia routes it to the Coordinator agent, and the response comes back in the same HTTP reply — no streaming required. If you want to watch the agent's progress in real time (for example, to see which tools it is calling), use [GET /api/messages/stream](/api/stream) alongside this endpoint.
+`POST /api/messages` is the primary way to interact with Curia programmatically. You send a message, Curia routes it to the Coordinator agent, and the response comes back in the same HTTP reply — no streaming required. If you want to watch the agent's progress in real time (for example, to see which tools it is calling), use [GET /api/messages/stream](/references/http-api-stream) alongside this endpoint.
 
 ## Request
 

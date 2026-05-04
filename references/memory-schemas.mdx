@@ -1,0 +1,134 @@
+---
+title: "Memory schemas"
+description: "Schema reference for Curia's knowledge graph — node types, edge types, decay classes, sensitivity levels, and temporal metadata."
+---
+
+Curia's knowledge graph stores all long-term memory in Postgres as typed nodes and edges with temporal metadata. This page documents the data model.
+
+## Node types
+
+Every node in the knowledge graph has a `type` field from this fixed set:
+
+| Type | Description | Examples |
+|---|---|---|
+| `person` | An individual | CEO, board members, contacts |
+| `organization` | A company, team, or institution | Acme Corp, Finance team |
+| `project` | A project or initiative | Q3 Fundraising, Website Redesign |
+| `decision` | A decision that was made | "Hired Alice as CFO", "Moved to weekly standups" |
+| `event` | A meeting, conference, or occurrence | Board meeting, Series A close |
+| `concept` | An abstract idea or topic | Machine learning, Compliance policy |
+| `fact` | A specific piece of information about an entity | "Prefers morning meetings", "Lives in Toronto" |
+
+## Edge types
+
+Edges represent typed relationships between nodes:
+
+| Category | Types | Description |
+|---|---|---|
+| **Structural** | `works_on`, `decided`, `attended`, `relates_to`, `belongs_to`, `authored`, `mentioned_in` | General relationships between entities |
+| **Personal** | `spouse`, `parent`, `child`, `sibling` | Family relationships |
+| **Professional** | `reports_to`, `manages`, `collaborates_with`, `advises`, `represents` | Organizational hierarchy and work relationships |
+| **Organizational** | `member_of`, `founded`, `invested_in` | Membership and investment relationships |
+
+`relates_to` is the generic fallback — use it when no specific type fits.
+
+## Temporal metadata
+
+Every node and edge carries temporal metadata:
+
+```typescript
+interface TemporalMetadata {
+  createdAt: Date;         // when first recorded
+  lastConfirmedAt: Date;   // last time evidence reinforced this
+  confidence: number;      // 0–1 scale, decays over time
+  decayClass: DecayClass;  // how fast confidence decays
+  source: string;          // provenance: "agent:coordinator/task:abc/channel:cli"
+}
+```
+
+### Decay classes
+
+| Class | Half-life | Behavior | Examples |
+|---|---|---|---|
+| `permanent` | Never | Confidence never decreases | Legal name, date of birth |
+| `slow_decay` | ~180 days | Halves every 6 months | Employer, city of residence |
+| `fast_decay` | ~21 days | Halves every 3 weeks | Coffee preference, current project focus |
+
+Confidence decays using a half-life model: `new_confidence = current × 0.5^(days / half_life)`. See [Dreaming](/core-concepts/dreaming) for how the decay pass works.
+
+## Sensitivity levels
+
+Every node has a sensitivity classification assigned at creation time:
+
+| Level | Description | Export behavior |
+|---|---|---|
+| `public` | No restrictions | Freely exportable |
+| `internal` | Default for most facts | Exportable with standard authorization |
+| `confidential` | Sensitive business information | Requires elevated authorization |
+| `restricted` | Highest sensitivity | Bulk export blocked |
+
+Sensitivity is **immutable after creation** — changing it requires a manual data migration. Skills can provide an explicit sensitivity override when storing facts, or let the system auto-classify using keyword analysis.
+
+## Node schema
+
+```typescript
+interface KgNode {
+  id: string;                          // UUID
+  type: NodeType;                      // person, organization, project, etc.
+  label: string;                       // display name
+  properties: Record<string, unknown>; // arbitrary key-value data
+  embedding?: number[];                // VECTOR(1536) for semantic search
+  temporal: TemporalMetadata;
+  sensitivity: Sensitivity;
+}
+```
+
+## Edge schema
+
+```typescript
+interface KgEdge {
+  id: string;                          // UUID
+  sourceNodeId: string;                // UUID of the source node
+  targetNodeId: string;                // UUID of the target node
+  type: EdgeType;                      // works_on, reports_to, etc.
+  properties: Record<string, unknown>; // arbitrary key-value data
+  temporal: TemporalMetadata;
+}
+```
+
+## Storing facts
+
+When storing a new fact via the `memory-store` skill:
+
+```typescript
+interface StoreFactOptions {
+  entityNodeId: string;            // the entity this fact is about
+  label: string;                   // the fact text
+  properties?: Record<string, unknown>;
+  confidence?: number;             // default: 0.7
+  decayClass?: DecayClass;         // default: "slow_decay"
+  source: string;                  // provenance string
+  sensitivity?: Sensitivity;       // override auto-classification
+  sensitivityCategory?: string;    // hint for auto-classifier
+}
+```
+
+## Validation
+
+Before creating a new fact, the memory validator checks:
+
+| Check | Outcome |
+|---|---|
+| **Deduplication** (cosine similarity > 0.92) | Updates `lastConfirmedAt` and merges properties instead of creating a duplicate |
+| **Contradiction** (conflicting fact exists) | Higher confidence wins; lower is archived with previous values preserved |
+| **Equal confidence conflict** | Flagged for CEO review via alert channel |
+| **Write rate limit** (50 per task) | Excess writes dropped with audit log warning |
+
+<CardGroup cols={2}>
+  <Card title="Memory and the knowledge graph" icon="brain" href="/core-concepts/memory">
+    Conceptual overview of the four memory tiers and how they work.
+  </Card>
+  <Card title="Dreaming" icon="moon" href="/core-concepts/dreaming">
+    How the decay pass processes temporal metadata overnight.
+  </Card>
+</CardGroup>
