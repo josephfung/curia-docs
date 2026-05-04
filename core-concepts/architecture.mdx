@@ -3,6 +3,104 @@ title: "Architecture"
 description: "How a message flows through Curia — from inbound channel to coordinator dispatch, agent execution, skill invocation, and outbound delivery."
 ---
 
-{/* TODO: This page needs to be written. Source from curia repo README, CLAUDE.md architectural notes, and the codebase's event bus / coordinator / dispatch flow. Include a high-level component diagram showing: channels → dispatch → coordinator → agents → skills → outbound. */}
+Curia is built around a central message bus that connects five layers. Four domain layers — Channel, Dispatch, Agent, and Execution — have hard security boundaries enforced at registration time. A fifth System layer provides trusted cross-cutting infrastructure (audit logger, memory engine, scheduler). All communication between layers flows through typed events on the bus, backed by Postgres for persistence.
 
-This page is under construction.
+## The five layers
+
+| Layer | Responsibility | Example components |
+|---|---|---|
+| **Channel** | Translates platform messages (Signal, Email, CLI, HTTP) into normalized bus events | Signal adapter, Email adapter, CLI adapter |
+| **Dispatch** | Routes messages to agents, enforces policy (rate limits, trust scoring, injection detection), translates responses back to channels | Dispatcher, PII redactor |
+| **Agent** | LLM-powered agents with isolated memory scopes — receives tasks, reasons, invokes skills, produces responses | Coordinator, Email Triage, Research Analyst |
+| **Execution** | Runs skills (local TypeScript handlers or MCP tools), validates permissions, sanitizes outputs | Skill executor, MCP client |
+| **System** | Trusted infrastructure with full pub/sub access to all event types | Audit logger, Memory engine, Scheduler, Dream engine |
+
+## Bus security enforcement
+
+The bus validates publisher authorization at registration time. A module registered as `layer: "channel"` can only publish event types in the channel allowlist (`inbound.message`, `inbound.event`). Attempting to publish `skill.invoke` throws an error. This is a hard security boundary — it's architectural, not policy.
+
+A compromised channel adapter cannot invoke skills, write to memory, or modify agent state. It can only publish inbound messages, which are then subject to the full dispatch policy pipeline before reaching any agent.
+
+The System layer is the exception — it has full publish and subscribe access to all event types. This is reserved for trusted infrastructure components that need cross-cutting access to operate.
+
+## Message flow
+
+A complete round-trip for an inbound message:
+
+<Steps>
+  <Step title="Channel receives a message">
+    A channel adapter (Signal, Email, CLI, or HTTP) receives a platform message and publishes an `inbound.message` event on the bus.
+  </Step>
+  <Step title="Dispatch evaluates policy">
+    The Dispatch layer (subscribed to `inbound.message`) resolves the sender's contact record, computes a trust score, checks rate limits, scans for prompt injection, and — if the message passes all gates — publishes an `agent.task` event.
+  </Step>
+  <Step title="Agent reasons and acts">
+    The Coordinator agent (subscribed to `agent.task`) receives the task, loads context (entity memory, working memory, autonomy score), and calls the LLM. If the agent needs to take action, it publishes `skill.invoke` events.
+  </Step>
+  <Step title="Execution runs the skill">
+    The Execution layer (subscribed to `skill.invoke`) validates permissions against the skill manifest, runs the skill handler, sanitizes the output, and publishes a `skill.result` event.
+  </Step>
+  <Step title="Agent incorporates results">
+    The agent receives the skill result, may invoke additional skills, and eventually publishes an `agent.response` event.
+  </Step>
+  <Step title="Dispatch routes the response">
+    The Dispatch layer translates the `agent.response` into an `outbound.message`, applying PII redaction based on channel policy.
+  </Step>
+  <Step title="Channel delivers">
+    The originating channel adapter (subscribed to `outbound.message`) sends the response via the platform API — an email reply, a Signal message, a CLI output, or an HTTP response.
+  </Step>
+</Steps>
+
+## Inter-agent communication
+
+Agents can communicate with each other through the **Bullpen** — a structured, threaded discussion space. An agent publishes an `agent.discuss` event addressed to another agent, which responds in the same thread. All Bullpen messages flow through the bus with the same security model and are written to the audit log with full causal tracing.
+
+You can observe, intervene in, or start Bullpen threads from any channel.
+
+## Event type registry
+
+All event types are defined as a TypeScript discriminated union — no untyped payloads or string-typed event names. Each event carries:
+
+- `id` — UUID
+- `timestamp` — when the event was created
+- `type` — the discriminant (e.g. `inbound.message`, `skill.invoke`)
+- `source_layer` — which layer published it
+- `source_id` — which component published it
+- `parent_event_id` — causal chain linking (optional)
+- `payload` — typed per event type
+
+## Write-ahead audit logging
+
+The audit logger writes events to Postgres *before* delivering them to other subscribers. If the process crashes after the audit write but before subscriber delivery, the event is logged but unprocessed. This gives at-least-once delivery for all events and exactly-once audit recording.
+
+## Design principles
+
+1. **Hard security boundaries** — layers are physically prevented from unauthorized actions, not just organizationally separated
+2. **Everything is auditable** — every event, decision, and inter-agent exchange is logged and traceable
+3. **Memory-first** — sophisticated knowledge graph with temporal awareness, not just conversation logs
+4. **Extensible by design** — new channels, skills, and agents added without touching core code
+5. **Restart-safe** — all state lives in Postgres; no in-process state that dies with the process
+6. **Single-tenant simplicity** — no multi-tenant complexity; deploy multiple instances for multiple users
+
+## Tech stack
+
+| Component | Technology |
+|---|---|
+| Runtime | Node.js 22+ with TypeScript (ESM) |
+| Database | PostgreSQL 16+ with pgvector |
+| LLM SDKs | @anthropic-ai/sdk, openai, ollama |
+| MCP | @modelcontextprotocol/sdk (client) |
+| HTTP | Fastify |
+| Config | YAML with env var interpolation |
+| Logging | pino (structured JSON) |
+| Migrations | node-pg-migrate (plain SQL) |
+| Embeddings | OpenAI `text-embedding-3-small` (1536 dimensions) |
+
+<CardGroup cols={2}>
+  <Card title="The layers model" icon="layer-group" href="/core-concepts/layers-model">
+    How governance layers compose — from channel trust to skill-level action risk.
+  </Card>
+  <Card title="Security overview" icon="shield" href="/security/overview">
+    The security architecture and audit framework that underpins every layer.
+  </Card>
+</CardGroup>
