@@ -29,10 +29,12 @@
     }
   },
   "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/josephfung/curia"
-    }
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/josephfung/curia"
+      }
+    ]
   },
   "navigation": {
     "tabs": [
