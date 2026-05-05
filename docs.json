@@ -8,14 +8,35 @@
   "theme": "luma",
   "favicon": "https://media.brand.dev/288cc7c4-5cef-4376-950b-bdf0083eedae.png",
   "colors": {
-    "primary": "#94cb04",
-    "light": "#545454"
+    "primary": "#1A6B5E",
+    "light": "#478189",
+    "dark": "#1A6B5E"
+  },
+  "background": {
+    "color": {
+      "light": "#F5F4F1",
+      "dark": "#111111"
+    }
+  },
+  "fonts": {
+    "heading": {
+      "family": "Manrope",
+      "weight": 700
+    },
+    "body": {
+      "family": "Manrope",
+      "weight": 400
+    }
   },
   "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/josephfung/curia"
-    }
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/josephfung/curia",
+        "icon": "github",
+        "iconType": "brands"
+      }
+    ]
   },
   "navigation": {
     "tabs": [
