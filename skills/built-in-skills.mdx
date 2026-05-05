@@ -3,7 +3,7 @@ title: "Built-in skills"
 description: "Catalog of the skills Curia ships with — organized by category, with action_risk levels and descriptions."
 ---
 
-Curia ships with 50+ skills organized into functional categories. Every skill declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it without explicit CEO approval.
+Curia ships with 60+ skills organized into functional categories. Every skill declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it. Skills with `action_risk: none` can always run; higher-risk skills trigger the [approval workflow](/security/approval-workflow) when the score is below their floor.
 
 ## Contact management
 
@@ -52,7 +52,7 @@ Curia ships with 50+ skills organized into functional categories. Every skill de
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `memory-store` | low | Store a fact in the knowledge graph |
+| `memory-store` | low | Store a fact in the knowledge graph; auto-creates the entity if it doesn't exist |
 | `memory-query` | none | Query the knowledge graph |
 | `query-relationships` | none | Look up stored relationships for an entity |
 | `delete-relationship` | low | Remove a relationship from the knowledge graph |
@@ -97,8 +97,12 @@ Curia ships with 50+ skills organized into functional categories. Every skill de
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `get-autonomy` | none | Read the current autonomy score and history |
+| `get-autonomy` | none | Read the current autonomy score, trend, and history |
 | `set-autonomy` | critical | Change the autonomy score (CEO only) |
+| `list-pending-actions` | none | List all open approval requests |
+| `approve-action` | none | Approve a pending Curia action request |
+| `deny-action` | none | Deny a pending action request |
+| `dismiss-action` | none | Dismiss a pending request without approving or denying |
 
 ## Knowledge bases
 
