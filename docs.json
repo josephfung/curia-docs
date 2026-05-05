@@ -32,7 +32,9 @@
     "links": [
       {
         "label": "GitHub",
-        "href": "https://github.com/josephfung/curia"
+        "href": "https://github.com/josephfung/curia",
+        "icon": "github",
+        "iconType": "brands"
       }
     ]
   },
