@@ -1,0 +1,124 @@
+---
+title: "Approval workflow"
+description: "How Curia handles actions blocked by the autonomy gate — creating approval requests, notifying you, and letting you approve, deny, or dismiss them conversationally."
+---
+
+When Curia wants to take an action but its autonomy score is below the required threshold, it doesn't silently fail. Instead, it creates an **approval request** — a structured record of what it was trying to do, why it was blocked, and what it needs from you. You can approve, deny, or dismiss the request conversationally, without having to change your global autonomy score.
+
+## When approval requests are created
+
+An approval request is created any time the [execution layer](/security/autonomy-engine) blocks a skill invocation because the live score is below the skill's `action_risk` floor. Common situations:
+
+- **Score is in Draft Only (60–69):** Curia wants to send an email but the outbound gate blocks it. Instead of giving up, it saves a draft and creates an approval request asking you to authorize the send.
+- **Score is in Approval Required (70–79):** A skill with `action_risk: high` (e.g., creating a calendar event on your behalf) is invoked. The gate allows medium-risk skills but blocks high-risk ones — an approval request is raised.
+- **Any score, blocked skill:** A skill with `action_risk: critical` is invoked at any score below 90. The request captures the full context so you can evaluate it.
+
+## What a request contains
+
+Each approval request includes:
+
+- A short reference code (e.g. `REF-A7B2`) for quick identification
+- The skill name and what it was trying to do
+- The context that triggered the request (task, channel, sender)
+- The required autonomy score vs. the current score
+- A timestamp and expiry window
+
+## Acting on pending requests
+
+You interact with approval requests conversationally from any trusted channel.
+
+### Seeing what's pending
+
+<Tip>
+Ask Curia: **"What's waiting for my approval?"** or **"List pending actions."**
+
+You can also use the `list-pending-actions` skill directly.
+</Tip>
+
+Example response:
+
+```
+2 actions pending your approval:
+
+REF-A7B2 — email-send (medium risk)
+  Send a reply to alice@example.com re: "Q3 budget review"
+  Blocked: score 65, required 70
+  Waiting since 10:14 AM · expires in 22 hours
+
+REF-C3D9 — calendar-create-event (high risk)
+  Create "Strategy sync" with the board on May 8 at 2 PM
+  Blocked: score 65, required 80
+  Waiting since 9:50 AM · expires in 22 hours
+```
+
+### Approving a request
+
+<Tip>
+Say: **"Approve REF-A7B2"** or **"Go ahead and send that email to Alice."**
+
+Curia will re-execute the blocked action immediately with your explicit authorization. The action bypasses the autonomy gate for this single execution only — your global score is unchanged.
+</Tip>
+
+When you approve a request, Curia:
+
+1. Marks the `autonomy_action_log` row as `approved`
+2. Re-executes the skill with `humanApproved: true`, which bypasses the gate for this invocation only
+3. Records the outcome in the action log (used later by automatic score adjustment)
+4. Notifies you of the result
+
+### Denying a request
+
+<Tip>
+Say: **"Deny REF-A7B2"** or **"Don't send that email."**
+</Tip>
+
+A denial marks the row as `rejected` and records it in the action log. The coordinator receives the denial as an advisory result and can surface alternative options or ask a clarifying question.
+
+### Dismissing a request
+
+<Tip>
+Say: **"Dismiss REF-C3D9"** or **"Ignore that calendar request."**
+</Tip>
+
+Dismissal is a neutral close — it doesn't count as an approval or a rejection in automatic scoring. Use it when a request is no longer relevant (e.g., the meeting was cancelled before you got to it).
+
+## Expiry and the daily digest
+
+Approval requests do not stay open indefinitely. Stale requests expire automatically — by default after 24 hours for standard requests, sooner for time-sensitive ones.
+
+**What happens on expiry:**
+
+- The row is marked `expired` in the action log
+- High and critical tier expirations trigger a batched notification to the CEO
+- Standard expirations are collected into the daily digest
+
+**Daily digest:** Every morning at 8 AM, Curia sends a summary of all outstanding approval requests to your configured channel. This ensures nothing lingers in the queue without your awareness, even if you missed an individual notification.
+
+<Note>
+Expiry thresholds are configurable in `config/local.yaml` under the approval lifecycle section.
+</Note>
+
+## Approval vs. raising your autonomy score
+
+Approving an individual request is intentionally narrow — it authorizes one specific action, not a class of future actions. It's the right tool when:
+
+- You want Curia to proceed on something specific right now, but aren't ready to extend general trust for that risk level
+- You're evaluating whether a type of action is worth raising the score for
+- A one-off high-stakes action needs your explicit sign-off
+
+If you find yourself approving the same type of request repeatedly, that's a signal the score should move up. Use `set-autonomy` or the Settings → Autonomy page to adjust.
+
+## How approvals feed automatic scoring
+
+Every approval and denial is recorded in the `autonomy_action_log` and factored into the daily autonomy scoring pass. Consistent approvals (Curia acted appropriately enough that you said yes) contribute to the Competence dimension and can nudge the score up over time. Consistent denials (Curia misjudged the situation) contribute negatively. This creates a feedback loop where the score gradually reflects observed performance rather than your initial estimate.
+
+See [Autonomy engine](/security/autonomy-engine) for the scoring mechanics.
+
+<CardGroup cols={2}>
+  <Card title="Autonomy engine" icon="gears" href="/security/autonomy-engine">
+    How action_risk thresholds, hard gates, and automatic score adjustment work.
+  </Card>
+  <Card title="Built-in skills" icon="puzzle-piece" href="/skills/built-in-skills">
+    The approve-action, deny-action, dismiss-action, and list-pending-actions skills.
+  </Card>
+</CardGroup>

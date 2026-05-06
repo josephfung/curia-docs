@@ -77,11 +77,31 @@ A practical approach for new deployments:
   </Step>
 </Steps>
 
+## Hard execution gates
+
+The autonomy score isn't only guidance injected into prompts — it's enforced as a hard gate at runtime. When Curia attempts to invoke a skill, the execution layer checks the live score against the skill's declared `action_risk` floor. If the score is too low, the skill is blocked before it runs.
+
+This means the bands are binding. At **Draft Only** (60–69), outbound sends are blocked regardless of what the coordinator decides. At **Restricted** (< 60), all non-read skills are blocked. The coordinator cannot reason its way around the gate.
+
+## What happens when Curia can't act
+
+A blocked invocation doesn't fail silently. Curia creates an **approval request** — a record of what it was trying to do, why it was blocked, and what permission it needs. You receive a notification so you can decide whether to allow the specific action without having to change your global autonomy score.
+
+<Tip>
+Ask Curia: **"What's waiting for my approval?"** to see all pending requests. You can approve or deny conversationally: **"Approve the last action"** or **"Deny action REF-1234."**
+</Tip>
+
+A daily digest at 8 AM summarises all outstanding requests so nothing lingers without your awareness. See [Approval workflow](/security/approval-workflow) for the full picture.
+
+## Autonomy web UI
+
+The Settings page in the web dashboard includes a dedicated Autonomy view where you can see the current score, trend direction (improving / declining / stable), and full paginated change history — including automatic adjustments made by the system.
+
 <CardGroup cols={2}>
   <Card title="Autonomy engine mechanics" icon="gears" href="/security/autonomy-engine">
     How action_risk levels, execution gates, and automatic score adjustment work under the hood.
   </Card>
-  <Card title="Security overview" icon="shield" href="/security/overview">
-    Understand the broader governance and audit framework Curia operates within.
+  <Card title="Approval workflow" icon="check-circle" href="/security/approval-workflow">
+    What happens when Curia can't act, and how to handle pending requests.
   </Card>
 </CardGroup>

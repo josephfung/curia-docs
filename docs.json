@@ -123,6 +123,7 @@
             "pages": [
               "security/overview",
               "security/autonomy-engine",
+              "security/approval-workflow",
               "security/audit-log",
               "security/redaction"
             ]

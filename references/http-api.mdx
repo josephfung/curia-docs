@@ -74,6 +74,9 @@ The following endpoints are used by the built-in web dashboard. They authenticat
 | `PATCH /api/jobs/:id` | Update or unsuspend a scheduled job |
 | `DELETE /api/jobs/:id` | Cancel (soft-delete) a scheduled job |
 | `GET /api/kg/*` | Knowledge graph browser — nodes, edges, search, and chat |
+| `GET /api/autonomy` | Current autonomy score, band, trend direction, `lastSetBy`, and scored action count |
+| `PUT /api/autonomy` | Set the autonomy score (body: `{ "score": 85, "reason": "..." }`) |
+| `GET /api/autonomy/history` | Paginated autonomy score change history (query: `limit`, `offset`) |
 
 ## Rate limiting
 
