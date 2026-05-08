@@ -99,7 +99,7 @@ When `true`, the agent can use the `skill-registry` skill to search for and invo
 
 ### `memory.scopes`
 
-Memory scopes isolate an agent's working memory. Each scope is an independent namespace — facts stored in one scope are not visible to agents using a different scope. The coordinator uses no explicit scope (it shares the default scope). Specialists like `email-triage` and `research-analyst` use their own scopes to prevent cross-contamination.
+Memory scopes isolate an agent's working memory. Each scope is an independent namespace — facts stored in one scope are not visible to agents using a different scope. The coordinator uses no explicit scope (it shares the default scope). Specialists like `research-analyst` use their own scopes to prevent cross-contamination.
 
 <CardGroup cols={2}>
   <Card title="Built-in agents" icon="users" href="/agents/built-in-agents">

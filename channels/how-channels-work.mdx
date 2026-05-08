@@ -76,22 +76,6 @@ The default is `hold_and_notify`. When a held message is waiting, the Coordinato
 Dismissing a held message discards the message — it does not delete the sender's contact record. Their email address remains in your contacts as provisional. You can look them up later with `contact-lookup`.
 </Note>
 
-## Observation mode
-
-Observation mode lets Curia monitor the CEO's own email inbox and act as a triage layer — without ever appearing to the sender as the one responding.
-
-When observation mode is enabled for an email account, every new message in that inbox is processed through a triage protocol. Curia classifies each email into one of five categories and takes the appropriate action:
-
-| Category | What it means | What Curia does |
-|---|---|---|
-| **URGENT** | Time-sensitive — needs the CEO's attention now | Notifies the CEO on Signal or CLI. Does not reply to the sender. |
-| **ACTIONABLE** | Curia can handle it directly | Acts using its skills (calendar, contacts, etc.). No notification unless confirmation is needed. |
-| **NEEDS DRAFT** | Requires the CEO's voice | Saves a draft reply in the CEO's email client for review. Does not send. |
-| **LEAVE FOR CEO** | Personal, sensitive, or requires CEO judgment | Takes no action. The CEO handles it directly. |
-| **NOISE** | Marketing, newsletters, automated notifications | Archives the email. No notification. |
-
-In observation mode, Curia never signs its own name to a reply from the CEO's inbox. When you ask it to draft a reply to an observed email, it writes in your voice — not its own.
-
 ## Channel security
 
 Channel adapters operate within a hard architectural constraint: they can pass inbound messages into the system and receive outbound messages for delivery — and nothing else. They cannot invoke skills, read memory, or trigger agent tasks directly. This is enforced at the framework level, not by policy.
@@ -100,7 +84,7 @@ A compromised email adapter could flood inbound messages, but it cannot execute 
 
 <CardGroup cols={2}>
   <Card title="Email setup" icon="envelope" href="/channels/email-setup">
-    Connect your email via Nylas and configure observation mode.
+    Connect your email via Nylas.
   </Card>
   <Card title="Signal setup" icon="shield" href="/channels/signal-setup">
     Set up Signal messaging via signal-cli.

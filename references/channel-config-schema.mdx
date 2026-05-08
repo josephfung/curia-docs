@@ -1,6 +1,6 @@
 ---
 title: "Channel configuration schema"
-description: "YAML schema reference for Curia channel configuration — email accounts, outbound policies, and observation mode."
+description: "YAML schema reference for Curia channel configuration — email accounts and sender exclusions."
 ---
 
 Channel configuration lives in `config/local.yaml` under `channel_accounts`. Currently, email is the only channel that supports multi-account configuration. Signal and CLI are configured via environment variables only.
@@ -14,9 +14,6 @@ channel_accounts:
     <account-name>:
       nylas_grant_id: string          # Nylas grant ID (supports "env:VAR_NAME")
       self_email: string              # email address this account sends from (supports "env:VAR_NAME")
-      outbound_policy: string         # "direct" | "draft_gate" | "autonomy_gated"
-      autonomy_threshold: number      # required when outbound_policy is "autonomy_gated" (0–100)
-      observation_mode: boolean       # optional, default false
       excluded_sender_emails: [string] # optional, supports "env:VAR_NAME"
 ```
 
@@ -34,32 +31,9 @@ The Nylas grant identifier for the connected email account. Supports `env:VAR_NA
 
 The email address this account reads from and sends as. Supports `env:VAR_NAME` references.
 
-#### `outbound_policy`
-
-Controls how outbound emails are handled for this account:
-
-| Policy | Behavior |
-|---|---|
-| `direct` | Send immediately. Content filter and blocked-contact checks are always enforced. |
-| `draft_gate` | Save the reply as a Nylas draft for CEO review before sending. The CEO discovers pending drafts via the end-of-day digest. |
-| `autonomy_gated` | Check the global autonomy score. If the score meets `autonomy_threshold`, send directly; otherwise fall back to `draft_gate`. |
-
-#### `autonomy_threshold`
-
-Required when `outbound_policy` is `autonomy_gated`. Integer 0–100 representing the minimum autonomy score for autonomous sending. When the live score is below this threshold, outbound emails are saved as drafts instead.
-
-#### `observation_mode`
-
-When `true`, Curia monitors this inbox as an observer rather than acting as the recipient:
-
-- Inbound emails bypass the contact trust flow (no provisional contact creation, no hold queue)
-- Messages are delivered to the coordinator with an `observationMode` flag
-- The coordinator treats them as third-party communications to triage, not as instructions
-- Intended for the CEO's personal inbox where Curia should draft replies on request but not act autonomously
-
 #### `excluded_sender_emails`
 
-Additional sender email addresses to suppress from this account's inbox, beyond the account's own `self_email`. Primary use case: exclude Curia's outbound address from a monitored CEO inbox to prevent self-reply loops. Supports `env:VAR_NAME` references.
+Additional sender email addresses to suppress from this account's inbox, beyond the account's own `self_email`. Primary use case: exclude other connected accounts' addresses to prevent processing loops. Supports `env:VAR_NAME` references.
 
 ### `env:VAR_NAME` references
 
@@ -71,7 +45,6 @@ channel_accounts:
     curia:
       nylas_grant_id: "env:NYLAS_GRANT_ID_CURIA"
       self_email: "env:NYLAS_SELF_EMAIL_CURIA"
-      outbound_policy: direct
 ```
 
 ## Example: multi-account setup
@@ -79,19 +52,15 @@ channel_accounts:
 ```yaml
 channel_accounts:
   email:
-    # Curia's own email — sends directly
+    # Curia's own email
     curia:
       nylas_grant_id: "env:NYLAS_GRANT_ID_CURIA"
       self_email: "env:NYLAS_SELF_EMAIL_CURIA"
-      outbound_policy: direct
 
-    # CEO's personal inbox — observation mode, autonomy-gated replies
+    # CEO's personal inbox
     personal:
       nylas_grant_id: "env:NYLAS_GRANT_ID_PERSONAL"
       self_email: "env:NYLAS_SELF_EMAIL_PERSONAL"
-      outbound_policy: autonomy_gated
-      autonomy_threshold: 80
-      observation_mode: true
       excluded_sender_emails:
         - "env:NYLAS_SELF_EMAIL_CURIA"
 ```

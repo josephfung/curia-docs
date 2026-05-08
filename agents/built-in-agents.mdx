@@ -32,30 +32,6 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 - Never exposes internal system details, tool names, or agent architecture to non-CEO users
 - Enforces authorization decisions from the dispatch layer (provisional contacts, blocked senders, permission denials)
 - Respects trust score thresholds before taking action on external requests
-- Delegates observation-mode email triage to the Email Triage specialist
-
-## Email Triage
-
-A specialist agent that triages the CEO's inbound email when running in observation mode. The Coordinator delegates observation-mode emails to it automatically.
-
-| Field | Value |
-|---|---|
-| **Role** | specialist |
-| **Model** | Claude Sonnet |
-| **Skills** | email-list, email-get, email-archive, email-draft-save, entity-context, bullpen |
-| **Discovery** | Disabled |
-
-**Classification categories** (evaluated in priority order):
-
-| Category | Action taken |
-|---|---|
-| **URGENT** | Opens a Bullpen thread to alert the Coordinator. Does not reply to the sender. |
-| **ACTIONABLE** | Opens a Bullpen thread mentioning the capable specialist with a handoff summary. |
-| **NEEDS DRAFT** | Saves a draft reply in the CEO's inbox for review before sending. |
-| **LEAVE FOR CEO** | Takes no action — the email is left for the CEO to handle. |
-| **NOISE** | Archives the message (receipts, newsletters, automated notifications). |
-
-Before classifying, the Email Triage agent checks for standing instructions on the sender (via entity-context) — per-sender rules override the default triage protocol.
 
 ## Research Analyst
 

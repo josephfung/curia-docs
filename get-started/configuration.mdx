@@ -73,7 +73,7 @@ Secrets and deployment-specific values go in `.env`. The most important ones are
     NYLAS_SELF_EMAIL=curia@yourdomain.com
     ```
 
-    For multiple email accounts with per-account outbound policies, see [Multiple email accounts](#multiple-email-accounts) below.
+    For multiple email accounts, see [Multiple email accounts](#multiple-email-accounts) below.
   </Accordion>
 
   <Accordion title="Signal">
@@ -103,17 +103,9 @@ Secrets and deployment-specific values go in `.env`. The most important ones are
 
 ## Multiple email accounts
 
-The default Nylas setup connects a single email account via environment variables. To connect multiple accounts — each with its own outbound behaviour — define them in `config/local.yaml` using `channel_accounts.email`.
+The default Nylas setup connects a single email account via environment variables. To connect multiple accounts, define them in `config/local.yaml` using `channel_accounts.email`.
 
-Each account has a logical name, a Nylas grant ID, a self-email address, and an outbound policy.
-
-**Outbound policies:**
-
-| Policy | Behaviour |
-|---|---|
-| `direct` | Send immediately. Content filter and blocked-contact checks are always enforced. |
-| `draft_gate` | Save the reply as a Nylas draft for your review before sending. |
-| `autonomy_gated` | Check the global autonomy score. If the score meets `autonomy_threshold`, send directly; otherwise fall back to `draft_gate`. |
+Each account has a logical name, a Nylas grant ID, and a self-email address. Outbound sending is governed globally by the [autonomy engine](/core-concepts/autonomy) — when the score is below the skill's `action_risk` floor, sends are blocked and saved as drafts instead.
 
 ```yaml
 # config/local.yaml
@@ -122,13 +114,10 @@ channel_accounts:
     curia:
       nylas_grant_id: "env:NYLAS_GRANT_ID_CURIA"
       self_email:     "env:NYLAS_SELF_EMAIL_CURIA"
-      outbound_policy: direct
 
     personal:
       nylas_grant_id: "env:NYLAS_GRANT_ID_PERSONAL"
       self_email:     "env:NYLAS_SELF_EMAIL_PERSONAL"
-      outbound_policy: autonomy_gated
-      autonomy_threshold: 80
 ```
 
 Use `env:VAR_NAME` to reference environment variables rather than inlining credential values directly in the YAML file.
@@ -141,7 +130,7 @@ Use `env:VAR_NAME` to reference environment variables rather than inlining crede
 
 <CardGroup cols={2}>
   <Card title="Set up email" icon="envelope" href="/channels/email-setup">
-    Connect your inbox and configure per-account outbound policies.
+    Connect your inbox and configure email accounts.
   </Card>
   <Card title="Full configuration reference" icon="book" href="/references/configuration">
     Every configurable setting: rate limits, security rules, knowledge graph decay, and more.
