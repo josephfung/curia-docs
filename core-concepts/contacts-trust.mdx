@@ -31,6 +31,17 @@ messageTrustScore =
 | HTTP API | Medium | 0.6 |
 | Email | Low | 0.3 |
 
+Separately, **contact trust levels** indicate how much Curia trusts a specific person, regardless of channel. The full hierarchy from lowest to highest:
+
+| Trust level | Who gets it |
+|---|---|
+| `low` | Default for newly confirmed contacts |
+| `medium` | Contacts with moderate interaction history |
+| `high` | Contacts you've explicitly trusted — EA, CFO, board members |
+| `ceo` | Reserved for the CEO. Set automatically at startup via the bootstrap process — cannot be assigned through `contact-set-trust`. |
+
+The `ceo` trust level outranks all others. It bypasses PII redaction, outbound content filters, and trust score thresholds. The `meetsMinimumTrust()` check uses ordinal comparison, so `ceo` satisfies any gate that requires `high`, `medium`, or `low`.
+
 **Contact confidence** accumulates over time as signal builds — successful interactions, explicit confirmation by you, verified identity links. A brand-new email sender has zero contact confidence. A CEO-verified Signal contact may carry 0.95.
 
 **Content risk** reduces the score when the dispatch layer detects injection-like patterns in the message body. Clean messages incur no penalty.
@@ -96,6 +107,31 @@ When Curia receives a message from someone not in your contacts, it follows the 
     Once you confirm a contact, they gain the permissions assigned to their role. If they send another message, it is processed normally — no more holds.
   </Step>
 </Steps>
+
+## Automatic contact creation from email
+
+When Curia processes an inbound email, it auto-creates provisional contacts for every participant in the From, To, and CC headers that isn't already in your contacts. This builds your contact database naturally as emails flow through.
+
+To protect against spam campaigns that flood your contacts with thousands of junk entries, auto-creation is rate-limited:
+
+| Limit | Default | What happens when hit |
+|---|---|---|
+| **Per message** | 10 | Remaining participants in that email are skipped |
+| **Per hour** | 100 per email account | All further auto-creation for that account pauses until the window resets |
+
+When a limit is hit, Curia notifies you via email (at most once per limit type per hour). Skipped participants are not lost — they will be auto-created if they email you directly in the future.
+
+Both limits are configurable in `config/local.yaml`:
+
+```yaml
+contact_creation_limits:
+  max_per_message: 10
+  max_per_hour: 100
+```
+
+<Note>
+Existing contacts are not counted toward the limits — only genuinely new contact creations. If a 20-person thread has 18 known contacts, only the 2 new ones count.
+</Note>
 
 ## Adding contacts proactively
 

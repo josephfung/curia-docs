@@ -84,7 +84,7 @@ skillOutput:
       trust_score_floor: 0.2      # messages below this score are held regardless of channel policy
     ```
 
-    Channel trust levels normalize as: `high = 1.0`, `medium = 0.6`, `low = 0.3`.
+    Channel trust levels normalize as: `high = 1.0`, `medium = 0.6`, `low = 0.3`. Contact trust levels follow a separate hierarchy: `low` < `medium` < `high` < `ceo`. See [Contacts and trust](/core-concepts/contacts-trust) for details.
   </Accordion>
 
   <Accordion title="Custom PII patterns">
@@ -105,6 +105,19 @@ skillOutput:
     </Warning>
   </Accordion>
 </AccordionGroup>
+
+## Contact creation limits
+
+When Curia processes email, it auto-creates provisional contacts for unknown participants. These limits protect against spam campaigns that flood your contacts database.
+
+```yaml
+# config/local.yaml
+contact_creation_limits:
+  max_per_message: 10    # max new contacts from a single email's participant list
+  max_per_hour: 100      # max new contacts per hour, per email account
+```
+
+When a limit is hit, remaining participants are skipped and the CEO is notified (at most once per limit type per hour). Skipped participants will be auto-created if they email directly in the future. See [Contacts and trust](/core-concepts/contacts-trust#automatic-contact-creation-from-email) for full details.
 
 ## Knowledge graph decay
 

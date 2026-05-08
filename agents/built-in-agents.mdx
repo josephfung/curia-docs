@@ -32,6 +32,7 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 - Never exposes internal system details, tool names, or agent architecture to non-CEO users
 - Enforces authorization decisions from the dispatch layer (provisional contacts, blocked senders, permission denials)
 - Respects trust score thresholds before taking action on external requests
+- Recognizes when it was CC'd (vs. directly addressed) on email and adjusts behavior — reads the thread for context, infers what's expected, and replies via the correct account
 
 ## Research Analyst
 

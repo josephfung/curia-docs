@@ -15,6 +15,8 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
 
     **Outbound:** Replies and new emails are sent via the Nylas Send API. The Coordinator injects its persona's display name and email signature into every outbound message.
 
+    **CC detection:** The email adapter determines whether Curia is a direct recipient (`to`), copied (`cc`), or blind-copied on each message. When Curia is CC'd, the dispatcher tags the message with the primary recipients so the Coordinator knows who the email was actually addressed to and can respond appropriately — typically by using `email-reply` to the thread rather than composing a new message.
+
     **Email validation:** Before processing, the email adapter checks SPF, DKIM, and DMARC headers. Messages that fail validation are tagged `sender_verified: false` in their metadata — the Coordinator uses this signal when deciding whether to act on consequential requests.
 
     **Required secrets:** `NYLAS_API_KEY`, `NYLAS_GRANT_ID`, `NYLAS_SELF_EMAIL`
@@ -62,6 +64,10 @@ Every inbound message is tagged with the trust level of the channel it arrived o
 | Email | Low | From headers are spoofable; even SPF/DKIM is not identity verification |
 
 Trust levels gate consequential actions. A request arriving over email to change financial settings, export data, or take irreversible action will be declined or held for verification, even if the sender's name is recognized — the Coordinator asks the sender to confirm through a higher-trust channel.
+
+<Note>
+Channel trust is separate from **contact trust** (`low` → `medium` → `high` → `ceo`). Channel trust reflects how much identity assurance the transport provides. Contact trust reflects how much you trust a specific person. Both feed into the [message trust score](/core-concepts/contacts-trust) that governs what actions Curia will take.
+</Note>
 
 ## Unknown sender policy
 
