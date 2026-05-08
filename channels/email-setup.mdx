@@ -1,9 +1,9 @@
 ---
 title: "Configure Curia's email channel with Nylas integration"
-description: "Configure Nylas to give Curia a dedicated email account for sending and receiving, and optionally monitor your own inbox in observation mode."
+description: "Configure Nylas to give Curia a dedicated email account for sending and receiving."
 ---
 
-Curia's email channel is powered by [Nylas](https://nylas.com) — a unified API that handles the OAuth and IMAP/SMTP complexity across Gmail, Outlook, and other providers. Once connected, Curia can send emails on your behalf, draft replies for your review, read your inbox, and triage incoming messages automatically.
+Curia's email channel is powered by [Nylas](https://nylas.com) — a unified API that handles the OAuth and IMAP/SMTP complexity across Gmail, Outlook, and other providers. Once connected, Curia can send emails on your behalf, draft replies for your review, and read your inbox.
 
 ## Single account setup
 
@@ -49,7 +49,7 @@ The quickest way to get email working is to connect one account using three envi
 
 ## Multiple email accounts
 
-For more advanced deployments — for example, a dedicated Curia account that sends directly and the CEO's personal account that requires draft review — configure named accounts in `config/local.yaml` using the `channel_accounts.email` block.
+For more advanced deployments — for example, connecting multiple inboxes — configure named accounts in `config/local.yaml` using the `channel_accounts.email` block.
 
 ```yaml
 # config/local.yaml
@@ -58,46 +58,17 @@ channel_accounts:
     curia:
       nylas_grant_id: "env:NYLAS_GRANT_ID_CURIA"
       self_email:     "env:NYLAS_SELF_EMAIL_CURIA"
-      outbound_policy: direct
 
     personal:
       nylas_grant_id: "env:NYLAS_GRANT_ID_PERSONAL"
       self_email:     "env:NYLAS_SELF_EMAIL_PERSONAL"
-      outbound_policy: autonomy_gated
-      autonomy_threshold: 80
 ```
 
-Each key (`curia`, `personal`) becomes an account name that you pass to email skills via the `account` parameter.
-
-### Outbound policies
-
-Every account has an `outbound_policy` that controls how Curia handles replies and new messages from that account:
-
-| Policy | What happens |
-|---|---|
-| `direct` | Curia sends immediately. Blocked-contact and content filters still apply. |
-| `draft_gate` | Curia saves a Nylas draft for your review. You send it from your email client. |
-| `autonomy_gated` | Curia checks its global autonomy score. Above `autonomy_threshold`, it sends directly. Below, it falls back to `draft_gate`. |
+Each key (`curia`, `personal`) becomes an account name that you pass to email skills via the `account` parameter. Outbound email sending is governed by the [autonomy engine](/core-concepts/autonomy) — when the score is below the skill's `action_risk` floor, sends are blocked and saved as drafts instead.
 
 <Note>
   When using `channel_accounts.email`, the single-account env vars (`NYLAS_API_KEY`, `NYLAS_GRANT_ID`, `NYLAS_SELF_EMAIL`) are no longer used. All accounts must be defined in the YAML block. You still need `NYLAS_API_KEY` in your environment — it's the application-level key shared by all accounts.
 </Note>
-
-## Observation mode
-
-Curia can monitor the CEO's inbox in addition to its own. In observation mode, Curia reads incoming messages addressed to the CEO and silently triages them — it does not act as the intended recipient or respond as itself.
-
-When a message arrives in observation mode, Curia classifies it into one of five categories and takes the appropriate action:
-
-| Category | What Curia does |
-|---|---|
-| **URGENT** | Notifies you immediately on a high-trust channel (e.g., Signal). Does not reply to the sender. |
-| **ACTIONABLE** | Takes action using available skills — calendar updates, contact lookups, etc. No notification sent. |
-| **NEEDS DRAFT** | Saves a draft reply (in your voice) to the CEO's account for your review. Does not send. |
-| **LEAVE FOR CEO** | Takes no action. No archive, no draft, no notification. You handle it yourself. |
-| **NOISE** | Archives the message. No notification. |
-
-When in doubt, Curia defaults to **LEAVE FOR CEO** rather than acting. URGENT is reserved for genuinely time-sensitive items.
 
 ## Email skills
 
@@ -110,6 +81,7 @@ Once the email channel is active, the following skills become available to Curia
 | `email-send` | Compose and send a new email |
 | `email-reply` | Reply to an existing thread by message ID |
 | `email-draft-save` | Save a draft to a specified account for human review |
+| `send-draft` | Send a previously saved draft (CEO-authorized) |
 | `email-archive` | Archive a message by ID |
 
 All email skills accept an `account` parameter to target a specific named account. Omit it to use Curia's own account.
@@ -139,6 +111,6 @@ All email skills accept an `account` parameter to target a specific named accoun
   </Accordion>
 
   <Accordion title="Outbound emails going to drafts unexpectedly">
-    If you configured `autonomy_gated` as your outbound policy, check your current autonomy score. Curia sends directly only when the score is at or above `autonomy_threshold`. Ask Curia its current score ("What is your autonomy score?") and raise it if needed.
+    Outbound sends are governed by the [autonomy engine](/core-concepts/autonomy). If your autonomy score is below 70, `email-send` and `email-reply` are blocked and drafts are saved instead. Ask Curia its current score ("What is your autonomy score?") and raise it if needed.
   </Accordion>
 </AccordionGroup>
