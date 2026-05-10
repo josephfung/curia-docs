@@ -134,6 +134,7 @@ The `ctx` object gives your handler access to inputs, secrets, logging, and call
 | `ctx.agentPersona` | `AgentPersona \| undefined` | Display name, title, email signature of the calling agent |
 | `ctx.caller` | `CallerContext \| undefined` | Caller identity — always present for elevated skills |
 | `ctx.contactService` | `ContactService \| undefined` | Read-only contact lookups |
+| `ctx.selfEmail` | `string \| undefined` | Email address of the active Curia account — use this to filter Curia's own address from CC lists |
 
 ### Secrets and environment variables
 
@@ -189,6 +190,8 @@ mcp_servers:
     permissions:
       - workspace:read
       - workspace:write
+    fixed_inputs:
+      user_google_email: "env:CURIA_GOOGLE_EMAIL"   # resolved at startup, invisible to agents
 
   - name: github
     transport: http
@@ -199,6 +202,16 @@ mcp_servers:
 ```
 
 Supported transports are `http` (StreamableHTTP, recommended for hosted servers) and `stdio` (local subprocess).
+
+#### `fixed_inputs` — binding constants to MCP tools
+
+The optional `fixed_inputs` map lets you bind parameter values that should always be the same for a given MCP server — for example, which account identity to pass on every call. These values are:
+
+- **Resolved at startup** from env vars (`"env:VAR_NAME"`) or used as literals
+- **Stripped from the tool schema** so agents never see the parameter and can't override it
+- **Merged into every `callTool` invocation** automatically by the MCP loader
+
+If an env var referenced in `fixed_inputs` is missing at startup, Curia raises a `McpConfigError` and refuses to start — fail-closed, not silent degradation.
 
 At startup, Curia connects to each configured MCP server, discovers available tools via `tools/list`, and registers them in the skill registry. Agents with `allow_discovery: true` can find and use MCP tools the same way they discover local skills.
 
