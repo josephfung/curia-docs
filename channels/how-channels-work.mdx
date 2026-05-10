@@ -82,6 +82,33 @@ The default is `hold_and_notify`. When a held message is waiting, the Coordinato
 Dismissing a held message discards the message — it does not delete the sender's contact record. Their email address remains in your contacts as provisional. You can look them up later with `contact-lookup`.
 </Note>
 
+## Context bridging on non-threaded channels
+
+Email has native threading — each reply carries a `message_id` that links it to the original conversation, so Curia always knows what it last said. Signal, CLI, and HTTP have no equivalent concept: each inbound message arrives without a reference to Curia's prior response.
+
+Without bridging, a Signal follow-up like "can you make it 4pm instead?" gives the coordinator no way to know what it's modifying.
+
+**Context bridging** solves this for non-threaded channels. After every outbound response, the dispatch layer writes a compact context memo to working memory. When the user sends a follow-up, the memo is injected as a preamble — giving the coordinator full awareness of what it last said before it reads the new message.
+
+You configure which channels use threading in `config/local.yaml`:
+
+```yaml
+channel_accounts:
+  signal:
+    threaded: false   # enables context bridging (default for Signal)
+  http:
+    threaded: false   # enables context bridging (default for HTTP)
+  email:
+    curia:
+      threaded: true  # email is natively threaded; no bridging needed
+```
+
+Channels with `threaded: false` get context bridging automatically. Channels with `threaded: true` (email) use native thread identifiers instead.
+
+<Note>
+Context memos are short and structured. They are not the full response — only enough to anchor a follow-up. The coordinator still has access to its full working memory and entity context on every turn.
+</Note>
+
 ## Channel security
 
 Channel adapters operate within a hard architectural constraint: they can pass inbound messages into the system and receive outbound messages for delivery — and nothing else. They cannot invoke skills, read memory, or trigger agent tasks directly. This is enforced at the framework level, not by policy.

@@ -42,7 +42,18 @@ Separately, **contact trust levels** indicate how much Curia trusts a specific p
 
 The `ceo` trust level outranks all others. It bypasses PII redaction, outbound content filters, and trust score thresholds. The `meetsMinimumTrust()` check uses ordinal comparison, so `ceo` satisfies any gate that requires `high`, `medium`, or `low`.
 
-**Contact confidence** accumulates over time as signal builds — successful interactions, explicit confirmation by you, verified identity links. A brand-new email sender has zero contact confidence. A CEO-verified Signal contact may carry 0.95.
+**Contact confidence** accumulates over time as signal builds. A brand-new email sender starts at zero. A CEO-verified Signal contact with a long interaction history may carry 0.95.
+
+Contact confidence is computed automatically by the **confidence scoring pipeline** — it updates on every qualifying event rather than being set manually:
+
+| Event | Effect |
+|---|---|
+| Inbound message received | Incremental increase based on message history |
+| Outbound reply sent | Incremental increase (bidirectional contact) |
+| CEO explicit trust grant | Larger positive boost |
+| Verified identity pairing confirmed | Positive boost |
+
+The pipeline supports two modes: **incremental** (triggered on each qualifying event, applied as a delta) and **full recompute** (recalculates from all stored history). Both modes converge to the same value. You never set `contact_confidence` directly — it is always derived from observable history.
 
 **Content risk** reduces the score when the dispatch layer detects injection-like patterns in the message body. Clean messages incur no penalty.
 
