@@ -75,6 +75,22 @@ dreaming:
 
 See the [configuration reference](/references/configuration) for the full set of options.
 
+## Decay warnings
+
+Before archiving a node, the dream engine checks whether it is important enough to warrant a warning:
+
+- **High-sensitivity nodes** — any node marked `confidential` or `restricted`
+- **High-connectivity nodes** — nodes in the top 5th percentile by edge count (minimum floor: 5 edges)
+
+Nodes that meet either criterion enter a **warned state** with a 7-day hold-back window. The coordinator surfaces a re-confirmation nudge to you during this window:
+
+> "A node about Beacon Capital has been flagged for archival in 5 days. Would you like me to keep it?"
+
+- **Confirming** resets the decay clock — the node is refreshed and the warning cleared
+- **Dismissing** archives the node immediately, the same as if the warning had expired
+
+You can review all currently warned nodes at any time by asking Curia, which uses the `decay-warnings-list` skill. The `memory-confirm` skill records your decision and emits a `memory.decay_warning` audit event.
+
 ## Re-confirmation
 
 Decay is not a one-way street. When Curia encounters evidence that reinforces an existing fact — you mention someone's employer in conversation, an email confirms a relationship — the fact's `last_confirmed_at` timestamp updates and confidence rises. The next decay pass uses this refreshed timestamp as its reference point, effectively resetting the decay clock.
@@ -89,8 +105,8 @@ The dream engine is designed to host additional maintenance passes as sibling me
 |---|---|---|
 | Memory decay | Confidence aging and archival | Implemented |
 | Autonomy scoring | Capability evaluation and score adjustment | Implemented |
-| Decay warning | Notify before archiving important nodes | Planned |
-| Contradiction resolution | Detect and resolve conflicting facts | Planned |
+| Decay warning | Warn before archiving high-sensitivity or high-connectivity nodes | Implemented |
+| Contradiction resolution | Background scan to detect and resolve conflicting facts at rest | Planned |
 | Working-memory synthesis | Consolidate conversation insights into long-term memory | Planned |
 
 <CardGroup cols={2}>
