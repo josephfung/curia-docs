@@ -205,6 +205,22 @@ Verified contact requests an action
   Authorization is deterministic. The coordinator cannot override the permission system, even if a request seems reasonable. If the system says "Denied," the action is denied — Curia declines politely and, if appropriate, lets the sender know they can reach out through a more secure channel.
 </Warning>
 
+## Channel identity status
+
+Every channel identity (email address, phone number, etc.) linked to a contact carries a `status` field, separate from whether it has been verified:
+
+| Status | Meaning |
+|---|---|
+| `active` | The identity is current and preferred for outbound use |
+| `defunct` | The identity is no longer valid (e.g., old email address) |
+| `bounced` | Outbound delivery to this address has failed |
+
+Curia prefers `active` identities when assembling outbound context. When non-active identities would be used — for example, if a contact's only linked email is `defunct` — the Contact Specialist warns the Coordinator before suggesting them. You can update an identity's status directly:
+
+> "Mark sarah's old acme.com email as defunct — she's at beacon.com now."
+
+Curia uses the `contact-set-identity-status` skill. Status is orthogonal to verification: a `verified` identity can be `defunct`, and an `active` identity may be `self_claimed` until you confirm it.
+
 ## Self-claimed identities
 
 If someone messages on a new channel and claims to be an existing contact ("Hi, it's Jenna"), that identity is tagged `self_claimed` and treated as unverified until you confirm it. Curia never auto-promotes self-claimed identities to verified status. An unverified identity is gated the same as an unknown sender for any consequential action.

@@ -22,6 +22,7 @@ Curia ships with 60+ skills organized into functional categories. Every skill de
 | `contact-merge` | low | Merge duplicate contacts (supports dry-run preview) |
 | `contact-find-duplicates` | none | Scan for potential duplicate contacts |
 | `contact-register` | low | Register or resolve a contact from outside the dispatcher pipeline (used by direct-channel agents such as ceo-inbox) |
+| `contact-set-identity-status` | low | Mark a channel identity as `active`, `defunct`, or `bounced` |
 
 ## Email
 
@@ -55,6 +56,8 @@ Curia ships with 60+ skills organized into functional categories. Every skill de
 |---|---|---|
 | `memory-store` | low | Store a fact in the knowledge graph; auto-creates the entity if it doesn't exist |
 | `memory-query` | none | Query the knowledge graph |
+| `memory-confirm` | low | Confirm or dismiss a decay-warned KG node, resetting or triggering its archive |
+| `decay-warnings-list` | none | List KG nodes currently in the warned state with days remaining until auto-archive |
 | `query-relationships` | none | Look up stored relationships for an entity |
 | `delete-relationship` | low | Remove a relationship from the knowledge graph |
 | `entity-context` | none | Assemble entity context (facts, relationships, history) for a contact |
@@ -85,13 +88,16 @@ Curia ships with 60+ skills organized into functional categories. Every skill de
 | `web-fetch` | none | Fetch and extract content from a URL |
 | `web-browser` | none | Interact with JavaScript-rendered pages via Playwright |
 
+## File parsing
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `file-parse` | none | Extract structured data from CSV, PDF, HTML, and image files |
+
 ## Templates
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `template-meeting-request` | medium | Generate a meeting request email |
-| `template-reschedule` | medium | Generate a reschedule request |
-| `template-cancel` | medium | Generate a cancellation notice |
 | `template-doc-request` | medium | Generate a document request |
 
 ## Autonomy

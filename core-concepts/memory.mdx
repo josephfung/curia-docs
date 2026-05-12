@@ -99,6 +99,8 @@ Agents writing to memory pass through validation gates designed to prevent pollu
 
 **Deduplication** — before creating a new fact node, the system checks for existing nodes about the same entity with a similar label (cosine similarity > 0.92). If a near-duplicate exists, the system updates `last_confirmed_at` and merges properties instead of creating a duplicate.
 
+**Fuzzy entity resolution** — when looking up an entity by name, the system first tries an exact label match. If none is found, it falls back to embedding-based semantic search to catch name variants ("Darlise" / "Darlise Restaurant") before creating a duplicate node. Confirmed matches are stored as aliases on the entity, so future lookups resolve instantly without another embedding search. Aliases are also learned automatically when `memory-store` disambiguates between candidates.
+
 **Contradiction detection** — if a new fact contradicts an existing one (for example, "the CEO lives in Toronto" when "the CEO lives in Kitchener" already exists), the system compares confidence scores:
 
 - New fact has lower confidence → write rejected, conflict logged
