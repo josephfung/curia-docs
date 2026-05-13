@@ -1,55 +1,71 @@
-# Mintlify Starter Kit
+# Curia Documentation
 
-Use the starter kit to get your docs deployed and ready to customize.
+Source for the [Curia docs](https://docs.meetcuria.com) — built with [Mintlify](https://mintlify.com).
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+Curia is a self-hosted, governance-first AI executive assistant. If you're here to read the docs rather than edit them, head to [docs.meetcuria.com](https://docs.meetcuria.com).
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+## Local preview
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
-
-## AI-assisted writing
-
-Set up your AI coding tool to work with Mintlify:
+Install the Mintlify CLI if you haven't already:
 
 ```bash
-npx skills add https://mintlify.com/docs
+npm i -g mintlify
 ```
 
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
+Start the dev server from the repo root (where `docs.json` lives):
 
-See the [AI tools guides](/ai-tools) for tool-specific setup.
-
-## Development
-
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
-
-```
-npm i -g mint
+```bash
+mintlify dev
 ```
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+Preview at `http://localhost:3000`. Hot-reload is on by default — changes to `.mdx` files and `docs.json` update immediately.
+
+## Repository structure
 
 ```
-mint dev
+curia-docs/
+├── docs.json               # Site config: theme, nav, colors, fonts
+├── style.css               # Custom CSS overrides
+├── index.mdx               # Landing page
+│
+├── core-concepts/          # What Curia is and how it works
+├── get-started/            # Installation, configuration, deployment, playbooks
+├── agents/                 # How agents work, built-in agents, building custom ones
+├── skills/                 # How skills work, built-in skills, building custom ones
+├── channels/               # Email, Signal, CLI, HTTP — setup and custom channels
+├── security/               # Autonomy engine, approval workflow, audit log, redaction
+├── references/             # Configuration schema, API reference, memory schemas
+│
+└── assets/                 # Logo files and images
 ```
 
-View your local preview at `http://localhost:3000`.
+Content is written in [MDX](https://mdxjs.com/) with Mintlify components (`<Card>`, `<Note>`, `<Steps>`, etc.). The navigation structure is declared in `docs.json` — adding a new page requires both a file and an entry there.
 
-## Publishing changes
+## Making changes
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+All changes go through pull requests — pushes directly to `main` are not allowed.
 
-## Need help?
+**For small edits** (typos, wording, factual corrections): edit the file directly on GitHub and open a PR from the editor.
 
-### Troubleshooting
+**For larger changes** (new pages, restructured sections):
 
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
+1. Clone the repo and create a branch
+2. Run `mintlify dev` to preview locally
+3. Make your changes
+4. Open a PR — Mintlify will generate a deploy preview automatically
 
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for writing guidelines.
+
+## Deployment
+
+The Mintlify GitHub app handles deployment. Every merge to `main` triggers an automatic deploy to [docs.meetcuria.com](https://docs.meetcuria.com). No manual steps required.
+
+If the deploy preview on a PR doesn't appear, check that the Mintlify GitHub app is installed under [Settings → Integrations](https://dashboard.mintlify.com/settings/organization/github-app).
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `mintlify dev` fails to start | Run `mintlify update` to get the latest CLI version |
+| Page loads as 404 locally | Make sure the page is listed under `navigation` in `docs.json` |
+| Changes not appearing after merge | Check the Mintlify dashboard for deploy status and error logs |
