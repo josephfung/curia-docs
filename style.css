@@ -1,0 +1,17 @@
+/* Pull the whole site inward so left/right sidebars sit closer to
+   the main content column — gives balanced breathing room on wide screens.
+   The attribute selector catches both the navbar's literal .max-w-8xl
+   and the content container's Tailwind peer-variant version.
+   !important is needed to override Tailwind's high-specificity peer rules. */
+@media (min-width: 1024px) {
+  [class*="max-w-8xl"] {
+    max-width: 1380px !important;
+  }
+}
+
+/* Widen the search trigger in the top bar.
+   Mint already shows it as an inline bar; this keeps it generous
+   after reducing the overall max-width. */
+#search-bar-entry {
+  min-width: 360px;
+}
