@@ -1,0 +1,41 @@
+---
+title: "Multi-agent architecture"
+description: "How Curia's coordinator-specialist model works: one agent speaks to the human, a team works behind the scenes."
+---
+
+Curia is a team of agents, not a single assistant. The design is deliberate: a single **Coordinator** handles every conversation while **specialist agents** do the focused work behind the scenes. The person on the other end never knows multiple agents were involved.
+
+<img
+  src="/assets/multi-agent-architecture.svg"
+  alt="Diagram showing the multi-agent architecture: You connects to the Coordinator inside the Bullpen, which delegates to Calendar, Contacts, CEO Inbox, and Research specialists. All agents draw from an Execution Layer of 65+ skills."
+  style={{ width: '100%', height: 'auto', borderRadius: '8px', marginTop: '8px', marginBottom: '8px' }}
+/>
+
+## The three tiers
+
+**You → Coordinator.** The Coordinator is the only agent that communicates outward — with you, with your contacts, with anyone. It holds your configured persona (display name, tone, email signature) and presents a single, coherent face for everything Curia does. There is exactly one Coordinator per deployment.
+
+**The Bullpen.** All agents — the Coordinator and every specialist — operate inside the Bullpen, a structured internal channel where agents can delegate, hand off, and coordinate. When the Coordinator needs research done or a calendar conflict resolved, it dispatches a task to the relevant specialist inside the Bullpen and waits for the result. Every exchange is logged with full causal tracing: you can always see who asked whom to do what and why.
+
+**The Execution Layer.** Agents don't have direct access to external systems. They request actions — send an email, look up a contact, search the web — through the Execution Layer, which validates permissions against each skill's manifest before running anything. This hard boundary means a misbehaving agent can't do anything its declared skills don't allow.
+
+## Why this structure
+
+The coordinator-specialist pattern solves two problems at once.
+
+*Coherence.* Having one agent own every outbound message means the persona stays consistent even when six different specialists contributed to the answer. The Coordinator synthesizes, re-voices, and delivers — the underlying specialization is invisible to the recipient.
+
+*Isolation.* Each specialist has its own memory scopes and permissions. The research analyst can't read the CEO inbox; the calendar specialist can't write to the contacts database. A compromised or misbehaving specialist can only affect the narrow scope it was given.
+
+## Extensibility
+
+Specialists are just YAML files. Adding a new one — a contracts analyst, a travel planner, a finance tracker — is a matter of writing a manifest and dropping it in the `agents/` directory. The `add more` slot in the diagram is literal: there's no architectural limit on the number of specialists, and the Coordinator can discover new ones dynamically if `allow_discovery: true` is set.
+
+<CardGroup cols={2}>
+  <Card title="How agents work" icon="robot" href="/agents/how-agents-work">
+    Deep dive into agent YAML configuration, TypeScript handlers, error budgets, and skill discovery.
+  </Card>
+  <Card title="The Bullpen" icon="comments" href="/agents/how-agents-work#the-bullpen">
+    How agents coordinate internally — threaded, logged, and interruptible from any channel.
+  </Card>
+</CardGroup>

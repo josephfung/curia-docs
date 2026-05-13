@@ -6,7 +6,7 @@
     "dark": "/assets/logo-curia-wordmark-light.svg"
   },
   "theme": "mint",
-  "favicon": "https://media.brand.dev/288cc7c4-5cef-4376-950b-bdf0083eedae.png",
+  "favicon": "/assets/logo-curia-mark.svg",
   "colors": {
     "primary": "#1A6B5E",
     "light": "#478189",
@@ -84,6 +84,7 @@
           {
             "group": "Agents",
             "pages": [
+              "agents/multi-agent-architecture",
               "agents/how-agents-work",
               "agents/built-in-agents",
               "agents/building-custom-agents"
