@@ -5,7 +5,7 @@
     "light": "/assets/logo-curia-wordmark-dark.svg",
     "dark": "/assets/logo-curia-wordmark-light.svg"
   },
-  "theme": "luma",
+  "theme": "mint",
   "favicon": "https://media.brand.dev/288cc7c4-5cef-4376-950b-bdf0083eedae.png",
   "colors": {
     "primary": "#1A6B5E",
@@ -30,6 +30,11 @@
   },
   "navbar": {
     "links": [
+      {
+        "label": "Website",
+        "href": "https://meetcuria.com",
+        "icon": "globe"
+      },
       {
         "label": "GitHub",
         "href": "https://github.com/josephfung/curia",
