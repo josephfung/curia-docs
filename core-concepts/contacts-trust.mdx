@@ -77,7 +77,7 @@ The coordinator checks the sender's `messageTrustScore` before taking action. If
 | Data export | 0.8 | High-trust channel and a verified contact |
 | Financial actions | 0.8 | High-trust channel and a verified contact |
 
-These thresholds are configured in `config/default.yaml` under `trust_policy` and can be adjusted without a code change.
+These thresholds are configured in `config/default.yaml` under `security.trust_thresholds` and can be adjusted without a code change. Startup fails if this block is missing or malformed.
 
 <Note>
   Trust thresholds do not apply to you (the CEO). Messages arriving via CLI, or from a contact with the `ceo` role, are always trusted regardless of score. Curia never explains the trust system or mentions scores to external senders.

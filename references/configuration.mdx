@@ -87,6 +87,26 @@ skillOutput:
     Channel trust levels normalize as: `high = 1.0`, `medium = 0.6`, `low = 0.3`. Contact trust levels follow a separate hierarchy: `low` < `medium` < `high` < `ceo`. See [Contacts and trust](/core-concepts/contacts-trust) for details.
   </Accordion>
 
+  <Accordion title="Action trust thresholds">
+    The coordinator checks a sender's `messageTrustScore` against these thresholds before taking action on their behalf. All values must be between 0.0 and 1.0. **This block is required** — startup fails if it is missing or malformed.
+
+    ```yaml
+    # config/local.yaml
+    security:
+      trust_thresholds:
+        information_query: 0.2   # answering questions, summaries
+        scheduling: 0.5           # calendar changes, meeting requests
+        data_export: 0.8          # sharing files, forwarding records
+        financial: 0.8            # payments, financial commitments
+    ```
+
+    These thresholds are compiled into the coordinator's system prompt at startup. Changes take effect on restart. See [Contacts and trust](/core-concepts/contacts-trust#action-thresholds) for how these thresholds are enforced.
+
+    <Note>
+      This replaces the previous top-level `trust_policy` config key, which was dead config (typed but never read by the runtime). If you had overrides under `trust_policy`, move them to `security.trust_thresholds`.
+    </Note>
+  </Accordion>
+
   <Accordion title="Custom PII patterns">
     Curia redacts common PII from LLM-facing error messages by default: email addresses, phone numbers, credit card numbers, and US Social Security numbers. Add custom patterns for PII types specific to your deployment.
 

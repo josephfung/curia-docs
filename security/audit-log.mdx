@@ -32,7 +32,8 @@ Every event type that flows through the bus produces an audit log entry:
 | `memory.query` | Every knowledge graph query, including which results were returned |
 | `contact.resolved` | Every sender identity successfully matched to a contact |
 | `contact.unknown` | Every unknown sender, including the routing decision taken |
-| `llm.call` | Every LLM API call — model, token count, cost, and provider request ID |
+| `llm.call` | Every LLM API call — model provenance (requested vs. actual), input/output/cache-read/cache-creation token counts, estimated cost in USD, latency, provider request ID (`msg_xxx`), and SHA-256 content fingerprints for prompt and response |
+| `context.budget` | Context assembly budget for each LLM call — per-tier token estimates, utilization percentage, and which tiers were dropped due to budget constraints |
 | `human.decision` | Every approval, denial, or timeout at a human-in-the-loop gate |
 | `config.change` | Agent and skill configuration changes detected at startup |
 
