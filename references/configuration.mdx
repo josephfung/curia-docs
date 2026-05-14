@@ -100,7 +100,7 @@ skillOutput:
         financial: 0.8            # payments, financial commitments
     ```
 
-    These thresholds are compiled into the coordinator's system prompt at startup. Changes take effect on restart. See [Contacts and trust](/core-concepts/contacts-trust#action-thresholds) for how scores are computed.
+    These thresholds are compiled into the coordinator's system prompt at startup. Changes take effect on restart. See [Contacts and trust](/core-concepts/contacts-trust#action-thresholds) for how these thresholds are enforced.
 
     <Note>
       This replaces the previous top-level `trust_policy` config key, which was dead config (typed but never read by the runtime). If you had overrides under `trust_policy`, move them to `security.trust_thresholds`.
