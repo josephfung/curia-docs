@@ -84,7 +84,7 @@ A specialist agent for conducting web research and providing analysis.
 |---|---|
 | **Role** | specialist |
 | **Model** | Claude Sonnet |
-| **Skills** | web-search, web-fetch, scheduler-create, scheduler-list, scheduler-cancel |
+| **Skills** | web-search, web-fetch, memory-store, memory-query, entity-context, scheduler-create, scheduler-list, scheduler-cancel |
 | **Discovery** | Disabled |
 
 **Research workflow:**
@@ -92,6 +92,7 @@ A specialist agent for conducting web research and providing analysis.
 2. Follows up on important sources with web-fetch for full content
 3. Synthesizes findings into clear, concise summaries for an executive audience
 4. Highlights key takeaways and concerns with source attribution
+5. Persists important findings about known entities to the knowledge graph, so research about contacts and organizations builds over time
 
 The Coordinator delegates to the Research Analyst when a request requires multi-source web research rather than a simple lookup.
 
