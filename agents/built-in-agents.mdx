@@ -29,6 +29,7 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 - Calendar operations and scheduling intelligence → Calendar Specialist
 - Contact briefings, deduplication, and relationship intelligence → Contact Specialist
 - Multi-source web research → Research Analyst
+- CEO inbox queries, triage, and rule management → CEO Inbox
 
 **Key behaviors:**
 - Resolves possessive pronouns ("my calendar", "your schedule") to explicit entity identities before delegating to any specialist
@@ -95,6 +96,27 @@ A specialist agent for conducting web research and providing analysis.
 5. Persists important findings about known entities to the knowledge graph, so research about contacts and organizations builds over time
 
 The Coordinator delegates to the Research Analyst when a request requires multi-source web research rather than a simple lookup.
+
+## CEO Inbox
+
+A specialist agent that manages the CEO's personal email inbox. It runs on a 15-minute schedule and can also be delegated inbox queries or rule management tasks by the Coordinator.
+
+| Field | Value |
+|---|---|
+| **Role** | specialist |
+| **Model** | Claude Sonnet |
+| **Skills** | ceo-inbox-*, contact-register, signal-send, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve |
+| **Discovery** | Disabled |
+| **Schedule** | Every 15 minutes |
+
+**What it handles:**
+- Autonomous inbox triage — reads unread messages and classifies each as URGENT, ACTIONABLE, NEEDS DRAFT, LEAVE FOR CEO, or NOISE
+- Draft reply creation — writes reply-all drafts in the CEO's voice using the stored executive profile; the CEO reviews and sends from Gmail
+- Escalation — sends a Signal alert and opens a Bullpen thread for URGENT items; delegates ACTIONABLE items to the appropriate specialist
+- Standing rules and decision tagging — maintains a configurable set of per-sender instructions and auto-labels via `config-store`
+- Inbox queries — searches, reads, and labels messages on demand when delegated by the Coordinator
+
+The CEO Inbox agent runs directly against the CEO's personal email account via Nylas. It never replies directly to senders — all outbound replies go through draft creation for CEO review.
 
 ## How delegation works
 

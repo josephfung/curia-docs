@@ -37,6 +37,16 @@ A blocked invocation:
 **CEO-bound and system messages are exempt from the outbound gate.** Messages addressed to you (the CEO) and internal infrastructure notifications (such as approval request alerts) bypass the autonomy gate at the gateway level. The gate governs autonomous communication with external parties — gating agent-to-principal messages would cause Curia to go silent at low scores and prevent it from delivering the very notifications you need to act on blocked requests. All other checks (content filter, PII redaction, blocked-contact) still apply.
 </Note>
 
+### Principal bypass
+
+When you send a direct instruction to Curia (via Signal, email, CLI, or any channel), the task is marked as **principal-originated**. Both execution gates — the `action_risk` floor check and the outbound send gate — are skipped for the duration of that task.
+
+The rationale: the autonomy score governs *autonomous* behavior (scheduled jobs, agent-initiated actions). When you explicitly tell Curia to do something, you are the authorization. A low autonomy score should not prevent you from issuing a direct command.
+
+This bypass applies only to tasks that trace back to a message from you. Scheduled jobs, agent-to-agent delegations, and other autonomous work are still subject to the full gate logic regardless of autonomy score.
+
+The bypass is logged at every invocation — you can see principal-originated gate skips in the audit log.
+
 ## Approval requests
 
 When a skill is blocked by a hard gate, Curia does not silently fail. Instead, it creates an approval request and notifies you so you can decide whether to allow the specific action.
