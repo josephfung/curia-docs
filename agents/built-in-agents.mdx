@@ -112,7 +112,7 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 **What it handles:**
 - Autonomous inbox triage — reads unread messages and classifies each as URGENT, ACTIONABLE, NEEDS DRAFT, LEAVE FOR CEO, or NOISE
 - Draft reply creation — writes reply-all drafts in the CEO's voice using the stored executive profile; the CEO reviews and sends from Gmail
-- Escalation — sends a Signal alert and opens a Bullpen thread for URGENT items; delegates ACTIONABLE items to the appropriate specialist
+- Escalation — sends a Signal alert and opens a Bullpen thread for URGENT items; opens a Bullpen thread mentioning the appropriate specialist for ACTIONABLE items
 - Standing rules and decision tagging — maintains a configurable set of per-sender instructions and auto-labels via `config-store`
 - Inbox queries — searches, reads, and labels messages on demand when delegated by the Coordinator
 
