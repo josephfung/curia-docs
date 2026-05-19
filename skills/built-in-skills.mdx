@@ -3,7 +3,7 @@ title: "Built-in skills"
 description: "Catalog of the skills Curia ships with — organized by category, with action_risk levels and descriptions."
 ---
 
-Curia ships with 60+ skills organized into functional categories. Every skill declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it. Skills with `action_risk: none` can always run; higher-risk skills trigger the [approval workflow](/security/approval-workflow) when the score is below their floor.
+Curia ships with 75+ skills organized into functional categories. Every skill declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it. Skills with `action_risk: none` can always run; higher-risk skills trigger the [approval workflow](/security/approval-workflow) when the score is below their floor.
 
 ## Contact management
 
@@ -36,6 +36,27 @@ Curia ships with 60+ skills organized into functional categories. Every skill de
 | `send-draft` | medium | Send a previously saved draft |
 | `email-archive` | low | Archive a message |
 | `context-for-email` | none | Assemble context for composing an email |
+| `email-label` | low | Apply one or more labels to an email message (creates the label if it doesn't exist) |
+| `email-mark-read` | low | Mark an email message as read |
+| `email-list-folders` | none | List all folders and labels in an email account |
+| `email-create-folder` | low | Create a new folder or label in an email account |
+| `email-download-attachment` | low | Download an email attachment and return content as base64 (10 MB limit) |
+
+## CEO Inbox
+
+Skills for the CEO Inbox agent to manage the CEO's personal email account. These skills are pinned exclusively to the `ceo-inbox` agent — they access the CEO's personal email and should not be called from other agents.
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `ceo-inbox-list` | none | List recent unread messages from the CEO's personal inbox |
+| `ceo-inbox-read` | none | Read a specific message, returning plain text and HTML body |
+| `ceo-inbox-search` | none | Search the CEO's inbox using Gmail-native query syntax |
+| `ceo-inbox-draft-reply` | low | Create a reply-all draft for CEO review (never sent automatically) |
+| `ceo-inbox-download-attachment` | low | Download an attachment from the CEO's inbox by its Nylas ID (10 MB limit) |
+| `ceo-inbox-archive` | low | Archive a message by removing it from the INBOX folder |
+| `ceo-inbox-label` | low | Apply one or more labels to a message, creating labels that don't yet exist |
+| `ceo-inbox-mark-read` | low | Mark a message as read to prevent re-processing on the next triage run |
+| `ceo-inbox-update-folders` | low | Add or remove folders/labels on a message (e.g. star, move between folders) |
 
 ## Calendar
 
