@@ -144,6 +144,20 @@ contact_creation_limits:
 Existing contacts are not counted toward the limits — only genuinely new contact creations. If a 20-person thread has 18 known contacts, only the 2 new ones count.
 </Note>
 
+## Automatic promotion of provisional contacts
+
+Provisional contacts are automatically promoted to **confirmed** when Curia detects evidence of a real relationship. Three signals trigger promotion:
+
+1. **Curia outbound** — Curia has sent an outbound message to the contact's email address (any account).
+2. **CEO sent email** — the CEO has sent them an email directly (detected via a daily Sent folder scan).
+3. **Calendar acceptance** — the CEO has accepted a calendar event where the contact is an attendee.
+
+A daily 8 AM background sweep by the contacts agent reconciles all provisional contacts against these signals. Promotions can also happen in real-time when Curia sends an outbound message.
+
+<Note>
+  Auto-promotion only applies to provisional contacts whose email was established through a trusted source (email participant headers, calendar attendees). It never applies to self-claimed channel identities — those always require explicit CEO confirmation.
+</Note>
+
 ## Adding contacts proactively
 
 You don't have to wait for someone to reach out. Tell Curia about people directly in conversation:

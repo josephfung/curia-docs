@@ -175,6 +175,41 @@ intentDrift:
 | `medium` | Pause on probable deviations. Some false positives expected. |
 | `low` | Pause whenever any drift is detected, regardless of LLM confidence. |
 
+## Model routing
+
+Agents declare a capability tier rather than a specific model. The `model_routing` config maps each tier to a concrete model. The provider is inferred automatically from a centralized **model registry** based on the model name prefix (e.g., `claude-*` resolves to Anthropic, `google/gemini-*` resolves to OpenRouter).
+
+```yaml
+# config/local.yaml
+model_routing:
+  tiers:
+    fast:
+      model: claude-haiku-4-5
+    standard:
+      model: claude-sonnet-4-6
+    powerful:
+      model: claude-sonnet-4-6
+```
+
+To route a tier through OpenRouter (requires `OPENROUTER_API_KEY` in `.env`), set the model to an OpenRouter model ID:
+
+```yaml
+model_routing:
+  tiers:
+    fast:
+      model: google/gemini-2.5-flash    # routed through OpenRouter
+    standard:
+      model: claude-sonnet-4-6           # routed through Anthropic
+    powerful:
+      model: claude-sonnet-4-6
+```
+
+The `ModelRouter` validates at startup that every configured model exists in the model registry. Unknown models cause a startup failure with a clear error message.
+
+<Note>
+  The `provider` field was removed from tier config. The model registry infers the provider from the model name — you only need to specify the `model`.
+</Note>
+
 ## Autonomy engine
 
 The autonomy score is stored in Postgres and controlled via natural-language commands or the CLI — you do not set it in a config file. Ask Curia directly:

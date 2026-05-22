@@ -21,6 +21,8 @@ schedule:
 
 Cron expressions run in Curia's configured timezone (set via `TIMEZONE` in `.env`). If you need a specific job to run in a different timezone, the scheduler-create skill accepts an optional `timezone` parameter.
 
+Declarative schedules are **idempotent** — on each startup, Curia reconciles the YAML definitions against existing jobs and automatically cleans up stale entries. If you change a cron expression or remove a schedule entry entirely, the old job is cancelled on the next restart. No orphaned jobs accumulate.
+
 ### Common cron patterns
 
 | Expression | When it fires |

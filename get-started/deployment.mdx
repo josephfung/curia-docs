@@ -68,7 +68,7 @@ Everything you need to run Curia and interact with it via the CLI and web app.
     pnpm local
     ```
 
-    On first run this applies all database migrations, then starts the full stack.
+    On first run this applies all database migrations, then starts the full stack. The production Docker image runs as a non-root `curia` user for security hardening.
   </Step>
   <Step title="Verify">
     **CLI:** Type a message at the prompt to interact with Curia directly.
