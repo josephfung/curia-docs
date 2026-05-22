@@ -104,6 +104,10 @@ Declares which privileged services this skill needs from the execution layer. On
 | `browserService` | Playwright browser for web interaction |
 | `bullpenService` | Inter-agent discussion threads |
 | `skillSearch` | Search the skill registry |
+| `actionLogRepo` | Autonomy action log for approval lifecycle management |
+| `executionLayer` | Re-invoke skills with `humanApproved` bypass (CEO-only, `approve-action` skill) |
+| `confidencePipeline` | Contact confidence scoring — fire signals when modifying trust-related data |
+| `tempFileStore` | Write binary buffers to tmpfs; returns `file://` URLs for MCP tool handoff |
 | `infraLlm` | Constrained LLM access — `classify()` and `extract()` only, no raw `chat()` |
 
 Services not listed here (`contactService`, `entityContextAssembler`, `agentPersona`) are universal — available to every skill without declaration.
