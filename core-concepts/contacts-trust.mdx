@@ -6,7 +6,7 @@ description: "Curia verifies every sender before acting on their behalf, using t
 Every person who contacts Curia — whether through email, Signal, or the HTTP API — is treated as a contact with an assigned trust level. Before Curia takes any action on a sender's behalf, it checks who they are, how confident it is in their identity, and whether the channel they're using is trusted enough for what they're asking. These checks are deterministic: a sender either has permission or they don't.
 
 <Warning>
-  Contacts start as **provisional** until you confirm them. Provisional contacts have no permissions — Curia will acknowledge their message but will not take any actions on their behalf. You'll be notified so you can decide whether to confirm, dismiss, or block them.
+  Contacts start as **provisional** until confirmed — either by you explicitly or by [automatic promotion](#automatic-promotion-of-provisional-contacts) when Curia detects evidence of a real relationship. Provisional contacts have no permissions — Curia will acknowledge their message but will not take any actions on their behalf. You'll be notified so you can decide whether to confirm, dismiss, or block them.
 </Warning>
 
 ## How trust scores work
@@ -142,6 +142,20 @@ contact_creation_limits:
 
 <Note>
 Existing contacts are not counted toward the limits — only genuinely new contact creations. If a 20-person thread has 18 known contacts, only the 2 new ones count.
+</Note>
+
+## Automatic promotion of provisional contacts
+
+Provisional contacts are automatically promoted to **confirmed** when Curia detects evidence of a real relationship. Three signals trigger promotion:
+
+1. **Curia outbound** — Curia has sent an outbound message to the contact's email address (any account).
+2. **CEO sent email** — the CEO has sent them an email directly (detected via a daily Sent folder scan).
+3. **Calendar acceptance** — the CEO has accepted a calendar event where the contact is an attendee.
+
+A daily 8 AM background sweep by the contacts agent reconciles all provisional contacts against these signals. Promotions can also happen in real-time when Curia sends an outbound message.
+
+<Note>
+  Auto-promotion only applies to provisional contacts whose email was established through a trusted source (email participant headers, calendar attendees). It never applies to self-claimed channel identities — those always require explicit CEO confirmation.
 </Note>
 
 ## Adding contacts proactively

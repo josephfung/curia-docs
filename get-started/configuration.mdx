@@ -49,10 +49,12 @@ Secrets and deployment-specific values go in `.env`. The most important ones are
     |---|---|---|
     | `ANTHROPIC_API_KEY` | Yes | Powers all agents. Get your key from [console.anthropic.com](https://console.anthropic.com). |
     | `OPENAI_API_KEY` | Recommended | Required for knowledge graph embeddings (`text-embedding-3-small`) and semantic search. |
+    | `OPENROUTER_API_KEY` | Optional | Enables multi-model routing via [OpenRouter](https://openrouter.ai). When set, agent tiers can map to models like Gemini Flash, DeepSeek V3, and GPT-4o. |
 
     ```env
     ANTHROPIC_API_KEY=sk-ant-...
     OPENAI_API_KEY=sk-...
+    OPENROUTER_API_KEY=sk-or-v1-...   # optional — enables multi-model routing
     ```
 
     Ollama requires no API key — configure the endpoint in your agent YAML instead.

@@ -43,6 +43,12 @@ Curia was built for executives who cannot afford to run AI agents on trust alone
   <Card title="Outbound safety" icon="paper-plane">
     All outbound messages — regardless of which skill or agent produced them — pass through a single outbound gateway before being sent. A deterministic content filter checks for system prompt fragments, internal field names, secret patterns, and contact data leakage. Display names in inbound emails are validated against the verified sender address to prevent spoofing.
   </Card>
+  <Card title="Skill caller restrictions" icon="user-lock">
+    Skills can declare which agents are allowed to invoke them via `allowed_callers` in the skill manifest. The execution layer enforces this before any other gate — a structurally forbidden caller is rejected immediately, not routed through autonomy or approval workflows. Agent names are validated at startup; unknown names prevent boot.
+  </Card>
+  <Card title="Container and supply chain" icon="container-storage">
+    The production Docker image runs as a non-root `curia` user. Automated security scanning runs on every pull request: Trivy (npm deps, Docker image, secrets), Semgrep (pattern-based SAST), CodeQL (semantic analysis), and Gitleaks (secret detection). Branch protection on `main` requires PR review and passing status checks before merge.
+  </Card>
 </CardGroup>
 
 ## Layer boundaries at a glance

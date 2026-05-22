@@ -98,13 +98,15 @@ Talk to your agents wherever you are. Every channel is a thin adapter that norma
 
 ## Multi-provider LLM support
 
-Each agent specifies its own LLM provider and model. Configure fallbacks for resilience — if Anthropic is unavailable, the agent switches to OpenAI automatically.
+Each agent declares a capability tier (`fast`, `standard`, `powerful`) rather than a specific model. The operator maps tiers to concrete models in a single config file — upgrading all agents of a tier is a one-line change, not a per-agent edit. A centralized **model registry** tracks pricing, context windows, and capabilities for all supported models.
 
 | Provider | Models | Use case |
 |---|---|---|
 | **Anthropic** | Claude Opus, Sonnet, Haiku | Primary — best for nuanced reasoning and long context |
-| **OpenAI** | GPT-4o, o1-pro, GPT-4o-mini | Fallback, cost optimization, embeddings |
+| **OpenRouter** | Gemini Flash, DeepSeek V3, GPT-4o, and others | Multi-model routing — cost optimization and model diversity via a single API key |
 | **Ollama** | Llama, Mistral, Gemma, and others | Local/private — no data leaves your server |
+
+Each tier maps to a single model. If your primary provider is unavailable, change the tier mapping to a different model or provider — no agent files need to change.
 
 ## How Curia differs from typical agent frameworks
 
