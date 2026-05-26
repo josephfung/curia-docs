@@ -118,6 +118,31 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 
 The CEO Inbox agent runs directly against the CEO's personal email account via Nylas. It never replies directly to senders — all outbound replies go through draft creation for CEO review.
 
+**Urgent alerts route through the coordinator.** When the CEO Inbox classifies a message as URGENT, it does not call `signal-send` directly — it opens a Bullpen thread mentioning the coordinator and asks for an outbound alert. The coordinator's send is what hits Signal, which means the alert participates in the same delegation-aware reply correlation as any other coordinator-initiated message. If the CEO replies to the alert, the coordinator routes the reply back to the inbox agent via the normal delegation path.
+
+## Meeting Debrief
+
+A proactive specialist agent that scans the CEO's calendar for recently-ended external meetings, prompts for takeaways, and executes whatever follow-up actions the CEO's notes imply.
+
+| Field | Value |
+|---|---|
+| **Role** | specialist |
+| **Model** | Claude Sonnet |
+| **Skills** | calendar-*, email-draft-save, email-send, scheduler-*, bullpen, memory-query, memory-store, config-store, entity-context |
+| **Discovery** | Disabled |
+| **Schedule** | Every 5 minutes |
+
+**What it handles:**
+- **Detection** — scans calendar events ending in the recent past, classifies attendees as internal vs external, and uses LLM judgment to decide which meetings warrant a debrief prompt (`YES`, `NO`, `DEFER`)
+- **Prompting** — opens a Bullpen thread asking the coordinator to send a brief conversational prompt on the CEO's preferred channel (Signal by default): *"You just wrapped up with Sarah Chen and David Park from Meridian. Any takeaways or follow-ups?"*
+- **Follow-up execution** — when the CEO replies with notes, the agent uses its full skill set to draft emails, find conflict-free meeting slots, store commitments as KG facts, and post Bullpen threads to other specialists (e.g. research-analyst) for cross-cutting work
+- **Reminders** — nudges the CEO on the same thread if a prompt goes unanswered after a configurable delay (default: 2 hours)
+- **Preference learning** — when the CEO says *"don't debrief me on meetings with X"*, the rule is stored as a KG fact and respected on future scans
+
+**Bullpen-through-coordinator pattern.** The Meeting Debrief agent has no outbound communication skills pinned. All proactive prompts and follow-up sends route through the coordinator via Bullpen, which keeps the unified persona intact and lets reply correlation work the same way as any other coordinator-initiated outbound.
+
+Tunable via the `debrief` block in `config/default.yaml` — channel, reminder delay, scan window, and context-bridge TTL for replies.
+
 ## How delegation works
 
 When the Coordinator receives a task that requires specialist expertise, it uses the `delegate` skill to hand the task to the appropriate agent. The specialist works independently, using only its pinned skills, and returns its findings to the Coordinator. The Coordinator synthesizes the specialist's response into its own voice — the user never sees that multiple agents were involved.
