@@ -109,6 +109,7 @@ Declares which privileged services this skill needs from the execution layer. On
 | `confidencePipeline` | Contact confidence scoring — fire signals when modifying trust-related data |
 | `tempFileStore` | Write binary buffers to tmpfs; returns `file://` URLs for MCP tool handoff |
 | `infraLlm` | Constrained LLM access — `classify()` and `extract()` only, no raw `chat()` |
+| `outboundContext` | Register/release outbound-context entries for delegation-aware reply correlation. Pre-scoped to the current conversation. |
 
 Services not listed here (`contactService`, `entityContextAssembler`, `agentPersona`) are universal — available to every skill without declaration.
 
@@ -124,6 +125,26 @@ Optional. Restricts which agents may invoke this skill. When set, only the named
 - CEO-approved re-executions bypass the caller gate.
 - The special value `"system"` matches system-layer invocations (checkpoint processor, etc.).
 - Omit the field entirely (or set to `[]`) to allow any agent — this is the default.
+
+### `context_bridge` (input field)
+
+Optional input on send skills (`email-send`, `email-reply`, `signal-send`). A JSON-encoded object that lets the caller attach delegation metadata to the outbound-context entry that's auto-registered when the message ships.
+
+```json
+"context_bridge": "{\"agent_id\": \"research-analyst\", \"expected_reply\": \"clarifying answer\", \"delegation_hint\": \"resume the multi-turn research conversation\", \"expires_in_hours\": 48}"
+```
+
+Recognized fields inside the JSON:
+
+| Field | Purpose |
+|---|---|
+| `agent_id` | Originating specialist (`coordinator`, `research-analyst`, `meeting-debrief`, …) |
+| `expected_reply` | Short hint about the kind of reply being awaited |
+| `delegation_hint` | Free-form instruction the dispatcher surfaces back on inbound replies (e.g. *"reply belongs to research-analyst"*) |
+| `metadata` | Optional JSON object — structured delegation context (e.g. `resume_token` for multi-turn clarification) |
+| `expires_in_hours` | Overrides the global `contextBridge.explicitExpiryHours` for this entry |
+
+Send skills auto-register a minimal outbound-context entry on every successful send regardless of whether `context_bridge` is passed. The optional field is for callers (specialists, the coordinator) that want richer delegation context.
 
 ### `entity_enrichment`
 

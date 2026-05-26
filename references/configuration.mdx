@@ -210,6 +210,45 @@ The `ModelRouter` validates at startup that every configured model exists in the
   The `provider` field was removed from tier config. The model registry infers the provider from the model name — you only need to specify the `model`.
 </Note>
 
+## Delegation and scheduler timeouts
+
+Two related timeouts can be tuned per deployment based on your model's latency profile.
+
+```yaml
+delegate:
+  defaultTimeoutMs: 90000   # how long the coordinator waits for a delegated specialist's reply (90 s default)
+
+scheduler:
+  defaultExpectedDurationSeconds: 600   # fallback expected duration for scheduled jobs that don't declare one (10 min default)
+```
+
+Raise `delegate.defaultTimeoutMs` if specialist agents are timing out under standard-tier models that run more slowly than the defaults assume. `scheduler.defaultExpectedDurationSeconds` is what the watchdog uses to compute the recovery timeout for a job — increase it if you run long jobs without an explicit `expectedDurationSeconds` hint. Both values are validated at startup; non-numeric or non-positive values cause a hard startup failure.
+
+## Outbound context bridge
+
+Controls TTL for the registry that lets the coordinator link incoming replies to messages it previously sent. See [Architecture › Outbound context bridge](/core-concepts/architecture#outbound-context-bridge) for the conceptual model.
+
+```yaml
+contextBridge:
+  defaultExpiryHours: 6      # auto-registered entries (proactive sends without explicit context_bridge metadata)
+  explicitExpiryHours: 24    # entries with explicit context_bridge JSON
+```
+
+Every outbound message auto-registers an entry. Callers can pass a `context_bridge` input with `expires_in_hours` to override per-entry; that value wins over both defaults.
+
+## Meeting debrief
+
+Configures the meeting-debrief specialist agent. The agent itself is defined in `agents/meeting-debrief.yaml`; this block controls runtime knobs.
+
+```yaml
+debrief:
+  channel: signal               # channel for debrief prompts (signal | email)
+  reminderDelayMinutes: 120     # minutes before a reminder is sent for unanswered debriefs
+  contextBridgeTtlHours: 48     # how long replies to a debrief prompt remain routable back to the agent
+```
+
+`contextBridgeTtlHours` overrides the global `contextBridge.explicitExpiryHours` for the outbound-context entry the agent registers when it sends a debrief prompt — giving the CEO a longer window to reply before the entry expires.
+
 ## Autonomy engine
 
 The autonomy score is stored in Postgres and controlled via natural-language commands or the CLI — you do not set it in a config file. Ask Curia directly:

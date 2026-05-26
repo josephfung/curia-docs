@@ -28,8 +28,8 @@ Curia ships with 75+ skills organized into functional categories. Every skill de
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `email-send` | medium | Send a new email to specified recipients |
-| `email-reply` | medium | Reply to an existing email thread |
+| `email-send` | medium | Send a new email to specified recipients. Accepts an optional `context_bridge` JSON for delegation-aware reply routing. |
+| `email-reply` | medium | Reply to an existing email thread. Appends the quoted original message body to the reply (matching standard email-client behaviour). Accepts an optional `context_bridge` JSON. |
 | `email-list` | none | List recent messages in an inbox |
 | `email-get` | none | Fetch the full body of a specific message |
 | `email-draft-save` | low | Save a draft reply for CEO review |
@@ -50,13 +50,13 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 |---|---|---|
 | `ceo-inbox-list` | none | List recent unread messages from the CEO's personal inbox |
 | `ceo-inbox-read` | none | Read a specific message, returning plain text and HTML body |
-| `ceo-inbox-search` | none | Search the CEO's inbox using Gmail-native query syntax |
+| `ceo-inbox-search` | none | Search the CEO's inbox using Gmail-native query syntax. When `unread_only` is set alongside a search query, `is:unread` is embedded into the search string so the filter actually applies. |
 | `ceo-inbox-draft-reply` | low | Create a reply-all draft for CEO review (never sent automatically) |
 | `ceo-inbox-download-attachment` | low | Download an attachment from the CEO's inbox by its Nylas ID (10 MB limit) |
 | `ceo-inbox-archive` | low | Archive a message by removing it from the INBOX folder |
 | `ceo-inbox-label` | low | Apply one or more labels to a message, creating labels that don't yet exist |
 | `ceo-inbox-mark-read` | low | Mark a message as read to prevent re-processing on the next triage run |
-| `ceo-inbox-update-folders` | low | Add or remove folders/labels on a message (e.g. star, move between folders) |
+| `ceo-inbox-update-folders` | low | Add or remove folders/labels on a message (e.g. star, move between folders). Falls back to the computed folder list when Nylas omits `folders` from the response, guarding against accidental folder wipes. |
 
 ## Calendar
 
@@ -98,8 +98,10 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `signal-send` | medium | Send a Signal message |
+| `signal-send` | medium | Send a Signal message. Accepts an optional `context_bridge` JSON for delegation-aware reply routing. |
 | `bullpen` | low | Open or contribute to an inter-agent discussion thread |
+| `request-clarification` | none | Pause a delegated task mid-execution to ask the CEO a clarifying question; the runtime short-circuits the tool loop and returns a typed result with a resume token so the coordinator can re-delegate seamlessly once the CEO replies |
+| `context-bridge-release` | none | Coordinator-only — explicitly close an active outbound-context entry once the LLM detects a conversation thread has ended, freeing the slot before TTL expiry |
 
 ## Web research
 
@@ -113,7 +115,7 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `file-parse` | none | Extract structured data from CSV, PDF, HTML, and image files |
+| `file-parse` | none | Extract structured data from CSV, PDF, HTML, and image files. Accepts either inline `content_base64` or a `temp_file_url` pointing at a file in the configured `CURIA_TEMPFILE_DIR` (paths are validated against the base directory). |
 
 ## Templates
 

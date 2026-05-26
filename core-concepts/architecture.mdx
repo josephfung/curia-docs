@@ -57,6 +57,12 @@ Agents can communicate with each other through the **Bullpen** — a structured,
 
 You can observe, intervene in, or start Bullpen threads from any channel.
 
+## Outbound context bridge
+
+When Curia sends a message it often expects a reply that needs to come back to a specific agent with specific context. The **outbound context bridge** is a small registry that records every outbound message — channel, originating agent, content preview, expected-reply hint, delegation hint, TTL — so that when an inbound reply arrives, the dispatcher can prepend a `[ACTIVE OUTBOUND CONTEXT]` block to the coordinator's task. The coordinator reads that block and decides whether to delegate the reply back to the originating specialist.
+
+The bridge is what lets the meeting-debrief agent claim threads for replies to its own outbound prompts, the research-analyst hold a multi-turn conversation with the CEO, and the coordinator route a Signal reply about an urgent email back to the CEO Inbox agent — all without coupling the routing logic to message bodies. Every send skill auto-registers an entry on success; callers can attach delegation metadata via an optional `context_bridge` input. Entries expire on a TTL (6 hours for auto-registered, 24 hours for explicit) and are released either by the coordinator (when it detects the conversation has ended) or by a periodic cleanup job.
+
 ## Event type registry
 
 All event types are defined as a TypeScript discriminated union — no untyped payloads or string-typed event names. Each event carries:
