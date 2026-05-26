@@ -87,7 +87,10 @@ The prompt injected at the start of every task. Supports runtime variable interp
 | `${office_identity_block}` | Agent persona (name, title, signature) from office identity config |
 | `${executive_voice_block}` | CEO's writing voice profile |
 | `${agent_contact_id}` | The agent's own contact UUID |
+| `${principal_contact_id}` | The principal's contact UUID (the CEO / operator the deployment serves). Resolved once at bootstrap. Pass it to `entity-context` to discover the principal's verified email addresses, Signal number, calendar IDs, and timezone — do not hardcode addresses or call `contact-lookup`-by-role for the principal. |
 | `${available_specialists}` | List of specialist agents available for delegation |
+
+Both `${agent_contact_id}` and `${principal_contact_id}` are opt-in — only agents that reference the placeholder pay the prompt-bytes cost. Both are guarded by a UUID-format check; if the underlying contact can't be resolved, the placeholder expands to an empty string and a one-time warning is logged at boot.
 
 ### `pinned_skills`
 
