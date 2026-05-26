@@ -134,6 +134,28 @@ Restart Curia after adding the file — agents are loaded at startup.
   </Accordion>
 </AccordionGroup>
 
+## Reaching the principal
+
+Agents that need to send messages to, look up calendars for, or otherwise act on behalf of the principal (the CEO / operator the deployment serves) MUST reference `${principal_contact_id}` in their system prompt. The runtime injects this placeholder at bootstrap from the contact designated as the principal.
+
+```yaml
+system_prompt: |
+  You are an executive assistant.
+
+  The CEO's contact ID is `${principal_contact_id}` — it is injected at bootstrap.
+  Call `entity-context` on `${principal_contact_id}` to discover their verified
+  email addresses, Signal number, calendar IDs, and timezone whenever you need
+  to reach them.
+```
+
+Why this matters:
+
+- **Don't hardcode addresses or phone numbers** in agent prompts. They go stale and create a confidentiality risk if the wrong value is baked in.
+- **Don't call `contact-lookup` by role for the principal.** The platform already resolved the principal's contact ID once at bootstrap; re-doing the lookup on every cron tick wastes a skill call on an immutable value, and an LLM doing the resolution mid-prompt can pick the wrong contact when role names overlap.
+- The placeholder is **opt-in** — only agents that reference it pay the prompt-bytes cost. Specialist agents that should report through the coordinator (research-analyst, expense-tracker, etc.) shouldn't need it.
+
+The same convention applies to `${agent_contact_id}` (the agent's own identity), which is also opt-in and bootstrap-resolved. See the [agent manifest schema](/references/agent-manifest-schema) for the full template-variable list.
+
 ## Full example — investor relations specialist
 
 ```yaml

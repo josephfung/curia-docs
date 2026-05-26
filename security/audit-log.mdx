@@ -27,7 +27,8 @@ Every event type that flows through the bus produces an audit log entry:
 | `skill.result` | The output of each skill call, after sanitization |
 | `agent.discuss` | Every inter-agent exchange in the Bullpen |
 | `agent.response` | Every response the coordinator produces |
-| `outbound.message` | Every message sent to an external recipient |
+| `outbound.message` | Every message sent to an external recipient (response-path sends, originated by `agent.response` and translated by the dispatch layer) |
+| `outbound.delivered` | Every successful wire-level delivery emitted by the outbound gateway — covers both response-path and skill-invoked sends (`signal-send`, `email-send`, `email-reply`, etc.). This is the canonical "did something actually leave the building?" audit signal; use it (not `outbound.message`) when counting outbound traffic for security review |
 | `memory.store` | Every write to the knowledge graph |
 | `memory.query` | Every knowledge graph query, including which results were returned |
 | `contact.resolved` | Every sender identity successfully matched to a contact |
