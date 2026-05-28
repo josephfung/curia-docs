@@ -23,7 +23,7 @@ The setup process is identical whether you're on a laptop or a server:
 </Note>
 
 - **The stack restarts automatically.** Both the `postgres` and `curia` services use `restart: unless-stopped`, so the instance comes back after a server reboot or a crash without manual intervention.
-- **Secrets live in `.env`.** `pnpm setup` writes generated secrets there and never rewrites the file. Treat `.env` as sensitive: back it up securely and keep it out of version control. Losing the `WEB_APP_BOOTSTRAP_SECRET` means a full reset is needed to log in again.
+- **Secrets live in `.env`.** `pnpm setup` writes generated secrets there and won't overwrite them on later runs unless you explicitly choose a full reset. Treat `.env` as sensitive: back it up securely and keep it out of version control. Losing the `WEB_APP_BOOTSTRAP_SECRET` means a full reset is needed to log in again.
 - **Applying configuration changes.** After editing `.env` on the server, recreate the container to pick up the change: `docker compose up -d --force-recreate curia`.
 
 ## Next steps
