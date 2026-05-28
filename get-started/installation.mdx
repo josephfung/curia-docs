@@ -1,122 +1,95 @@
 ---
-title: "Set up Curia from minimum to full configuration"
-description: "Clone, configure, and start your Curia instance in three tiers — minimum setup gets the CLI working; full setup adds email, search, and Signal messaging."
+title: "Install Curia"
+description: "Get Curia running with a single command, then add the channels and capabilities you need."
 ---
 
-Getting Curia running takes around 15 minutes for the minimum setup. The guide is organized into three tiers: a minimum configuration that gets the CLI and web app working, a recommended tier that adds email and semantic search, and a full tier that adds web research and Signal messaging. Complete each tier before moving to the next.
-
-| Tier | What you add | What you get |
-|---|---|---|
-| **1 — Minimum** | Anthropic + Postgres | Agents running, CLI and web app working |
-| **2 — Recommended** | Nylas + OpenAI | Email channel active, semantic search and entity memory working |
-| **3 — Full** | Tavily + Signal | Web research skill, encrypted Signal messaging |
+Getting Curia running takes one command and about five minutes. `pnpm setup` generates your secrets, starts the database and app in Docker, and runs migrations — the only thing you provide is an Anthropic API key. Once it's running, you finish configuration inside the app and add optional capabilities (email, search, Signal) whenever you need them.
 
 ## Prerequisites
 
 Before you start, install the following:
 
 - **Node.js 22 or later** — verify with `node --version`
-- **Docker and Docker Compose** — Postgres runs in Docker; install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI
+- **Docker and Docker Compose** — Postgres and the app both run in Docker; install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI
 - **pnpm** — install with `npm install -g pnpm`
 
-<Tabs>
-  <Tab title="Tier 1 — Minimum">
+<Note>
+  Setup also uses `openssl` to generate secrets. It ships by default on macOS and most Linux distributions, so you likely already have it.
+</Note>
 
-Tier 1 gives you a fully running Curia instance accessible via the CLI and web app. Agents are live and responding; email and embeddings are not yet connected.
+## Quick start
 
 <Steps>
-  <Step title="Clone and install">
-    Clone the repository and install dependencies:
-
+  <Step title="Clone the repository">
     ```bash
     git clone https://github.com/josephfung/curia.git
     cd curia
-    pnpm install
     ```
   </Step>
 
-  <Step title="Configure your environment">
-    Copy the example environment file:
-
+  <Step title="Run setup">
     ```bash
-    cp .env.example .env
+    pnpm setup
     ```
 
-    Open `.env` and fill in the values below. Leave everything else at its default for now.
+    This single command does everything needed to get Curia running:
 
-    **Postgres** — credentials for the Docker Compose container. You can use any values you like; they just need to match each other:
+    - Checks that Docker, Node, and pnpm are available
+    - Generates cryptographically random secrets (database password, API token, web app bootstrap secret) and writes them to `.env`
+    - Prompts you for an Anthropic API key — get one at [console.anthropic.com](https://console.anthropic.com)
+    - Starts Postgres, waits for it to be healthy, and runs database migrations
+    - Starts the full Curia stack in Docker
 
-    ```env
-    DB_USER=curia
-    DB_PASSWORD=curia_dev
-    DATABASE_URL=postgres://curia:curia_dev@localhost:5432/curia
-    ```
-
-    **Anthropic** — your API key from [console.anthropic.com](https://console.anthropic.com). This powers all agents:
-
-    ```env
-    ANTHROPIC_API_KEY=sk-ant-...
-    ```
-
-    **HTTP API token** — a secret for authenticating API requests. Generate any random string:
-
-    ```env
-    API_TOKEN=your-secret-token-here
-    ```
-
-    **Web app** — required to access the knowledge graph browser at `http://localhost:3000`. Generate any long random string:
-
-    ```env
-    WEB_APP_BOOTSTRAP_SECRET=replace-with-a-long-random-secret
-    ```
-
-    **Your email and timezone** — your primary email prevents your first message from being held as an unknown sender. The IANA timezone is used to resolve relative dates ("next Friday") in agent prompts:
-
-    ```env
-    CEO_PRIMARY_EMAIL=you@yourdomain.com
-    TIMEZONE=America/Toronto
-    ```
+    The Anthropic key is the only value you supply. Everything else is generated for you.
   </Step>
 
-  <Step title="Start Postgres">
-    Start the Postgres container with pgvector:
+  <Step title="Save your bootstrap secret">
+    When setup finishes, it prints a summary box with your login URL and a **bootstrap secret**:
 
-    ```bash
-    docker compose up -d
+    ```
+    ╔══════════════════════════════════════════════════════════════════════╗
+    ║   Curia is running.                                                    ║
+    ║   Open:    http://localhost:3000                                       ║
+    ║   Bootstrap secret (save this to a password manager):                  ║
+    ║   a1b2c3d4...                                                          ║
+    ╚══════════════════════════════════════════════════════════════════════╝
     ```
 
-    The first run pulls the image; subsequent starts are fast. Confirm the container is healthy:
-
-    ```bash
-    docker compose ps
-    ```
+    Save the bootstrap secret to a password manager now. You'll use it to log in, and it won't be shown again.
   </Step>
 
-  <Step title="Start Curia">
-    ```bash
-    pnpm local
-    ```
+  <Step title="Log in and finish in the app">
+    Open [http://localhost:3000](http://localhost:3000) and enter your bootstrap secret to create your account.
 
-    On first run, Curia applies all database migrations and then starts the full stack. You should see log output as the bus, agents, and channels initialize.
-  </Step>
-
-  <Step title="Verify">
-    **CLI:** In the terminal where Curia is running, type a message at the prompt to interact with it directly.
-
-    **Web app:** Open `http://localhost:3000` in your browser. Enter your `WEB_APP_BOOTSTRAP_SECRET` when prompted. Once authenticated, the knowledge graph browser is available.
+    Once you're in, the **setup wizard** walks you through the rest conversationally — naming your instance, setting its persona and voice, and configuring the CEO profile it operates on behalf of. This takes a few minutes and makes every subsequent interaction more useful.
 
     <Note>
-      Checkpoint: Curia is running. Agents are live, the CLI is working, and the web app is accessible. Stop here or continue to Tier 2 to add the email channel and semantic search.
+      Checkpoint: Curia is running on Anthropic and Postgres. Agents are live and the web app is working. Add email, semantic search, or Signal below whenever you need them.
     </Note>
   </Step>
 </Steps>
 
-  </Tab>
-  <Tab title="Tier 2 — Recommended">
+<Accordion title="Running pnpm setup again">
+  If `.env` already exists, `pnpm setup` won't overwrite it. Instead it offers a short menu:
 
-Tier 2 adds the email channel and knowledge graph embeddings — a realistic environment close to how Curia is actually used in production. Complete Tier 1 before continuing.
+  - **Start the stack** — bring the containers back up (`docker compose up -d`)
+  - **Resume setup** — re-run database migrations and startup against your existing `.env`, useful if a previous run didn't finish
+  - **Full reset** — regenerate all secrets. This invalidates active sessions and requires typing `yes` to confirm
 
-### Nylas (email)
+  Your secrets are never silently regenerated, because rotating them would invalidate live sessions.
+</Accordion>
+
+## Full setup
+
+The quick start gives you a running instance on Anthropic and Postgres. The capabilities below are optional and independent — add them in any order, only when you need them.
+
+Each one follows the same pattern: add the relevant variables to `.env`, then recreate the Curia container to pick up the change:
+
+```bash
+docker compose up -d --force-recreate curia
+```
+
+### Email (Nylas)
 
 Curia uses [Nylas](https://nylas.com) as its email layer — a unified API that handles IMAP and SMTP complexity and provides a consistent interface across Gmail, Outlook, and other providers.
 
@@ -151,20 +124,16 @@ Curia uses [Nylas](https://nylas.com) as its email layer — a unified API that 
     `NYLAS_SELF_EMAIL` is the address Curia reads and sends from — it filters self-sent messages and signs outbound emails.
   </Step>
 
-  <Step title="Restart Curia">
+  <Step title="Apply the change">
     ```bash
-    pnpm local
+    docker compose up -d --force-recreate curia
     ```
 
     The email channel activates automatically when all three Nylas variables are present.
-
-    <Note>
-      Checkpoint: The email channel is active and Curia is reading your connected inbox. Continue to set up embeddings, or stop here if you don't need semantic search.
-    </Note>
   </Step>
 </Steps>
 
-### OpenAI (embeddings)
+### Semantic search and entity memory (OpenAI)
 
 OpenAI's `text-embedding-3-small` model powers entity memory and semantic search in the knowledge graph. Without it, knowledge graph lookups are exact-match only.
 
@@ -174,18 +143,13 @@ Get an API key from [platform.openai.com](https://platform.openai.com) and add i
 OPENAI_API_KEY=sk-...
 ```
 
-Restart Curia (`pnpm local`) to pick up the change.
+Then recreate the container to apply it:
 
-<Note>
-  Checkpoint: Email channel active, knowledge graph fully functional with semantic search. This is the recommended baseline for most deployments.
-</Note>
+```bash
+docker compose up -d --force-recreate curia
+```
 
-  </Tab>
-  <Tab title="Tier 3 — Full">
-
-Tier 3 adds web research capability and Signal messaging. Complete Tier 2 before continuing.
-
-### Tavily (web search)
+### Web research (Tavily)
 
 Tavily powers the `web-search` skill, which lets agents research topics and look up current information during tasks.
 
@@ -201,11 +165,15 @@ Tavily powers the `web-search` skill, which lets agents research topics and look
     TAVILY_API_KEY=tvly-...
     ```
 
-    No restart required if Curia is already running — the skill picks up the key on next use.
+    Then recreate the container:
+
+    ```bash
+    docker compose up -d --force-recreate curia
+    ```
   </Step>
 </Steps>
 
-### Signal
+### Signal messaging
 
 Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Docker Compose manages the socket path automatically — the only thing you need to provide is your phone number.
 
@@ -224,59 +192,30 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
     Do not set `SIGNAL_SOCKET_PATH` — the deployment layer manages this automatically.
   </Step>
 
-  <Step title="Restart Curia">
+  <Step title="Apply the change">
     ```bash
-    pnpm local
+    docker compose up -d --force-recreate curia
     ```
 
     The Signal channel activates when `SIGNAL_PHONE_NUMBER` is set and the `signal-data` volume is populated.
-
-    <Note>
-      Checkpoint: All three tiers complete. Curia is running with email, web search, and Signal messaging.
-    </Note>
   </Step>
 </Steps>
-
-  </Tab>
-</Tabs>
-
-## First-time setup
-
-Once Curia is running, open the web app at `http://localhost:3000` and complete the setup wizard. It walks you through naming your instance, setting its persona and voice, and configuring the CEO profile it operates on behalf of. This takes a few minutes and makes every subsequent interaction significantly more useful.
-
-After setup, start a conversation from the CLI:
-
-```bash
-pnpm local
-```
-
-Type a message at the prompt. You're talking to Curia.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="macOS: HTTPS requests fail with 'unable to get local issuer certificate'">
-    Node installed via nvm or fnm bundles its own CA store and doesn't trust macOS system certificates. Export your system certs and point Node at them:
-
-    ```bash
-    security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain > ~/.config/curia/macos-ca-certs.pem
-    ```
-
-    Then uncomment this line in `.env`:
-
-    ```env
-    NODE_EXTRA_CA_CERTS=/Users/yourname/.config/curia/macos-ca-certs.pem
-    ```
+  <Accordion title="pnpm setup says my .env already exists">
+    This is expected on a second run. `pnpm setup` never overwrites an existing `.env` — instead it offers a menu to start the stack, resume setup, or do a full reset. Full reset is the only option that regenerates secrets, and it asks for confirmation first.
   </Accordion>
 
   <Accordion title="Postgres connection refused">
-    Confirm the Docker container is running:
+    Confirm the container is running:
 
     ```bash
     docker compose ps
     ```
 
-    If the container is healthy but Curia can't connect, verify that the credentials in `.env` match the values in `docker-compose.yml`.
+    The database password is generated during `pnpm setup` and shared with the container automatically through `.env`, so the credentials match by default. If you've edited `.env` by hand, make sure `DATABASE_URL` is still consistent with `DB_USER` and `DB_PASSWORD`.
   </Accordion>
 
   <Accordion title="Email channel not activating">
@@ -284,6 +223,22 @@ Type a message at the prompt. You're talking to Curia.
 
     - `NYLAS_API_KEY/NYLAS_GRANT_ID not set — email channel disabled` — the API key or grant ID is missing
     - `NYLAS_SELF_EMAIL not set — email adapter disabled` — the first two variables are set but `NYLAS_SELF_EMAIL` is missing
+
+    Remember to recreate the container after editing `.env`: `docker compose up -d --force-recreate curia`.
+  </Accordion>
+
+  <Accordion title="macOS: HTTPS requests fail with 'unable to get local issuer certificate'">
+    Node installed via nvm or fnm bundles its own CA store and doesn't trust macOS system certificates. Export your system certs and point Node at them:
+
+    ```bash
+    security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain > ~/.config/curia/macos-ca-certs.pem
+    ```
+
+    Then uncomment this line in `.env` and recreate the container:
+
+    ```env
+    NODE_EXTRA_CA_CERTS=/Users/yourname/.config/curia/macos-ca-certs.pem
+    ```
   </Accordion>
 </AccordionGroup>
 
