@@ -1,181 +1,32 @@
 ---
 title: "Deployment and self-hosting"
-description: "Get Curia running on your own server — prerequisites, database setup, configuration tiers, and first-run verification."
+description: "Run Curia on your own server. Setup is the same single command as local — this page covers what's different in production."
 ---
 
-Curia is single-tenant and self-hosted. This guide walks through getting a local instance running, organized into three tiers — start with the minimum and add services as needed.
+Curia is single-tenant and self-hosted: one instance per principal, running on infrastructure you control. Getting it running on a server is the same one-command flow as local development, so this page doesn't repeat the steps — it points you at the install guide and covers what's specific to production.
 
-| Tier | Services | What you get |
-|---|---|---|
-| **1 — Minimum** | Anthropic + Postgres | Agents running, CLI and web app working |
-| **2 — Recommended** | + Nylas + OpenAI | Email channel active, semantic search working |
-| **3 — Full** | + Tavily + Signal | Web research skill, encrypted Signal messaging |
+## Install
 
-## Prerequisites
+The setup process is identical whether you're on a laptop or a server:
 
-- **Node.js 22+** — check with `node --version`
-- **Docker and Docker Compose** — Postgres runs in Docker; install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI
-- **pnpm** — `npm install -g pnpm`
+- Follow the [installation guide](/get-started/installation) to run `pnpm setup`, which generates your secrets, starts Postgres and the app in Docker, and runs migrations.
+- Add the channels and capabilities you need — email, semantic search, web research, Signal — from the same guide's [full setup](/get-started/installation#full-setup) section.
 
-## Tier 1 — Minimum
+<Card title="Installation guide" icon="download" href="/get-started/installation">
+  The complete quick start and full setup steps.
+</Card>
 
-Everything you need to run Curia and interact with it via the CLI and web app.
-
-<Steps>
-  <Step title="Clone and install">
-    ```bash
-    git clone https://github.com/josephfung/curia.git
-    cd curia
-    pnpm install
-    ```
-  </Step>
-  <Step title="Configure .env">
-    ```bash
-    cp .env.example .env
-    ```
-
-    Open `.env` and fill in:
-
-    ```env
-    # Postgres — credentials for the Docker Compose container
-    DB_USER=curia
-    DB_PASSWORD=curia_dev
-    DATABASE_URL=postgres://curia:curia_dev@localhost:5432/curia
-
-    # Anthropic — powers all agents
-    ANTHROPIC_API_KEY=sk-ant-...
-
-    # HTTP API authentication
-    API_TOKEN=your-secret-token-here
-
-    # Web app access
-    WEB_APP_BOOTSTRAP_SECRET=replace-with-a-long-random-secret
-
-    # Your identity
-    CEO_PRIMARY_EMAIL=you@yourdomain.com
-    TIMEZONE=America/Toronto
-    ```
-  </Step>
-  <Step title="Start Postgres">
-    ```bash
-    docker compose up -d
-    ```
-
-    This starts Postgres with pgvector and pgAudit. Confirm it's healthy with `docker compose ps`.
-  </Step>
-  <Step title="Start Curia">
-    ```bash
-    pnpm local
-    ```
-
-    On first run this applies all database migrations, then starts the full stack.
-  </Step>
-  <Step title="Verify">
-    **CLI:** Type a message at the prompt to interact with Curia directly.
-
-    **Web app:** Open `http://localhost:3000` and enter your `WEB_APP_BOOTSTRAP_SECRET`. The knowledge graph browser is available once authenticated.
-  </Step>
-</Steps>
-
-## Tier 2 — Recommended
-
-Adds the email channel and knowledge graph embeddings for a realistic development environment.
-
-### Nylas (Email)
-
-Curia uses [Nylas](https://nylas.com) as its email layer — a unified API that handles IMAP/SMTP complexity across Gmail, Outlook, and other providers.
-
-1. Sign up at [app.nylas.com](https://app.nylas.com) (free tier is sufficient for development)
-2. Create an application and copy your **API key**
-3. Add a grant (connects an email account via OAuth) and copy the **Grant ID**
-4. Add to `.env`:
-
-```env
-NYLAS_API_KEY=nyk_v0_...
-NYLAS_GRANT_ID=<grant-id-from-dashboard>
-NYLAS_SELF_EMAIL=curia@yourdomain.com
-```
-
-Restart Curia — the email channel activates automatically when all three Nylas vars are present.
+## Production considerations
 
 <Note>
-For development, use a dedicated email account rather than your primary inbox. Curia reads and processes all incoming messages.
+  The Docker image runs as a non-root `curia` user as part of its security hardening. See the [security overview](/security/overview) for the full container security model.
 </Note>
 
-For multiple email accounts, see [Initial configuration](/get-started/configuration#multiple-email-accounts).
+- **The stack restarts automatically.** Both the `postgres` and `curia` services use `restart: unless-stopped`, so the instance comes back after a server reboot or a crash without manual intervention.
+- **Secrets live in `.env`.** `pnpm setup` writes generated secrets there and never rewrites the file. Treat `.env` as sensitive: back it up securely and keep it out of version control. Losing the `WEB_APP_BOOTSTRAP_SECRET` means a full reset is needed to log in again.
+- **Applying configuration changes.** After editing `.env` on the server, recreate the container to pick up the change: `docker compose up -d --force-recreate curia`.
 
-### OpenAI (Embeddings)
-
-OpenAI's `text-embedding-3-small` model powers entity memory and semantic search in the knowledge graph. Without it, lookups are exact-match only.
-
-```env
-OPENAI_API_KEY=sk-...
-```
-
-## Tier 3 — Full
-
-### Tavily (Web Search)
-
-Powers the `web-search` skill for researching topics and looking up current information.
-
-```env
-TAVILY_API_KEY=tvly-...
-```
-
-No restart required — the skill picks up the key on next use.
-
-### Signal
-
-Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). The socket path is managed automatically by Docker Compose.
-
-1. Register a phone number with signal-cli and seed the `signal-data` Docker volume with the resulting credentials
-2. Add to `.env`:
-
-```env
-SIGNAL_PHONE_NUMBER=+12223334444
-```
-
-Restart Curia — the Signal channel activates when `SIGNAL_PHONE_NUMBER` is set and the signal-data volume is populated.
-
-## What's next
-
-With Curia running, open the web app and go through the setup wizard — it walks you through naming your instance, setting its persona, and configuring the CEO profile. Then start a conversation via the CLI:
-
-```bash
-pnpm local
-```
-
-Type a message at the prompt. You're talking to Curia.
-
-<Note>
-  When deploying to production, the Docker image runs as a non-root `curia` user for security hardening. See [Security overview](/security/overview) for the full container security model.
-</Note>
-
-## Troubleshooting
-
-<AccordionGroup>
-  <Accordion title="macOS: HTTPS requests fail with 'unable to get local issuer certificate'">
-    Node installed via nvm or fnm bundles its own CA store and doesn't trust macOS system certificates. Export your system certs and point Node at them:
-
-    ```bash
-    security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain > ~/.config/curia/macos-ca-certs.pem
-    ```
-
-    Then set in `.env`:
-
-    ```env
-    NODE_EXTRA_CA_CERTS=/Users/yourname/.config/curia/macos-ca-certs.pem
-    ```
-  </Accordion>
-
-  <Accordion title="Postgres connection refused">
-    Make sure the Docker container is running (`docker compose ps`). If the container is healthy but Curia can't connect, confirm the credentials in `.env` match the values in `docker-compose.yml`.
-  </Accordion>
-
-  <Accordion title="Email channel not activating">
-    All three Nylas vars (`NYLAS_API_KEY`, `NYLAS_GRANT_ID`, `NYLAS_SELF_EMAIL`) must be set. If any are missing, the channel disables itself at startup with a log message indicating which variable is absent.
-  </Accordion>
-</AccordionGroup>
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Initial configuration" icon="sliders" href="/get-started/configuration">
