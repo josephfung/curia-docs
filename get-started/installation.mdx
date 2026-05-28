@@ -69,7 +69,7 @@ Before you start, install the following:
   </Step>
 </Steps>
 
-<Accordion title="Running pnpm run setup again">
+<Accordion title="Running setup again">
   If `.env` already exists, `pnpm run setup` won't overwrite it. Instead it offers a short menu:
 
   - **Start the stack** — bring the containers back up (`docker compose up -d`)
@@ -204,7 +204,7 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="pnpm run setup says my .env already exists">
+  <Accordion title="Setup says my .env already exists">
     This is expected on a second run. `pnpm run setup` never overwrites an existing `.env` — instead it offers a menu to start the stack, resume setup, or do a full reset. Full reset is the only option that regenerates secrets, and it asks for confirmation first.
   </Accordion>
 
