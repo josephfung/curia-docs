@@ -3,7 +3,7 @@ title: "Install Curia"
 description: "Get Curia running with a single command, then add the channels and capabilities you need."
 ---
 
-Getting Curia running takes one command and about five minutes. `pnpm setup` generates your secrets, starts the database and app in Docker, and runs migrations — the only thing you provide is an Anthropic API key. Once it's running, you finish configuration inside the app and add optional capabilities (email, search, Signal) whenever you need them.
+Getting Curia running takes one command and about five minutes. `pnpm run setup` generates your secrets, starts the database and app in Docker, and runs migrations — the only thing you provide is an Anthropic API key. Once it's running, you finish configuration inside the app and add optional capabilities (email, search, Signal) whenever you need them.
 
 ## Prerequisites
 
@@ -29,7 +29,7 @@ Before you start, install the following:
 
   <Step title="Run setup">
     ```bash
-    pnpm setup
+    pnpm run setup
     ```
 
     This single command does everything needed to get Curia running:
@@ -69,8 +69,8 @@ Before you start, install the following:
   </Step>
 </Steps>
 
-<Accordion title="Running pnpm setup again">
-  If `.env` already exists, `pnpm setup` won't overwrite it. Instead it offers a short menu:
+<Accordion title="Running pnpm run setup again">
+  If `.env` already exists, `pnpm run setup` won't overwrite it. Instead it offers a short menu:
 
   - **Start the stack** — bring the containers back up (`docker compose up -d`)
   - **Resume setup** — re-run database migrations and startup against your existing `.env`, useful if a previous run didn't finish
@@ -204,8 +204,8 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="pnpm setup says my .env already exists">
-    This is expected on a second run. `pnpm setup` never overwrites an existing `.env` — instead it offers a menu to start the stack, resume setup, or do a full reset. Full reset is the only option that regenerates secrets, and it asks for confirmation first.
+  <Accordion title="pnpm run setup says my .env already exists">
+    This is expected on a second run. `pnpm run setup` never overwrites an existing `.env` — instead it offers a menu to start the stack, resume setup, or do a full reset. Full reset is the only option that regenerates secrets, and it asks for confirmation first.
   </Accordion>
 
   <Accordion title="Postgres connection refused">
@@ -215,7 +215,7 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
     docker compose ps
     ```
 
-    The database password is generated during `pnpm setup` and shared with the container automatically through `.env`, so the credentials match by default. If you've edited `.env` by hand, make sure `DATABASE_URL` is still consistent with `DB_USER` and `DB_PASSWORD`.
+    The database password is generated during `pnpm run setup` and shared with the container automatically through `.env`, so the credentials match by default. If you've edited `.env` by hand, make sure `DATABASE_URL` is still consistent with `DB_USER` and `DB_PASSWORD`.
   </Accordion>
 
   <Accordion title="Email channel not activating">

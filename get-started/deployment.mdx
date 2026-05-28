@@ -9,7 +9,7 @@ Curia is single-tenant and self-hosted: one instance per principal, running on i
 
 The setup process is identical whether you're on a laptop or a server:
 
-- Follow the [installation guide](/get-started/installation) to run `pnpm setup`, which generates your secrets, starts Postgres and the app in Docker, and runs migrations.
+- Follow the [installation guide](/get-started/installation) to run `pnpm run setup`, which generates your secrets, starts Postgres and the app in Docker, and runs migrations.
 - Add the channels and capabilities you need — email, semantic search, web research, Signal — from the same guide's [full setup](/get-started/installation#full-setup) section.
 
 <Card title="Installation guide" icon="download" href="/get-started/installation">
@@ -23,7 +23,7 @@ The setup process is identical whether you're on a laptop or a server:
 </Note>
 
 - **The stack restarts automatically.** Both the `postgres` and `curia` services use `restart: unless-stopped`, so the instance comes back after a server reboot or a crash without manual intervention.
-- **Secrets live in `.env`.** `pnpm setup` writes generated secrets there and won't overwrite them on later runs unless you explicitly choose a full reset. Treat `.env` as sensitive: back it up securely and keep it out of version control. Losing the `WEB_APP_BOOTSTRAP_SECRET` means a full reset is needed to log in again.
+- **Secrets live in `.env`.** `pnpm run setup` writes generated secrets there and won't overwrite them on later runs unless you explicitly choose a full reset. Treat `.env` as sensitive: back it up securely and keep it out of version control. Losing the `WEB_APP_BOOTSTRAP_SECRET` means a full reset is needed to log in again.
 - **Applying configuration changes.** After editing `.env` on the server, recreate the container to pick up the change: `docker compose up -d --force-recreate curia`.
 
 ## Next steps
