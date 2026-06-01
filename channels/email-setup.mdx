@@ -38,12 +38,14 @@ The quickest way to get email working is to connect one account using three envi
     `NYLAS_SELF_EMAIL` is the address of the connected account. Curia uses it to filter self-sent messages and sign outbound emails.
   </Step>
 
-  <Step title="Restart Curia">
+  <Step title="Apply the change">
+    Recreate the Curia container so it picks up the new environment variables:
+
     ```bash
-    pnpm local
+    docker compose up -d --force-recreate curia
     ```
 
-    The email channel activates automatically when all three Nylas variables are present. You should see the email adapter initialize in the log output.
+    The email channel activates automatically when all three Nylas variables are present. `docker compose logs curia` will show the email adapter initializing.
   </Step>
 </Steps>
 

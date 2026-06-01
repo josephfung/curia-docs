@@ -1,8 +1,89 @@
 ---
-title: "Playbooks and best practices"
-description: "Suggested workflows and recipes for common Curia use cases — email management, weekly briefings, contact management, and more."
+title: "Playbooks"
+description: "Step-by-step recipes for common Curia workflows — onboarding, configuring channels, calibrating autonomy, and more."
 ---
 
-{/* TODO: This page needs to be written. Provide step-by-step playbooks for common use cases like: managing email workflows, configuring a weekly briefing, managing contacts and trust levels, and calibrating autonomy. Each playbook should be a self-contained recipe a new user can follow. */}
+These playbooks are short, opinionated recipes for common Curia workflows. Each one stands on its own: pick the one that matches what you're trying to do.
 
-This page is under construction.
+## First run after setup
+
+You just ran `pnpm run setup`, logged in with your bootstrap secret, and the form wizard at `/setup` walked you through identity and posture. Here's what happens next.
+
+<Steps>
+  <Step title="Land in the chat view">
+    Submitting the last step of the form wizard navigates you directly to `/chat`. If the process booted in setup-required mode (no `CEO_PRIMARY_EMAIL` was set before first boot), you'll see a brief **Setting up channels…** screen first — the supervisor is restarting Curia so email and Signal can come online. This usually takes 10–30 seconds.
+  </Step>
+
+  <Step title="Greet the setup wizard">
+    Within about a second of landing in `/chat`, a kickoff message fires automatically and the **setup-wizard specialist** introduces itself through the Coordinator. Expect a warm greeting followed by a single question:
+
+    > "What takes up most of your time right now — email, scheduling, research, staying on top of news?"
+
+    Answer in plain language. There's no right answer — the wizard uses what you say to recommend the next setup steps.
+  </Step>
+
+  <Step title="Capture working hours">
+    Based on your answer, the wizard appends a behavioral preference to `OfficeIdentity.behavioralPreferences` (you can confirm later via the knowledge graph browser or by reading `office_identity_versions`). It then asks for your usual working hours and timezone. Reply with something like:
+
+    > "Weekdays 9 to 6, America/Toronto."
+
+    This shapes when proactive features like the meeting debrief poller and CEO Inbox triage run.
+  </Step>
+
+  <Step title="Decide on a debrief cadence">
+    Finally, the wizard asks whether a regular debrief would be useful — a daily end-of-day summary, a weekly Friday digest, or no recurring debrief. If you accept, it schedules the job via `scheduler-create` immediately. You can change or cancel the schedule later from `/jobs` in the console, or by asking Curia in chat.
+  </Step>
+
+  <Step title="Add channels as you need them">
+    After the first conversation closes, your instance is configured but minimal: it can answer questions, do web research, and manage memory. Add channels when you're ready:
+
+    - **Email** — set `NYLAS_API_KEY`, `NYLAS_GRANT_ID`, `NYLAS_SELF_EMAIL` in `.env` and recreate the container. See [installation §Email](/get-started/installation#email-nylas).
+    - **Signal** — register a phone with `signal-cli`, set `SIGNAL_PHONE_NUMBER`, and recreate. See [installation §Signal messaging](/get-started/installation#signal-messaging).
+    - **Web search** — set `TAVILY_API_KEY` and the `web-search` skill picks it up on next use (no restart needed).
+
+    You can also ask the setup-wizard for help any time: "Help me set up Nylas" or "What can you do?" both route back to it.
+  </Step>
+</Steps>
+
+<Note>
+  If you skipped the form wizard or want to revise your assistant's voice later, visit `/setup` directly. The form remains accessible even after onboarding is complete, and it pre-populates with your current identity values.
+</Note>
+
+## Calibrating autonomy
+
+Curia ships with the autonomy engine seeded at **score 75 (approval-required band)**. At that level, reads and internal state writes (memory, contacts, behavioral preferences) and outbound communications (email and Signal sends) run autonomously, while higher-risk actions — calendar writes, commitments on the CEO's behalf, and anything `critical` — pause for explicit approval through the approval workflow.
+
+<Steps>
+  <Step title="Decide what you want to delegate">
+    Read the [autonomy engine overview](/security/autonomy-engine) for the band model. Each band has a `min_score` floor that skills declare via `action_risk` in their manifests: `low` ≥ 60, `medium` ≥ 70, `high` ≥ 80, `critical` ≥ 90. Raising the score widens what runs without approval; lowering it tightens what slips through.
+  </Step>
+
+  <Step title="Adjust from the console">
+    In the console, go to `/settings/autonomy`. The page shows the current score, lets you preview the consequences of a change on a slider, and asks for a written reason on save. Every change is versioned to `autonomy_history`.
+  </Step>
+
+  <Step title="Watch a few cycles before raising further">
+    The approval workflow surfaces a paused-action queue. After raising the score, review what Curia would have done autonomously over a few days. If nothing surprises you, you can raise again. If something feels too aggressive, lower it — there's no penalty for tightening.
+  </Step>
+</Steps>
+
+## Connecting a second email account
+
+The single-account env-var setup connects one Nylas grant via `NYLAS_API_KEY`, `NYLAS_GRANT_ID`, and `NYLAS_SELF_EMAIL`. To run multiple accounts — say, a Curia-only address that sends autonomously and a personal address that always drafts for review — define them in `config/local.yaml` under `channel_accounts.email`. See [configuration §Multiple email accounts](/get-started/configuration#multiple-email-accounts) for the YAML shape.
+
+After editing `local.yaml`, recreate the container so the dispatch layer picks up the new account map:
+
+```bash
+docker compose up -d --force-recreate curia
+```
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Built-in agents" icon="users" href="/agents/built-in-agents">
+    The specialists Curia delegates to, including the setup-wizard you just met.
+  </Card>
+  <Card title="Autonomy engine" icon="shield-check" href="/security/autonomy-engine">
+    How Curia decides what to do on its own vs. what to escalate.
+  </Card>
+</CardGroup>

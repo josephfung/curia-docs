@@ -7,7 +7,14 @@ The CLI channel is Curia's simplest channel — a readline-based interface that 
 
 ## How it works
 
-When you run `pnpm local`, Curia starts all services and presents a text prompt. Type a message and press Enter to interact with Curia directly. Responses appear in the same terminal.
+The CLI channel only activates when Curia runs directly on the host with a terminal attached. The standard Docker deployment (`pnpm run setup` → `docker compose up`) does not include the CLI. To use the CLI, stop the container and run Curia on the host instead:
+
+```bash
+docker compose stop curia
+pnpm local
+```
+
+`pnpm local` starts all services and presents a text prompt. Type a message and press Enter to interact with Curia directly. Responses appear in the same terminal.
 
 The CLI adapter publishes `inbound.message` events on the bus, just like every other channel. Your messages pass through the same dispatch pipeline — trust scoring, rate limiting, injection scanning — before reaching the Coordinator. The only difference is the channel trust level: CLI is always **high**.
 
@@ -26,7 +33,7 @@ Because the CLI is local-only, messages from it bypass the trust score threshold
 - **Development and testing** — the fastest way to interact with Curia during development
 - **Administrative tasks** — checking autonomy score, managing contacts, processing held messages
 - **Troubleshooting** — direct access with full trust, useful when debugging channel-specific issues
-- **Initial setup** — the CLI is available immediately after `pnpm local`, before any external channels are configured
+- **Direct host runs** — when developing against `pnpm local` rather than the Docker stack, the CLI is available immediately, before any external channels are configured
 
 ## Limitations
 
