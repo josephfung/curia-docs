@@ -60,13 +60,15 @@ SIGNAL_PHONE_NUMBER=+12223334444
 
 Use the same E.164 number you registered in Step 1.
 
-## Step 3 — Restart Curia
+## Step 3 — Apply the change
+
+Recreate the Curia container so it picks up the new environment variable:
 
 ```bash
-pnpm local
+docker compose up -d --force-recreate curia
 ```
 
-The Signal channel activates when `SIGNAL_PHONE_NUMBER` is set and the `signal-data` volume is populated. You should see the Signal adapter initialize in the startup logs.
+The Signal channel activates when `SIGNAL_PHONE_NUMBER` is set and the `signal-data` volume is populated. `docker compose logs curia` will show the Signal adapter initializing.
 
 ## Sending your first message
 

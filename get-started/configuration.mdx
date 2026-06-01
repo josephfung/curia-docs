@@ -5,8 +5,12 @@ description: "Set up environment variables, LLM providers, email, and Signal for
 
 Curia uses two configuration layers: a `config/default.yaml` file that ships with the repository and defines all defaults, and a `config/local.yaml` file that you create to override specific values for your deployment. Secrets — API keys, credentials, and tokens — always go in `.env`, never in YAML files.
 
+<Note>
+  First-time setup configures `.env` for you. `pnpm run setup` generates secrets and prompts for your Anthropic API key on the first install, and the in-app setup wizard captures your assistant's identity, voice, and decision posture conversationally. This page covers everything you might want to change later — additional channels, multiple email accounts, custom LLM routing, and manual `.env` edits.
+</Note>
+
 <Warning>
-  All configuration changes take effect on restart unless noted otherwise. Run `pnpm local` after editing any config file or `.env` to apply changes.
+  Most configuration changes take effect on restart. After editing `.env` or any YAML file, recreate the Curia container to apply changes: `docker compose up -d --force-recreate curia`. The Tavily API key is the only exception — the `web-search` skill picks it up on next use without a restart.
 </Warning>
 
 ## How configuration works
@@ -32,7 +36,7 @@ Secrets and deployment-specific values go in `.env`. The most important ones are
     | Variable | Required | Description |
     |---|---|---|
     | `API_TOKEN` | Yes | Bearer token for all HTTP API requests. Set to any long random string. |
-    | `WEB_APP_BOOTSTRAP_SECRET` | Yes | Secret for accessing the knowledge graph browser at `/`. Set to any long random string. |
+    | `WEB_APP_BOOTSTRAP_SECRET` | Yes | Secret for logging in to the console at `/` (setup wizard, chat, tasks, knowledge graph, jobs, settings). Set to any long random string. |
     | `CEO_PRIMARY_EMAIL` | Yes | Your primary email address. Ensures your messages are never held as an unknown sender at startup. |
     | `TIMEZONE` | Yes | IANA timezone (e.g. `America/Toronto`). Used to resolve relative dates in agent prompts. |
 

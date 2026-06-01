@@ -30,6 +30,7 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 - Contact briefings, deduplication, and relationship intelligence → Contact Specialist
 - Multi-source web research → Research Analyst
 - CEO inbox queries, triage, and rule management → CEO Inbox
+- First-conversation onboarding and "help me set up X" requests → Setup Wizard
 
 **Key behaviors:**
 - Resolves possessive pronouns ("my calendar", "your schedule") to explicit entity identities before delegating to any specialist
@@ -119,6 +120,31 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 The CEO Inbox agent runs directly against the CEO's personal email account via Nylas. It never replies directly to senders — all outbound replies go through draft creation for CEO review.
 
 **Urgent alerts route through the coordinator.** When the CEO Inbox classifies a message as URGENT, it does not call `signal-send` directly — it opens a Bullpen thread mentioning the coordinator and asks for an outbound alert. The coordinator's send is what hits Signal, which means the alert participates in the same delegation-aware reply correlation as any other coordinator-initiated message. If the CEO replies to the alert, the coordinator routes the reply back to the inbox agent via the normal delegation path.
+
+## Setup Wizard
+
+A specialist agent that owns the first-conversation experience after a new install and stays available for "help me set up X" requests later.
+
+| Field | Value |
+|---|---|
+| **Role** | specialist |
+| **Model** | Claude Sonnet |
+| **Skills** | behavioral-preferences-update, scheduler-create, scheduler-list, scheduler-cancel, skill-registry, memory-store, executive-profile-update |
+| **Discovery** | Disabled |
+| **inject_specialists** | False |
+
+**When it runs:**
+- Auto-triggered on the first chat message after the form wizard at `/setup` completes. The chat view sends a one-shot kickoff message that the Coordinator routes here.
+- On demand when the principal asks "help me set up Nylas / Twilio / Signal / OpenAI" or similar — the specialist returns the env var names, restart instructions, and a note that in-app integration flows are coming in a future release.
+- On "what can you do?" — returns a plain-language capability summary grouped by category.
+
+**First-conversation flow:**
+1. Greet, then ask what takes up most of the principal's time (email, scheduling, research, news).
+2. Map the answer to concrete next steps (email-heavy → Nylas setup; research → web search is already wired) and append the preference to `OfficeIdentity.behavioralPreferences` via `behavioral-preferences-update`. Then ask about working hours and timezone.
+3. Acknowledge the hours and ask whether a regular debrief would be useful — daily summary or weekly digest.
+4. If yes, schedule the debrief via `scheduler-create`. Close with a brief summary of what got set up and what's next.
+
+The Setup Wizard never addresses the principal directly — like every other specialist, its output is paraphrased and relayed by the Coordinator. It has no persistent per-conversation state; each invocation is fresh, with the "this is a first conversation" signal coming from the kickoff message text itself rather than a stored flag.
 
 ## Meeting Debrief
 
