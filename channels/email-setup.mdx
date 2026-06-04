@@ -88,6 +88,10 @@ Once the email channel is active, the following skills become available to Curia
 
 All email skills accept an `account` parameter to target a specific named account. Omit it to use Curia's own account.
 
+## File attachments
+
+Outbound email skills (`email-send`, `email-reply`, and their CEO-inbox counterparts) accept an optional list of attachments. Files are referenced by `file://` URLs backed by Curia's temp-file store rather than passed inline, with a cap of **20 MB total across at most 10 attachments** per message. Anything an agent has written to the temp-file store can be attached; the [`drive-download-file`](/skills/built-in-skills#email) skill bridges Google Drive by downloading a file (including Google-native exports) into that store and returning a `file://` URL ready to attach. No extra configuration is needed beyond a working Nylas grant — attachments ride the same Send API as the message body.
+
 ## Troubleshooting
 
 <AccordionGroup>

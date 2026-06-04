@@ -249,6 +249,20 @@ debrief:
 
 `contextBridgeTtlHours` overrides the global `contextBridge.explicitExpiryHours` for the outbound-context entry the agent registers when it sends a debrief prompt — giving the CEO a longer window to reply before the entry expires.
 
+## Task management
+
+Tunes the [task backlog and heartbeat](/core-concepts/scheduling#tasks-and-the-backlog). The heartbeat is the deterministic loop that wakes idle or stale tasks so open work doesn't linger.
+
+```yaml
+tasks:
+  heartbeatIntervalMinutes: 60   # how often the heartbeat ticks
+  heartbeatMaxWakesPerTick: 5    # global cap on agents woken per tick (per-agent cap is always 1)
+  idleThresholdHours: 4          # an open/in-progress Curia-owned task is "idle" after this long untouched
+  staleWaitThresholdHours: 48    # a waiting/blocked task with no pending wake is "stale" after this long
+```
+
+Whether an agent participates in the task system (auto-pinned `task-*` skills, the executor-discipline prompt block, and heartbeat eligibility) is set per agent with `enable_task_management: true` in `agents/<name>.yaml` — not in this file. The coordinator and ceo-inbox ship with it enabled.
+
 ## Autonomy engine
 
 The autonomy score is stored in Postgres and controlled via natural-language commands or the CLI — you do not set it in a config file. Ask Curia directly:

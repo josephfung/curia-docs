@@ -23,13 +23,14 @@ Curia ships with 75+ skills organized into functional categories. Every skill de
 | `contact-find-duplicates` | none | Scan for potential duplicate contacts |
 | `contact-register` | low | Register or resolve a contact from outside the dispatcher pipeline (used by direct-channel agents such as ceo-inbox) |
 | `contact-set-identity-status` | low | Mark a channel identity as `active`, `defunct`, or `bounced` |
+| `contact-update` | low | Set a contact's canonical attributes (title, organization, primary email/phone, timezone, location, pronouns, and more); phone numbers are normalized to E.164 |
 
 ## Email
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `email-send` | medium | Send a new email to specified recipients. Accepts an optional `context_bridge` JSON for delegation-aware reply routing. |
-| `email-reply` | medium | Reply to an existing email thread. Appends the quoted original message body to the reply (matching standard email-client behaviour). Accepts an optional `context_bridge` JSON. |
+| `email-send` | medium | Send a new email to specified recipients. Accepts an optional list of `attachments` (`file://` URLs, 20 MB / 10 files) and an optional `context_bridge` JSON for delegation-aware reply routing. |
+| `email-reply` | medium | Reply to an existing email thread. Appends the quoted original message body to the reply (matching standard email-client behaviour). Accepts optional `attachments` and a `context_bridge` JSON. |
 | `email-list` | none | List recent messages in an inbox |
 | `email-get` | none | Fetch the full body of a specific message |
 | `email-draft-save` | low | Save a draft reply for CEO review |
@@ -41,6 +42,7 @@ Curia ships with 75+ skills organized into functional categories. Every skill de
 | `email-list-folders` | none | List all folders and labels in an email account |
 | `email-create-folder` | low | Create a new folder or label in an email account |
 | `email-download-attachment` | low | Download an email attachment and return content as base64 (10 MB limit) |
+| `drive-download-file` | low | Download a Google Drive file (native or Google-native export) to the temp-file store and return a `file://` URL, so Drive files can be attached to outbound email |
 
 ## CEO Inbox
 
@@ -51,6 +53,7 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 | `ceo-inbox-list` | none | List recent unread messages from the CEO's personal inbox |
 | `ceo-inbox-read` | none | Read a specific message, returning plain text and HTML body |
 | `ceo-inbox-search` | none | Search the CEO's inbox using Gmail-native query syntax. When `unread_only` is set alongside a search query, `is:unread` is embedded into the search string so the filter actually applies. |
+| `ceo-inbox-draft-compose` | low | Compose a cold-outreach (new, non-reply) draft into the CEO's Gmail Drafts for review |
 | `ceo-inbox-draft-reply` | low | Create a reply-all draft for CEO review (never sent automatically) |
 | `ceo-inbox-download-attachment` | low | Download an attachment from the CEO's inbox by its Nylas ID (10 MB limit) |
 | `ceo-inbox-archive` | low | Archive a message by removing it from the INBOX folder |
@@ -93,6 +96,17 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 | `scheduler-list` | none | List active scheduled jobs |
 | `scheduler-cancel` | high | Cancel a scheduled job |
 | `scheduler-report` | none | Generate a report on scheduled task activity (system skill) |
+
+## Tasks
+
+Track deferred, multi-step, and waiting work in the unified [tasks backlog](/core-concepts/scheduling#tasks-and-the-backlog). These are usually auto-pinned onto an agent via the `enable_task_management` capability rather than listed individually.
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `task-create` | low | Create a task with an owner (you / the CEO / external), priority, optional due date, and an optional `wake_at` that schedules a future nudge |
+| `task-list` | none | List tasks filtered by status, owner, or tag — the source for "what's open?", "what's waiting on me?" |
+| `task-update` | low | Update a task's status, priority, owner, or wake time; append a progress note |
+| `task-complete` | low | Mark a task done (cancels any pending wake-up) |
 
 ## Communication
 

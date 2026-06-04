@@ -13,13 +13,15 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 |---|---|
 | **Role** | coordinator |
 | **Model** | Claude Sonnet |
-| **Skills** | 30+ pinned skills (email, memory, scheduling, web research, autonomy, and more) |
+| **Skills** | 30+ pinned skills (email, memory, scheduling, tasks, web research, autonomy, and more) |
 | **Discovery** | Enabled — can find and invoke skills not in its pinned list |
+| **Task management** | Enabled (`enable_task_management`) — owns and advances the task backlog |
 
 **What it handles directly:**
 - Conversational messages and questions
 - Email reading, sending, replying, and drafting
 - Scheduling recurring and one-shot tasks
+- Tracking deferred work in the [task backlog](/core-concepts/scheduling#tasks-and-the-backlog) — "remind me to…", "what's open?", "mark X done"
 - Knowledge graph queries and memory storage
 - Autonomy score management
 - Web research (search, fetch, browse)
@@ -106,18 +108,22 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 |---|---|
 | **Role** | specialist |
 | **Model** | Claude Sonnet |
-| **Skills** | ceo-inbox-*, contact-register, signal-send, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve |
+| **Skills** | ceo-inbox-* (incl. `ceo-inbox-draft-compose`), task-* (via task management), contact-register, signal-send, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve |
 | **Discovery** | Disabled |
+| **Task management** | Enabled (`enable_task_management`) |
 | **Schedule** | Every 15 minutes |
 
 **What it handles:**
 - Autonomous inbox triage — reads unread messages and classifies each as URGENT, ACTIONABLE, NEEDS DRAFT, LEAVE FOR CEO, or NOISE
 - Draft reply creation — writes reply-all drafts in the CEO's voice using the stored executive profile; the CEO reviews and sends from Gmail
+- Cold-outreach drafts — composes new (non-reply) drafts into the CEO's Gmail Drafts via `ceo-inbox-draft-compose`
 - Escalation — sends a Signal alert and opens a Bullpen thread for URGENT items; opens a Bullpen thread mentioning the appropriate specialist for ACTIONABLE items
 - Standing rules and decision tagging — maintains a configurable set of per-sender instructions and auto-labels via `config-store`
 - Inbox queries — searches, reads, and labels messages on demand when delegated by the Coordinator
 
 The CEO Inbox agent runs directly against the CEO's personal email account via Nylas. It never replies directly to senders — all outbound replies go through draft creation for CEO review.
+
+**Tasks keep the loop closed.** When a reply depends on something not yet available (a document the CEO must provide, a fact to look up), the agent creates a tracked follow-up [task](/core-concepts/scheduling#tasks-and-the-backlog) rather than sending a bare "the CEO will follow up" — it resolves the dependency first where it can, and resumes drafting when the task wakes. On a backed-up inbox it processes the top-priority handful inline and defers the tail as `inbox-overflow` tasks, so the time spent per run no longer grows with the backlog.
 
 **Urgent alerts route through the coordinator.** When the CEO Inbox classifies a message as URGENT, it does not call `signal-send` directly — it opens a Bullpen thread mentioning the coordinator and asks for an outbound alert. The coordinator's send is what hits Signal, which means the alert participates in the same delegation-aware reply correlation as any other coordinator-initiated message. If the CEO replies to the alert, the coordinator routes the reply back to the inbox agent via the normal delegation path.
 
@@ -154,16 +160,18 @@ A proactive specialist agent that scans the CEO's calendar for recently-ended ex
 |---|---|
 | **Role** | specialist |
 | **Model** | Claude Sonnet |
-| **Skills** | calendar-*, email-draft-save, email-send, scheduler-*, bullpen, memory-query, memory-store, config-store, entity-context |
+| **Skills** | calendar-*, email-draft-save, email-send, scheduler-*, task-*, bullpen, memory-query, memory-store, config-store, entity-context |
 | **Discovery** | Disabled |
 | **Schedule** | Every 5 minutes |
 
 **What it handles:**
 - **Detection** — scans calendar events ending in the recent past, classifies attendees as internal vs external, and uses LLM judgment to decide which meetings warrant a debrief prompt (`YES`, `NO`, `DEFER`)
 - **Prompting** — opens a Bullpen thread asking the coordinator to send a brief conversational prompt on the CEO's preferred channel (Signal by default): *"You just wrapped up with Sarah Chen and David Park from Meridian. Any takeaways or follow-ups?"*
-- **Follow-up execution** — when the CEO replies with notes, the agent uses its full skill set to draft emails, find conflict-free meeting slots, store commitments as KG facts, and post Bullpen threads to other specialists (e.g. research-analyst) for cross-cutting work
+- **Follow-up execution** — when the CEO replies with notes, the agent uses its full skill set to draft emails, find conflict-free meeting slots, store commitments, and post Bullpen threads to other specialists (e.g. research-analyst) for cross-cutting work
 - **Reminders** — nudges the CEO on the same thread if a prompt goes unanswered after a configurable delay (default: 2 hours)
 - **Preference learning** — when the CEO says *"don't debrief me on meetings with X"*, the rule is stored as a KG fact and respected on future scans
+
+**State is tracked as tasks.** Each pending debrief is a [task](/core-concepts/scheduling#tasks-and-the-backlog) (tagged `debrief-pending`), and the reminder is just that task's wake-up; follow-up actions become child tasks owned by Curia, you, or an external party. Pending debriefs therefore also surface in the daily digest, and you can ask "what debriefs are outstanding?" through the coordinator.
 
 **Bullpen-through-coordinator pattern.** The Meeting Debrief agent has no outbound communication skills pinned. All proactive prompts and follow-up sends route through the coordinator via Bullpen, which keeps the unified persona intact and lets reply correlation work the same way as any other coordinator-initiated outbound.
 

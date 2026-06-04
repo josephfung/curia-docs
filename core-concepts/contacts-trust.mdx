@@ -172,6 +172,12 @@ Curia creates a contact record, links both channel identities as verified, and a
 
 All contact mutations are confirmed with you before they're written, and every change is audit-logged.
 
+## Contact profile attributes
+
+Beyond identity and trust, Curia keeps a small set of **canonical profile attributes** directly on each contact record: preferred name, job title, organization, primary email and phone, timezone, locale, location, pronouns, LinkedIn URL, a short bio, and birthday. These are stored as structured fields on the contact itself — not as free-floating knowledge-graph facts — so agents read a reliable value instead of inferring one from a list of remembered notes. That distinction matters: it's what stops Curia from guessing a stale address or timezone when composing on your behalf.
+
+You set them the same conversational way as anything else ("Sarah's title is now VP of Sales", "her timezone is US Pacific"), and Curia writes them via the `contact-update` skill (phone numbers are normalized to E.164). Richer, narrative knowledge about a person — relationships, history, preferences — still lives in the knowledge graph; the canonical attributes are just the handful of stable fields worth pinning down. The console's contact view exposes the same fields for direct editing.
+
 ## Contact deduplication
 
 Curia runs a weekly background scan for likely duplicate contacts — for example, "Jenna Torres" and "J. Torres" who share the same email address. When potential duplicates are detected, Curia presents them to you for review:

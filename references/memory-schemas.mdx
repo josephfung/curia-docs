@@ -113,6 +113,10 @@ interface StoreFactOptions {
 }
 ```
 
+<Note>
+  A contact's **canonical attributes** (title, organization, primary email/phone, timezone, location, pronouns, and similar — see [contacts](/core-concepts/contacts-trust#contact-profile-attributes)) are **not** stored as facts. `memory-store` detects a write that maps to one of these and redirects it to the contact record instead of creating a `fact` node, so there's a single source of truth for them. The knowledge graph still holds richer, narrative facts about a person.
+</Note>
+
 ## Validation
 
 Before creating a new fact, the memory validator checks:

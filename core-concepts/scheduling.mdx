@@ -138,6 +138,35 @@ When an agent creates a persistent task, Curia:
 
 The agent doesn't stay running between bursts. All state lives in Postgres — if Curia restarts mid-task, the next burst picks up exactly where the last one stopped.
 
+## Tasks and the backlog
+
+Scheduled jobs answer *when* something should happen. **Tasks** answer *what* work is open, who owns it, and whether anyone is waiting. Curia keeps a single backlog of tasks — deferred follow-ups, multi-step projects, things you've asked it to remember — that it can advance on its own and that you can query in plain language.
+
+Each task carries an **owner**, so the backlog cleanly separates three questions:
+
+- **Curia** — work Curia is doing itself.
+- **You** — things only you can do (the digest surfaces these under "For you to do").
+- **External** — work blocked on someone else's reply.
+
+You interact with the backlog conversationally:
+
+```
+> Remind me to send Steve the deck on Friday.
+> What's open right now?
+> What's waiting on me?
+> Mark the Acme follow-up done.
+```
+
+Behind that, agents use the `task-create` / `task-list` / `task-update` / `task-complete` skills. A task can carry a **wake time** — when it's time to act, the scheduler fires and the owning agent resumes with the task's full context. The daily [pending-actions digest](/core-concepts/autonomy) also renders the backlog: what's for you to do, what's waiting on others, and what Curia is working on.
+
+### How tasks differ from scheduled jobs
+
+A scheduled job is a trigger; a task is a unit of work. A task that needs to wake at a particular time *creates* a one-shot scheduled job pointing back at it — so the two stay cleanly separated and a task's deliverable date (`due_at`) is never confused with a wake-up timer.
+
+### Keeping the backlog moving: the heartbeat
+
+A deterministic **hourly heartbeat** is the backstop that keeps open work from lingering. It does no AI reasoning — it simply notices tasks that have gone quiet (an idle task Curia owns, or a "waiting" task whose expected reply never came) and wakes the owning agent to advance or re-evaluate them. Most work actually advances faster than that, driven by incoming replies and per-task wake timers; the heartbeat only catches the stragglers. Task management is enabled per agent via the `enable_task_management` capability and tuned under the `tasks` block in `config/default.yaml`.
+
 ## Task-scope fence for scheduled runs
 
 When an agent runs from a scheduler tick, Curia applies a **task-scope fence** — a hard scope restriction prepended to the agent's system prompt. It tells the agent:
