@@ -59,6 +59,7 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 | `ceo-inbox-archive` | low | Archive a message by removing it from the INBOX folder |
 | `ceo-inbox-label` | low | Apply one or more labels to a message, creating labels that don't yet exist |
 | `ceo-inbox-mark-read` | low | Mark a message as read to prevent re-processing on the next triage run |
+| `ceo-inbox-mark-starred` | low | Star (or unstar) a message in the CEO's inbox. Triage auto-stars anything labelled 🚨 Urgent so it surfaces in the native client. |
 | `ceo-inbox-update-folders` | low | Add or remove folders/labels on a message (e.g. star, move between folders). Falls back to the computed folder list when Nylas omits `folders` from the response, guarding against accidental folder wipes. |
 
 ## Calendar
@@ -121,7 +122,7 @@ Track deferred, multi-step, and waiting work in the unified [tasks backlog](/cor
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `web-search` | none | Search the web via Tavily |
+| `web-search` | none | Search the web via Tavily. Requires `tavily_api_key` in the vault — declared in `install.requires_secrets`, so the registry will not enable the skill until the key is provisioned. |
 | `web-fetch` | none | Fetch and extract content from a URL |
 | `web-browser` | none | Interact with JavaScript-rendered pages via Playwright |
 

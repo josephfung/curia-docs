@@ -5,6 +5,10 @@ description: "Complete YAML schema reference for Curia agent definitions — all
 
 Agent definitions live in `agents/<name>.yaml`. Each file defines an agent's identity, model configuration, system prompt, and skill access.
 
+<Note>
+  Like skills and channels, agents are tracked in a [DB-backed registry](/core-concepts/registry). An agent on disk must be installed and enabled before it loads; only enabled agents run. Enable or disable agents from the Settings registry in the console — changes take effect on restart.
+</Note>
+
 ## Schema reference
 
 ```yaml

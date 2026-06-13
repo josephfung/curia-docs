@@ -1,0 +1,50 @@
+---
+title: "Managing skills, agents, and channels"
+description: "Curia tracks which skills, agents, and channels are installed and enabled in a database-backed registry — so capabilities are explicit, gated, and auditable."
+---
+
+Curia ships with a large library of skills, several agents, and a handful of channels, but not all of them are active by default. What actually runs is governed by a **registry** — a database record of which skills, agents, and channels are installed and enabled. Only enabled items are loaded at startup. This gives you one place to turn capabilities on and off, and a gate that keeps a capability from running before its prerequisites (like an API key) are in place.
+
+## Installed vs. enabled
+
+The registry tracks two independent states for each item:
+
+- **Installed** — the item is registered with the system. Installing records it and runs any install-time checks.
+- **Enabled** — the item is active. Only enabled skills, agents, and channels are loaded and usable.
+
+An item present on disk is not automatically active. A new skill you add, for example, is registered but starts disabled — you enable it before an agent can call it.
+
+<Note>
+  Registry changes are **restart-based**. Enabling or disabling an item updates its state in the database; the change takes effect when the instance reloads. Recreate the container after a change: `docker compose up -d --force-recreate curia`.
+</Note>
+
+## Required-secret gates
+
+A skill or channel can declare credentials it cannot run without. The registry refuses to install or enable it until those secrets are present in the [vault](/get-started/secrets-vault):
+
+- **Skills** declare `install.requires_secrets` in their manifest. The bundled `web-search` skill declares `tavily_api_key`, so it stays disabled until you provision a Tavily key.
+- **Channels** declare required credential fields in the catalog. Email and Signal cannot be enabled until their vault keys (`channel.email.*`, `channel.signal.*`) resolve.
+
+This means a half-configured capability fails closed — it cannot be switched on until it would actually work.
+
+## Channels: always-on vs. toggleable
+
+Channels behave like skills and agents, with one safeguard: the **HTTP and CLI channels are always on and cannot be disabled or uninstalled**. They are how you reach your own instance, so locking them off would lock you out. Email and Signal are toggleable — install and enable them from the Channels page once their credentials are in the vault.
+
+## Managing from the console
+
+- **Skills and agents** — the Settings registry lists every registered skill and agent with its installed/enabled state. Toggle items there; required-secret gates are surfaced inline so you can see what a disabled item is waiting on.
+- **Channels** — the Channels page lists each channel, its credential fields, and its enabled state. Enter credentials there (they are written to the vault) and enable the channel.
+
+The same operations are available over the HTTP API under `/api/registry/*` for skills and agents and `/api/vault/*` for credentials — see the [HTTP API reference](/references/http-api).
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Secrets vault" icon="key" href="/get-started/secrets-vault">
+    Where credentials are stored and how to seed them.
+  </Card>
+  <Card title="How skills work" icon="puzzle-piece" href="/skills/how-skills-work">
+    The skill manifest, the lifecycle, and required-secret gates.
+  </Card>
+</CardGroup>

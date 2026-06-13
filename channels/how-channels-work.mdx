@@ -5,13 +5,17 @@ description: "Email, Signal, CLI, and HTTP are thin adapters with trust levels. 
 
 Channels are how messages get in and out of Curia. Whether you send a Signal message from your phone, an email from a colleague, or a command from the terminal, every message travels through a channel adapter that normalizes it into the same internal format. Curia's agents work with that normalized format — they never deal with email headers, Signal protocol specifics, or HTTP request objects directly. Adding a new channel means building one adapter; nothing in the core changes.
 
+<Note>
+  Channels are tracked in the [channel registry](/core-concepts/registry): each one is installed and enabled (or not), and its credentials live in the [vault](/get-started/secrets-vault). Email and Signal are toggleable — enable them once their credentials are configured. **HTTP and CLI are always on and cannot be disabled**, so you can never accidentally lock yourself out of your own instance.
+</Note>
+
 ## The four channels
 
 <Tabs>
   <Tab title="Email">
     Email is Curia's primary channel for external communication. It connects via the Nylas API, which abstracts away the differences between Gmail, Outlook, and other providers.
 
-    **Inbound:** Curia polls the Nylas Messages API every 30 seconds (configurable) for new messages. Emails are parsed, attachments extracted, and participants auto-added to your contacts.
+    **Inbound:** Curia polls the Nylas Messages API every 30 seconds (configurable) for new messages. Emails are parsed, attachments extracted, and participants auto-added to your contacts. The adapter persists its high-water mark (the timestamp of the last message it saw) so a restart never re-reads or skips mail, and a watchdog raises an alert if polling stalls for several intervals.
 
     **Outbound:** Replies and new emails are sent via the Nylas Send API. The Coordinator injects its persona's display name and email signature into every outbound message.
 
@@ -19,7 +23,7 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
 
     **Email validation:** Before processing, the email adapter checks SPF, DKIM, and DMARC headers. Messages that fail validation are tagged `sender_verified: false` in their metadata — the Coordinator uses this signal when deciding whether to act on consequential requests.
 
-    **Required secrets:** `NYLAS_API_KEY`, `NYLAS_GRANT_ID`, `NYLAS_SELF_EMAIL`
+    **Required secrets (vault):** `nylas_api_key`, `nylas_grant_id`, `nylas_self_email`
 
     **Trust level:** Low — email From headers are trivially spoofable, and even with SPF/DKIM validation, email is the least trustworthy channel.
   </Tab>
@@ -28,7 +32,7 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
 
     Signal supports text messages, attachments, and reactions. Conversation IDs are derived from Signal group or 1:1 conversation identifiers, so Curia maintains persistent context within each thread.
 
-    **Required secret:** `SIGNAL_PHONE_NUMBER`
+    **Required secret (vault):** `signal_phone_number`
 
     **Trust level:** High — Signal identity is tied to a phone number verified by the Signal protocol. Use Signal for sensitive instructions, financial actions, or anything where you want maximum assurance.
   </Tab>

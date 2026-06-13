@@ -58,9 +58,10 @@ The manifest describes what the skill does, what it needs, and how risky it is. 
 | `action_risk` | Yes | Risk level — determines the minimum autonomy score required |
 | `inputs` | Yes | Named input parameters with types. Append `?` for optional fields |
 | `outputs` | Yes | Named output fields returned on success |
-| `secrets` | Yes | Env var names this skill will access via `ctx.secret()` |
+| `secrets` | Yes | Vault secret keys this skill will read via `ctx.secret()` (use `[]` if none) |
 | `permissions` | Yes | Declared capability requirements (use `[]` if none) |
 | `timeout` | No | Per-invocation timeout in milliseconds (default: 30000) |
+| `install.requires_secrets` | No | Vault keys that must exist before the skill can be installed or enabled |
 
 #### action_risk values
 
@@ -129,14 +130,14 @@ The `ctx` object gives your handler access to inputs, secrets, logging, and call
 | Field | Type | Description |
 |---|---|---|
 | `ctx.input` | `Record<string, unknown>` | Validated inputs from the manifest schema |
-| `ctx.secret(name)` | `(name: string) => string` | Read an env var declared in `secrets`. Throws if undeclared. |
+| `ctx.secret(name)` | `(name: string) => string` | Read a vault secret declared in `secrets`. Throws if undeclared. |
 | `ctx.log` | `Logger` | Scoped pino logger — use instead of `console.log` |
 | `ctx.agentPersona` | `AgentPersona \| undefined` | Display name, title, email signature of the calling agent |
 | `ctx.caller` | `CallerContext \| undefined` | Caller identity — always present for elevated skills |
 | `ctx.contactService` | `ContactService \| undefined` | Read-only contact lookups |
 | `ctx.selfEmail` | `string \| undefined` | Email address of the active Curia account — use this to filter Curia's own address from CC lists |
 
-### Secrets and environment variables
+### Secrets
 
 Declare secrets your skill needs in the `secrets` array in `skill.json`:
 
@@ -144,13 +145,20 @@ Declare secrets your skill needs in the `secrets` array in `skill.json`:
 "secrets": ["slack_bot_token"]
 ```
 
-Then add the corresponding environment variable to your `.env`:
+Then seed the value into the [encrypted vault](/get-started/secrets-vault) — set it transiently and run the seed script:
 
-```env
-SLACK_BOT_TOKEN=xoxb-...
+```bash
+SLACK_BOT_TOKEN=xoxb-... pnpm run seed-vault
 ```
 
-Access it in your handler via `ctx.secret('slack_bot_token')`. Secret names map to env var names with case normalization (`slack_bot_token` → `SLACK_BOT_TOKEN`). The LLM never sees the value — only your handler does.
+The script stores it under the canonical key `slack_bot_token`. Access it in your handler via `ctx.secret('slack_bot_token')`. Values are resolved from the vault (with an env-var fallback applied at bootstrap); the LLM never sees the value — only your handler does.
+
+If your skill should not be usable until its credential is configured, also declare the key in `install.requires_secrets`. The registry will then refuse to enable the skill until the secret is in the vault:
+
+```json
+"secrets": ["slack_bot_token"],
+"install": { "requires_secrets": ["slack_bot_token"] }
+```
 
 <Warning>
   Skills must never throw. All error paths must return `{ success: false, error: '...' }` rather than throwing an exception. If an uncaught exception reaches the execution layer, it is caught and wrapped as a generic error — but this prevents proper error messaging to the LLM.

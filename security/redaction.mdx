@@ -5,6 +5,10 @@ description: "How Curia redacts sensitive data from outbound messages — built-
 
 Curia's PII redactor sits between agent responses and channel delivery. Before any outbound message reaches a recipient, it scans for sensitive data and replaces detected patterns with labelled tokens like `[REDACTED: CREDIT_CARD]`. The redactor is channel-aware — different channels can allow different types of information through.
 
+<Note>
+  Redaction is one of two outbound safeguards and handles **pattern-based PII** (emails, phone numbers, card and SSN formats). It is distinct from the outbound content filter and its second-stage [LLM-as-judge](/security/overview), which catch *contextual* leaks — internal reasoning, system details, or principal-private content reaching the wrong audience — that no fixed pattern would match. Both run before a message is delivered.
+</Note>
+
 ## What's redacted by default
 
 The redactor detects these PII patterns in all outbound messages:

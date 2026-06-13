@@ -35,12 +35,13 @@ Before you start, install the following:
     This single command does everything needed to get Curia running:
 
     - Checks that Docker, Node, and pnpm are available
-    - Generates cryptographically random secrets (database password, API token, web app bootstrap secret) and writes them to `.env`
+    - Generates the database password and the vault master key (`SECRET_ENCRYPTION_KEY`) and writes them to `.env`
     - Prompts you for an Anthropic API key — get one at [console.anthropic.com](https://console.anthropic.com)
     - Starts Postgres, waits for it to be healthy, and runs database migrations
+    - Seeds the encrypted vault with the generated API token, the login secret, and your Anthropic key (these are never written to `.env`)
     - Starts the full Curia stack in Docker
 
-    The Anthropic key is the only value you supply. Everything else is generated for you.
+    The Anthropic key is the only value you supply. Everything else is generated for you. Secrets land in the [encrypted vault](/get-started/secrets-vault); only the four bootstrap values needed to reach and unlock it stay in `.env`.
   </Step>
 
   <Step title="Save your bootstrap secret">
@@ -85,9 +86,10 @@ Before you start, install the following:
 
 The quick start gives you a running instance on Anthropic and Postgres. The capabilities below are optional and independent — add them in any order, only when you need them.
 
-Each one follows the same pattern: add the relevant variables to `.env`, then recreate the Curia container to pick up the change:
+Each one follows the same pattern: seed the relevant credential into the [encrypted vault](/get-started/secrets-vault), then recreate the Curia container to pick up the change. To seed a secret, set it transiently on the command line and run the seed script — the value is read from the environment, encrypted, and stored:
 
 ```bash
+ANTHROPIC_API_KEY=sk-ant-... pnpm run seed-vault
 docker compose up -d --force-recreate curia
 ```
 
@@ -114,16 +116,17 @@ Curia uses [Nylas](https://nylas.com) as its email layer — a unified API that 
     </Warning>
   </Step>
 
-  <Step title="Set the Nylas environment variables">
-    Add these three variables to your `.env`. All three must be present for the email channel to activate:
+  <Step title="Seed the Nylas credentials into the vault">
+    Seed all three values at once. All three must be present for the email channel to activate:
 
-    ```env
-    NYLAS_API_KEY=nyk_v0_...
-    NYLAS_GRANT_ID=<grant-id-from-dashboard>
-    NYLAS_SELF_EMAIL=curia@yourdomain.com
+    ```bash
+    NYLAS_API_KEY=nyk_v0_... \
+    NYLAS_GRANT_ID=<grant-id-from-dashboard> \
+    NYLAS_SELF_EMAIL=curia@yourdomain.com \
+    pnpm run seed-vault
     ```
 
-    `NYLAS_SELF_EMAIL` is the address Curia reads and sends from — it filters self-sent messages and signs outbound emails.
+    They are stored under the vault keys `nylas_api_key`, `nylas_grant_id`, and `nylas_self_email`. `nylas_self_email` is the address Curia reads and sends from — it filters self-sent messages and signs outbound emails.
   </Step>
 
   <Step title="Apply the change">
@@ -139,10 +142,10 @@ Curia uses [Nylas](https://nylas.com) as its email layer — a unified API that 
 
 OpenAI's `text-embedding-3-small` model powers entity memory and semantic search in the knowledge graph. Without it, knowledge graph lookups are exact-match only.
 
-Get an API key from [platform.openai.com](https://platform.openai.com) and add it to `.env`:
+Get an API key from [platform.openai.com](https://platform.openai.com) and seed it into the vault (stored as `openai_api_key`):
 
-```env
-OPENAI_API_KEY=sk-...
+```bash
+OPENAI_API_KEY=sk-... pnpm run seed-vault
 ```
 
 Then recreate the container to apply it:
@@ -160,18 +163,22 @@ Tavily powers the `web-search` skill, which lets agents research topics and look
     Sign up at [tavily.com](https://tavily.com) and copy your API key from the dashboard.
   </Step>
 
-  <Step title="Set the environment variable">
-    Add the key to your `.env`:
-
-    ```env
-    TAVILY_API_KEY=tvly-...
+  <Step title="Seed the key into the vault">
+    ```bash
+    TAVILY_API_KEY=tvly-... pnpm run seed-vault
     ```
 
-    Then recreate the container:
+    It is stored under the vault key `tavily_api_key`.
+  </Step>
+
+  <Step title="Enable the web-search skill">
+    `web-search` declares `tavily_api_key` in its `install.requires_secrets`, so it stays disabled until the key is in the vault. Once seeded, enable the skill from the Settings registry in the console, then recreate the container:
 
     ```bash
     docker compose up -d --force-recreate curia
     ```
+
+    See [Managing skills, agents, and channels](/core-concepts/registry) for the registry workflow.
   </Step>
 </Steps>
 
@@ -184,14 +191,14 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
     Signal requires registering a phone number with signal-cli and seeding the `signal-data` Docker volume with the resulting credentials. Refer to your deployment documentation for the bootstrap procedure.
   </Step>
 
-  <Step title="Set the environment variable">
-    Set your E.164-formatted phone number — the number you registered via `signal-cli register` and `signal-cli verify`:
+  <Step title="Seed your phone number into the vault">
+    Seed your E.164-formatted phone number — the number you registered via `signal-cli register` and `signal-cli verify`:
 
-    ```env
-    SIGNAL_PHONE_NUMBER=+12223334444
+    ```bash
+    SIGNAL_PHONE_NUMBER=+12223334444 pnpm run seed-vault
     ```
 
-    Do not set `SIGNAL_SOCKET_PATH` — the deployment layer manages this automatically.
+    It is stored under the vault key `signal_phone_number`. Do not set `SIGNAL_SOCKET_PATH` — the deployment layer manages this automatically.
   </Step>
 
   <Step title="Apply the change">
@@ -199,7 +206,7 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
     docker compose up -d --force-recreate curia
     ```
 
-    The Signal channel activates when `SIGNAL_PHONE_NUMBER` is set and the `signal-data` volume is populated.
+    The Signal channel activates when `signal_phone_number` is in the vault and the `signal-data` volume is populated.
   </Step>
 </Steps>
 
@@ -221,12 +228,9 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
   </Accordion>
 
   <Accordion title="Email channel not activating">
-    All three Nylas variables must be present: `NYLAS_API_KEY`, `NYLAS_GRANT_ID`, and `NYLAS_SELF_EMAIL`. If any are missing, the channel disables itself at startup. Check the startup logs for one of these messages:
+    All three Nylas secrets must be in the vault: `nylas_api_key`, `nylas_grant_id`, and `nylas_self_email`. If any is missing, the channel disables itself at startup. Confirm what is seeded with `pnpm run seed-vault` (it verifies and lists keys), then check the startup logs for a "email channel disabled" or "email adapter disabled" message.
 
-    - `NYLAS_API_KEY/NYLAS_GRANT_ID not set — email channel disabled` — the API key or grant ID is missing
-    - `NYLAS_SELF_EMAIL not set — email adapter disabled` — the first two variables are set but `NYLAS_SELF_EMAIL` is missing
-
-    Remember to recreate the container after editing `.env`: `docker compose up -d --force-recreate curia`.
+    Remember to recreate the container after seeding: `docker compose up -d --force-recreate curia`.
   </Accordion>
 
   <Accordion title="macOS: HTTPS requests fail with 'unable to get local issuer certificate'">

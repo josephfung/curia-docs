@@ -6,7 +6,7 @@ description: "Connect a phone number to Curia via signal-cli for end-to-end encr
 Signal gives you a private, encrypted channel to your Curia instance. Because Signal uses strong phone-number-based identity, messages you send via Signal carry the highest trust level in Curia's security model — enabling actions that lower-trust channels like email cannot authorize. If you want to send financial instructions, approve sensitive actions, or interact with Curia when you're away from a terminal, Signal is the right channel.
 
 <Warning>
-  `SIGNAL_SOCKET_PATH` is managed by Docker Compose and is set automatically when the `signal-cli` container starts. Do not set it in your `.env` file. The only environment variable you need to configure is `SIGNAL_PHONE_NUMBER`.
+  `SIGNAL_SOCKET_PATH` is managed by Docker Compose and is set automatically when the `signal-cli` container starts. Do not set it in your `.env` file. The only credential you configure is the Signal phone number, which is stored in the [vault](/get-started/secrets-vault) as `signal_phone_number`.
 </Warning>
 
 ## Prerequisites
@@ -50,25 +50,25 @@ Before Curia can use Signal, you need to register a phone number with `signal-cl
   </Step>
 </Steps>
 
-## Step 2 — Set the environment variable
+## Step 2 — Seed the phone number into the vault
 
-Open your `.env` file and uncomment or add:
+Set the number transiently and run the seed script. Use the same E.164 number you registered in Step 1:
 
-```env
-SIGNAL_PHONE_NUMBER=+12223334444
+```bash
+SIGNAL_PHONE_NUMBER=+12223334444 pnpm run seed-vault
 ```
 
-Use the same E.164 number you registered in Step 1.
+It is encrypted and stored under the vault key `signal_phone_number`.
 
 ## Step 3 — Apply the change
 
-Recreate the Curia container so it picks up the new environment variable:
+Recreate the Curia container so it picks up the new secret:
 
 ```bash
 docker compose up -d --force-recreate curia
 ```
 
-The Signal channel activates when `SIGNAL_PHONE_NUMBER` is set and the `signal-data` volume is populated. `docker compose logs curia` will show the Signal adapter initializing.
+The Signal channel activates when `signal_phone_number` is in the vault and the `signal-data` volume is populated. `docker compose logs curia` will show the Signal adapter initializing.
 
 ## Sending your first message
 
@@ -90,7 +90,7 @@ Because Signal carries `high` trust, you can use it to:
   <Accordion title="Signal adapter not starting">
     Check that:
 
-    1. `SIGNAL_PHONE_NUMBER` is set in `.env`
+    1. `signal_phone_number` is in the vault (re-seed with `pnpm run seed-vault` if unsure)
     2. The `signal-data` Docker volume is populated (see Step 1, Step 3 above)
     3. The `signal-cli` container is running: `docker compose ps`
 
