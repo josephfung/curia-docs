@@ -17,13 +17,13 @@ For production deployments behind a reverse proxy, replace `localhost:3000` with
 
 ## Authentication
 
-Set `API_TOKEN` in your `.env` file to enable authentication. Every request (except `GET /api/health`) must include the token in the `Authorization` header:
+The API token (`api_token`) lives in the [vault](/get-started/secrets-vault) — `pnpm run setup` generates and seeds it, or set your own with `API_TOKEN=... pnpm run seed-vault`. Every request (except `GET /api/health`) must include the token in the `Authorization` header:
 
 ```
 Authorization: Bearer <your-token>
 ```
 
-If `API_TOKEN` is not set, authentication is disabled — useful for local development, but not recommended for any network-accessible deployment.
+If no API token is configured, authentication is disabled — useful for local development, but not recommended for any network-accessible deployment.
 
 <Note>
   The HTTP channel carries **medium trust**. It is suited for information queries, scheduling requests, and read-only operations. Actions that require higher trust — such as financial transactions or irreversible operations — must originate from the Signal or CLI channel. If you send a medium-trust request that triggers a high-trust action, Curia will ask you to confirm via a trusted channel before proceeding.
@@ -77,6 +77,16 @@ The following endpoints are used by the built-in web dashboard. They authenticat
 | `GET /api/autonomy` | Current autonomy score, band, trend direction, `lastSetBy`, and scored action count |
 | `PUT /api/autonomy` | Set the autonomy score (body: `{ "score": 85, "reason": "..." }`) |
 | `GET /api/autonomy/history` | Paginated autonomy score change history (query: `limit`, `offset`) |
+| `GET /api/registry/skills` | List registered skills with installed/enabled state |
+| `GET /api/registry/agents` | List registered agents with installed/enabled state |
+| `POST /api/registry/:kind/:name/install` | Install a skill or agent (`kind` is `skills` or `agents`) |
+| `POST /api/registry/:kind/:name/enable` | Enable an installed skill or agent |
+| `POST /api/registry/:kind/:name/install-enable` | Install and enable in one call |
+| `POST /api/registry/:kind/:name/disable` | Disable a skill or agent |
+| `DELETE /api/registry/:kind/:name` | Uninstall a skill or agent |
+| `GET /api/vault/*` | Manage vault secrets and channel credentials (names only; values are never returned) |
+
+See [Managing skills, agents, and channels](/core-concepts/registry) for how the registry and required-secret gates work.
 
 ## Rate limiting
 

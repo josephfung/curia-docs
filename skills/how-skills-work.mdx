@@ -81,8 +81,9 @@ Every local skill includes a `skill.json` manifest that the execution layer vali
 | `inputs` | Input schema — validated before the handler is called |
 | `outputs` | Output schema — documents what the skill returns |
 | `permissions` | Declared capabilities, validated at load time |
-| `secrets` | Env-var-backed secrets this skill may request via `ctx.secret()` |
+| `secrets` | Vault secret keys this skill may request via `ctx.secret()` |
 | `timeout` | Per-invocation timeout in milliseconds (default: 30,000) |
+| `install.requires_secrets` | Optional. Vault keys that must exist before the skill can be installed or enabled (see [Skill lifecycle](#skill-lifecycle-install-and-enable)) |
 
 ## Action risk levels
 
@@ -109,14 +110,20 @@ This means you review elevated-sensitivity skills once, not on every invocation.
 
 ## Secrets: credentials the LLM never sees
 
-Skills that need API keys, passwords, or tokens declare them in their `secrets` array. At runtime, the execution layer provides a scoped `ctx.secret()` accessor:
+Skills that need API keys, passwords, or tokens declare them in their `secrets` array. At runtime, the execution layer provides a scoped `ctx.secret()` accessor that resolves the value from the [encrypted vault](/get-started/secrets-vault):
 
 ```typescript
 // Inside a skill handler
-const apiKey = ctx.secret("NYLAS_API_KEY");
+const apiKey = ctx.secret("nylas_api_key");
 ```
 
-The execution layer validates that the calling skill's manifest declared the requested secret. If a skill tries to access a secret it did not declare, the call fails. Agents and LLMs never see secret values — only the skill handler does, and only through this scoped accessor. Every secret access is audit-logged (which skill, which task, when) — but values are never written to the log.
+The execution layer validates that the calling skill's manifest declared the requested secret. If a skill tries to access a secret it did not declare, the call fails. Agents and LLMs never see secret values — only the skill handler does, and only through this scoped accessor. Every secret access is audit-logged (which skill, which task, when, and whether the value came from the vault or an env fallback) — but values are never written to the log.
+
+## Skill lifecycle: install and enable
+
+Skills live in a [DB-backed registry](/core-concepts/registry). A skill present on disk is not automatically active — it must be **installed** and **enabled** before agents can call it, and only enabled skills are loaded at startup. This gives you a single place to turn capabilities on and off, and a gate for required credentials.
+
+When a skill declares `install.requires_secrets`, the registry refuses to install or enable it until every listed vault key is present. The bundled `web-search` skill declares `tavily_api_key`, so it stays disabled until you provision a Tavily key. Enable and disable skills from the Settings registry in the console; changes take effect on restart.
 
 ## Output sanitization
 

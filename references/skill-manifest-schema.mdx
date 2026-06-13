@@ -29,6 +29,9 @@ Skill definitions live in `skills/<name>/skill.json`. Each manifest declares wha
   "entity_enrichment": {
     "param": "string",
     "default": "caller | agent"
+  },
+  "install": {
+    "requires_secrets": ["string"]
   }
 }
 ```
@@ -80,7 +83,9 @@ Array of permission names this skill requires. Validated at load time.
 
 ### `secrets`
 
-Array of environment variable names this skill needs access to via `ctx.secret()`. Only secrets declared here are accessible — the skill cannot read arbitrary environment variables.
+Array of vault secret keys this skill needs access to via `ctx.secret()`. Secrets are resolved from the [encrypted vault](/get-started/secrets-vault) (with an env-var fallback applied at bootstrap). Only secrets declared here are accessible — the skill cannot read arbitrary secrets or environment variables. Keys are lowercase snake_case (e.g. `tavily_api_key`, `nylas_api_key`).
+
+This is the *runtime* allowlist — what the handler may read while executing. To require that a secret be **present before the skill can be installed or enabled**, declare it in [`install.requires_secrets`](#install) instead (a skill commonly declares the same key in both).
 
 ### `timeout`
 
@@ -155,6 +160,22 @@ Optional. When declared, the execution layer automatically assembles entity cont
 |---|---|
 | `param` | The input key containing contact/entity IDs to enrich |
 | `default` | What to use when the input is not provided: `"caller"` (the message sender) or `"agent"` (the agent's own contact) |
+
+### `install`
+
+Optional. Declares install-time requirements that the registry enforces before a skill can be installed or enabled. Skills live in a [DB-backed registry](/core-concepts/registry) and only enabled skills are loaded at startup.
+
+| Field | Description |
+|---|---|
+| `requires_secrets` | Array of vault secret keys that must already exist in the [vault](/get-started/secrets-vault) before the skill can be installed or enabled. The registry rejects the install/enable until every listed key is present. |
+
+```json
+"install": {
+  "requires_secrets": ["tavily_api_key"]
+}
+```
+
+This is distinct from the runtime [`secrets`](#secrets) allowlist: `secrets` controls what the handler may read while executing; `install.requires_secrets` is a precondition gate checked at install/enable time. The `web-search` skill is the canonical example — it declares `tavily_api_key` here so it cannot be enabled until you have provisioned a Tavily key.
 
 ## Example
 

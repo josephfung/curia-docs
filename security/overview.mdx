@@ -26,7 +26,7 @@ Curia was built for executives who cannot afford to run AI agents on trust alone
     Every event that flows through the bus is written to Postgres **before** it is delivered to any subscriber. No UPDATE, no DELETE — ever. If the process crashes mid-delivery, the event is still in the log. Every event carries a `parent_event_id` so you can trace the full causal chain from any action back to the message that triggered it.
   </Card>
   <Card title="Secrets never reach the LLM" icon="key">
-    Agents never see passwords, API keys, or tokens. Skills access secrets through a scoped `ctx.secret()` interface, validated against each skill's declared manifest. The LLM sees "email-parser connected to inbox" — never the IMAP password. Every secret access is audit-logged: which secret, which skill, which agent, which task.
+    Credentials live in an encrypted vault (AES-256-GCM in Postgres), not in plaintext `.env` files — only the master key and database credentials remain on disk. Agents never see passwords, API keys, or tokens. Skills access secrets through a scoped `ctx.secret()` interface, validated against each skill's declared manifest. The LLM sees "email-parser connected to inbox" — never the IMAP password. Every secret access is audit-logged: which secret, which skill, which agent, which task, and whether it resolved from the vault.
   </Card>
   <Card title="Tool output sanitization" icon="filter">
     All skill results are sanitized before being fed back into LLM context. XML and HTML tags are stripped, outputs are truncated to a configurable limit, secret-like patterns are redacted, and error messages are wrapped in structured tags to prevent prompt injection. Nothing from the outside world reaches the LLM unfiltered.
@@ -41,13 +41,13 @@ Curia was built for executives who cannot afford to run AI agents on trust alone
     Inbound message content is treated as data, not instructions. The dispatch layer strips instruction-like patterns and tags high-risk messages with a `risk_score` before the LLM sees them. The coordinator's system prompt explicitly instructs it not to follow instructions embedded in user messages. Even if an injection succeeds at the coordinator level, architectural containment limits what a tricked agent can actually do.
   </Card>
   <Card title="Outbound safety" icon="paper-plane">
-    All outbound messages — regardless of which skill or agent produced them — pass through a single outbound gateway before being sent. A deterministic content filter checks for system prompt fragments, internal field names, secret patterns, and contact data leakage. Display names in inbound emails are validated against the verified sender address to prevent spoofing.
+    All outbound messages — regardless of which skill or agent produced them — pass through a single outbound gateway before being sent. A deterministic content filter checks for system prompt fragments, internal field names, secret patterns, and contact data leakage. A second-stage LLM-as-judge then reviews mixed-audience messages for principal-private or internal content leaking to external recipients, blocking the send and notifying you with a principal-safe reason. Display names in inbound emails are validated against the verified sender address to prevent spoofing.
   </Card>
   <Card title="Skill caller restrictions" icon="user-lock">
     Skills can declare which agents are allowed to invoke them via `allowed_callers` in the skill manifest. The execution layer enforces this before any other gate — a structurally forbidden caller is rejected immediately, not routed through autonomy or approval workflows. Agent names are validated at startup; unknown names prevent boot.
   </Card>
   <Card title="Container and supply chain" icon="container-storage">
-    The production Docker image runs as a non-root `curia` user. Automated security scanning runs on every pull request: Trivy (npm deps, Docker image, secrets), Semgrep (pattern-based SAST), CodeQL (semantic analysis), and Gitleaks (secret detection). Branch protection on `main` requires PR review and passing status checks before merge.
+    The production Docker image runs as a non-root `curia` user, and its base images are pinned by SHA-256 digest. Automated security scanning runs on every pull request: Trivy (npm deps, Docker image, secrets), Semgrep (pattern-based SAST), CodeQL (semantic analysis), and Gitleaks (secret detection), plus a weekly OpenSSF Scorecard run published to the GitHub Security tab. Every GitHub Actions reference is pinned to a commit SHA, workflow `GITHUB_TOKEN` grants are scoped to least privilege per job, and Dependabot tracks npm, Actions, and Docker updates. Branch protection on `main` requires PR review and passing status checks before merge.
   </Card>
 </CardGroup>
 

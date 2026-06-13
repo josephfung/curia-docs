@@ -29,6 +29,11 @@ Every event type that flows through the bus produces an audit log entry:
 | `agent.response` | Every response the coordinator produces |
 | `outbound.message` | Every message sent to an external recipient (response-path sends, originated by `agent.response` and translated by the dispatch layer) |
 | `outbound.delivered` | Every successful wire-level delivery emitted by the outbound gateway — covers both response-path and skill-invoked sends (`signal-send`, `email-send`, `email-reply`, etc.). This is the canonical "did something actually leave the building?" audit signal; use it (not `outbound.message`) when counting outbound traffic for security review |
+| `outbound.blocked` | A message the outbound safety filter refused to send — records the recipient, a human-readable reason, and the specific findings (so you can review what would have leaked) |
+| `outbound.suppressed_duplicate` | A duplicate response-path send that was suppressed because a human-facing reply had already gone out for that task |
+| `secret.accessed` | Every `ctx.secret()` call — the secret name (never the value), the requesting skill and task, and whether the value resolved from the vault or an env fallback (`source: vault \| env`) |
+| `channel.poll` | One per email poll cycle — messages fetched, processed, skipped (by reason), the new high-water mark, and duration |
+| `channel.stalled` | Watchdog alert raised when no poll cycle has completed within several intervals — surfaces a silently stuck channel |
 | `memory.store` | Every write to the knowledge graph |
 | `memory.query` | Every knowledge graph query, including which results were returned |
 | `contact.resolved` | Every sender identity successfully matched to a contact |
@@ -64,13 +69,14 @@ Beyond convention, Curia maintains a cryptographic hash chain: each entry's hash
 
 ## Secret access logging
 
-When a skill calls `ctx.secret()` to access a credential, the access is audit-logged before the secret value is returned. The log entry records:
+When a skill calls `ctx.secret()` to access a credential from the [vault](/get-started/secrets-vault), the access is audit-logged as a `secret.accessed` event before the secret value is returned. The log entry records:
 
 - Which secret was accessed (by name, not value)
 - Which skill requested it
 - Which agent and task triggered the skill
+- Whether the value resolved from the vault or an env fallback (`source: vault | env`)
 
-Secret values are never written to the audit log. The log tells you that the email-parser skill accessed the IMAP credential — not what that credential is.
+Secret values are never written to the audit log. The log tells you that the email-parser skill accessed the Nylas credential — not what that credential is.
 
 ## PII handling
 
@@ -127,7 +133,7 @@ The audit log is stored in your Postgres database and can be queried directly fo
 - **Trace all activity from a specific sender** — filter by the sender's email address or channel identifier in the payload
 - **Review all tool calls in a conversation** — filter by conversation ID and event types `skill.invoke` and `skill.result`
 - **Audit outbound communications** — filter for `outbound.message` events within a time window
-- **Track secret accesses** — filter for `secret.access` events to see which credentials were used, by which skill, in which task
+- **Track secret accesses** — filter for `secret.accessed` events to see which credentials were used, by which skill, in which task
 
 Every query starts from `timestamp` and `event_type` — add payload filters as needed for your specific review. Because every event includes a `parent_event_id`, you can reconstruct full causal chains by joining recursively or using a recursive CTE.
 

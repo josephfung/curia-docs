@@ -59,6 +59,7 @@
               "core-concepts/autonomy",
               "core-concepts/dreaming",
               "core-concepts/scheduling",
+              "core-concepts/registry",
               "core-concepts/releases"
             ]
           }
@@ -72,6 +73,7 @@
             "pages": [
               "get-started/installation",
               "get-started/configuration",
+              "get-started/secrets-vault",
               "get-started/deployment",
               "get-started/playbooks"
             ]

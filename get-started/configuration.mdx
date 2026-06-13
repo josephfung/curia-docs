@@ -3,14 +3,14 @@ title: "Initial configuration"
 description: "Set up environment variables, LLM providers, email, and Signal for your Curia deployment."
 ---
 
-Curia uses two configuration layers: a `config/default.yaml` file that ships with the repository and defines all defaults, and a `config/local.yaml` file that you create to override specific values for your deployment. Secrets — API keys, credentials, and tokens — always go in `.env`, never in YAML files.
+Curia uses two configuration layers: a `config/default.yaml` file that ships with the repository and defines all defaults, and a `config/local.yaml` file that you create to override specific values for your deployment. Secrets — API keys, credentials, and tokens — live in an [encrypted vault](/get-started/secrets-vault), not in `.env` and not in YAML files. Only the four values needed to reach and unlock that vault, plus non-secret deployment config, stay in `.env`.
 
 <Note>
-  First-time setup configures `.env` for you. `pnpm run setup` generates secrets and prompts for your Anthropic API key on the first install, and the in-app setup wizard captures your assistant's identity, voice, and decision posture conversationally. This page covers everything you might want to change later — additional channels, multiple email accounts, custom LLM routing, and manual `.env` edits.
+  First-time setup configures everything for you. `pnpm run setup` writes the four bootstrap values to `.env`, prompts for your Anthropic API key, and seeds it (along with the generated API token and login secret) into the encrypted vault after migrations. The in-app setup wizard then captures your assistant's identity, voice, and decision posture conversationally. This page covers everything you might want to change later — additional channels, multiple email accounts, custom LLM routing, and adding secrets to the vault.
 </Note>
 
 <Warning>
-  Most configuration changes take effect on restart. After editing `.env` or any YAML file, recreate the Curia container to apply changes: `docker compose up -d --force-recreate curia`. The Tavily API key is the only exception — the `web-search` skill picks it up on next use without a restart.
+  Most configuration changes take effect on restart. After editing `.env` or any YAML file, recreate the Curia container to apply changes: `docker compose up -d --force-recreate curia`. Adding or updating a vault secret with `VAR=value pnpm run seed-vault` does not require editing `.env`, but recreate the container afterward so running skills pick up the change.
 </Warning>
 
 ## How configuration works
@@ -29,81 +29,89 @@ intentDrift:
 
 ## Environment variables
 
-Secrets and deployment-specific values go in `.env`. The most important ones are listed below.
+`.env` holds only two kinds of values: the four bootstrap secrets needed to reach and unlock the vault, and non-secret deployment config. Every other credential — LLM keys, Nylas, Signal, Tavily, the HTTP API token, the login secret — lives in the [encrypted vault](/get-started/secrets-vault) and is seeded with `pnpm run seed-vault`.
+
+### What stays in `.env`
+
+| Variable | Required | Description |
+|---|---|---|
+| `DB_USER` | Yes | PostgreSQL user. |
+| `DB_PASSWORD` | Yes | PostgreSQL password. |
+| `DATABASE_URL` | Yes | Postgres connection string. Constructed from `DB_USER`, `DB_PASSWORD`, and `POSTGRES_PORT` by `pnpm run setup`. |
+| `SECRET_ENCRYPTION_KEY` | Yes | Base64-encoded 32-byte AES-256 master key that encrypts the vault. Generate with `openssl rand -base64 32`; `pnpm run setup` fills it in. **Back this up — losing it makes the vault unrecoverable.** |
+| `CEO_PRIMARY_EMAIL` | No | Your primary email address. Ensures your messages are never held as an unknown sender at startup. |
+| `TIMEZONE` | No | IANA timezone (e.g. `America/Toronto`). Used to resolve relative dates in agent prompts. |
+| `HTTP_PORT` / `POSTGRES_PORT` | No | Host ports for the app and Postgres. Defaults `3000` / `5432`. |
+| `NYLAS_POLL_INTERVAL_MS` | No | Email poll interval in ms (default `30000`). Non-secret. |
+| `NODE_EXTRA_CA_CERTS` | No | Path to a CA bundle (macOS TLS workaround). |
+
+```env
+DB_USER=curia
+DB_PASSWORD=<generated-by-setup>
+DATABASE_URL=postgres://curia:<password>@localhost:5432/curia
+SECRET_ENCRYPTION_KEY=<openssl rand -base64 32>
+CEO_PRIMARY_EMAIL=you@yourdomain.com
+TIMEZONE=America/Toronto
+```
+
+### What goes in the vault
+
+These secrets are seeded into the encrypted vault, never written to `.env`. Set each transiently on the command line and run the seed script — the value is read from the process environment, encrypted, and stored:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... pnpm run seed-vault
+```
+
+The script maps each environment variable to its canonical vault key:
 
 <AccordionGroup>
-  <Accordion title="Authentication and access">
-    | Variable | Required | Description |
-    |---|---|---|
-    | `API_TOKEN` | Yes | Bearer token for all HTTP API requests. Set to any long random string. |
-    | `WEB_APP_BOOTSTRAP_SECRET` | Yes | Secret for logging in to the console at `/` (setup wizard, chat, tasks, knowledge graph, jobs, settings). Set to any long random string. |
-    | `CEO_PRIMARY_EMAIL` | Yes | Your primary email address. Ensures your messages are never held as an unknown sender at startup. |
-    | `TIMEZONE` | Yes | IANA timezone (e.g. `America/Toronto`). Used to resolve relative dates in agent prompts. |
-
-    ```env
-    API_TOKEN=your-secret-token-here
-    WEB_APP_BOOTSTRAP_SECRET=replace-with-a-long-random-secret
-    CEO_PRIMARY_EMAIL=you@yourdomain.com
-    TIMEZONE=America/Toronto
-    ```
-  </Accordion>
-
   <Accordion title="LLM providers">
-    | Variable | Required | Description |
+    | Env var (transient) | Vault key | Notes |
     |---|---|---|
-    | `ANTHROPIC_API_KEY` | Yes | Powers all agents. Get your key from [console.anthropic.com](https://console.anthropic.com). |
-    | `OPENAI_API_KEY` | Recommended | Required for knowledge graph embeddings (`text-embedding-3-small`) and semantic search. |
-    | `OPENROUTER_API_KEY` | Optional | Enables multi-model routing via [OpenRouter](https://openrouter.ai). When set, agent tiers can map to models like Gemini Flash, DeepSeek V3, and GPT-4o. |
-
-    ```env
-    ANTHROPIC_API_KEY=sk-ant-...
-    OPENAI_API_KEY=sk-...
-    OPENROUTER_API_KEY=sk-or-v1-...   # optional — enables multi-model routing
-    ```
+    | `ANTHROPIC_API_KEY` | `anthropic_api_key` | Powers all agents. Seeded automatically on first setup. |
+    | `OPENAI_API_KEY` | `openai_api_key` | Knowledge graph embeddings (`text-embedding-3-small`) and semantic search. |
+    | `OPENROUTER_API_KEY` | `openrouter_api_key` | Optional. Enables multi-model routing via [OpenRouter](https://openrouter.ai). |
 
     Ollama requires no API key — configure the endpoint in your agent YAML instead.
   </Accordion>
 
+  <Accordion title="Authentication and access">
+    | Env var (transient) | Vault key | Notes |
+    |---|---|---|
+    | `API_TOKEN` | `api_token` | Bearer token for all HTTP API requests. Generated and seeded by `pnpm run setup`. |
+    | `WEB_APP_BOOTSTRAP_SECRET` | `web_app_bootstrap_secret` | Secret for logging in to the console. Generated and shown once by `pnpm run setup`. |
+  </Accordion>
+
   <Accordion title="Email (Nylas)">
-    All three variables must be set for the email channel to activate. If any are missing, the channel disables itself at startup.
+    All three must be present in the vault for the single-account email channel to activate. If any is missing, the channel disables itself at startup.
 
-    | Variable | Description |
-    |---|---|
-    | `NYLAS_API_KEY` | Application API key from the Nylas dashboard. |
-    | `NYLAS_GRANT_ID` | Identifier for the connected email account (from Nylas Grants). |
-    | `NYLAS_SELF_EMAIL` | The email address Curia reads and sends from. |
+    | Env var (transient) | Vault key | Notes |
+    |---|---|---|
+    | `NYLAS_API_KEY` | `nylas_api_key` | Application API key from the Nylas dashboard. |
+    | `NYLAS_GRANT_ID` | `nylas_grant_id` | Identifier for the connected email account (from Nylas Grants). |
+    | `NYLAS_SELF_EMAIL` | `nylas_self_email` | The email address Curia reads and sends from. |
 
-    ```env
-    NYLAS_API_KEY=nyk_v0_...
-    NYLAS_GRANT_ID=<grant-id>
-    NYLAS_SELF_EMAIL=curia@yourdomain.com
+    ```bash
+    NYLAS_API_KEY=nyk_v0_... NYLAS_GRANT_ID=<grant-id> NYLAS_SELF_EMAIL=curia@yourdomain.com pnpm run seed-vault
     ```
 
     For multiple email accounts, see [Multiple email accounts](#multiple-email-accounts) below.
   </Accordion>
 
   <Accordion title="Signal">
-    | Variable | Description |
-    |---|---|
-    | `SIGNAL_PHONE_NUMBER` | Your E.164 phone number (e.g. `+12223334444`). Must match the number registered via `signal-cli register` + `verify`. |
-
-    ```env
-    SIGNAL_PHONE_NUMBER=+12223334444
-    ```
+    | Env var (transient) | Vault key | Notes |
+    |---|---|---|
+    | `SIGNAL_PHONE_NUMBER` | `signal_phone_number` | Your E.164 phone number (e.g. `+12223334444`). Must match the number registered via `signal-cli register` + `verify`. |
 
     Do not set `SIGNAL_SOCKET_PATH` — the deployment layer manages this automatically.
   </Accordion>
 
   <Accordion title="Web search">
-    | Variable | Description |
-    |---|---|
-    | `TAVILY_API_KEY` | API key from [tavily.com](https://tavily.com). Powers the `web-search` skill. |
+    | Env var (transient) | Vault key | Notes |
+    |---|---|---|
+    | `TAVILY_API_KEY` | `tavily_api_key` | API key from [tavily.com](https://tavily.com). Required before the `web-search` skill can be enabled. |
 
-    ```env
-    TAVILY_API_KEY=tvly-...
-    ```
-
-    No restart required — the skill picks up the key on next use.
+    The `web-search` skill declares `tavily_api_key` in its `install.requires_secrets`, so the registry will not let you enable it until the key is in the vault. See [Managing skills, agents, and channels](/core-concepts/registry).
   </Accordion>
 </AccordionGroup>
 
@@ -129,7 +137,7 @@ channel_accounts:
 Use `env:VAR_NAME` to reference environment variables rather than inlining credential values directly in the YAML file.
 
 <Note>
-  When `channel_accounts.email` is present in `config/local.yaml`, the single-account env-var mode (`NYLAS_API_KEY` / `NYLAS_GRANT_ID` / `NYLAS_SELF_EMAIL`) is ignored.
+  When `channel_accounts.email` is present in `config/local.yaml`, the single-account mode sourced from the vault keys `nylas_api_key` / `nylas_grant_id` / `nylas_self_email` is ignored.
 </Note>
 
 ## Next steps

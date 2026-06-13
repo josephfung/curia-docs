@@ -3,37 +3,52 @@ title: "Building custom channels"
 description: "How to create a new channel integration — implementing a channel adapter, declaring trust levels, and registering with the message bus."
 ---
 
-A channel adapter is the bridge between an external messaging platform and Curia's internal message bus. Every channel — CLI, HTTP, Email, Signal — follows the same pattern: receive platform messages, normalize them into bus events, and deliver outbound responses back through the platform API.
+A channel is the bridge between an external messaging platform and Curia's internal message bus. Every channel — CLI, HTTP, Email, Signal — follows the same pattern: receive platform messages, normalize them into bus events, and deliver outbound responses back through the platform API. Channels implement a small interface and are tracked in the [channel registry](/core-concepts/registry), so they can be installed, enabled, and credentialed like skills.
 
-## The channel adapter pattern
+## The `Channel` interface
 
-Every channel adapter:
+A channel is a class implementing this interface:
 
-1. **Registers with the bus** as `layer: "channel"` — this limits it to publishing only `inbound.message` and `inbound.event` types (the hard security boundary)
-2. **Subscribes to `outbound.message`** events — to deliver responses back through the platform
-3. **Normalizes inbound messages** into the standard `inbound.message` event payload
-4. **Declares a trust level** — high, medium, or low — based on the identity guarantees of the platform
+```typescript
+interface Channel {
+  readonly name: string;          // 'email' | 'signal' | 'http' | 'cli' | 'my-channel'
+  readonly isToggleable: boolean; // false only for http and cli (always-on safeguard)
+  start(): Promise<void>;         // connect, begin listening, subscribe to outbound
+  stop(): Promise<void>;          // graceful, idempotent teardown
+}
+```
+
+There is no `send()` method on the interface. Inside `start()`, the channel publishes inbound messages and subscribes to outbound ones; outbound delivery for email and Signal is routed through the shared outbound gateway, while simple channels (like CLI) write directly.
 
 ## Implementation steps
 
 <Steps>
-  <Step title="Create the adapter directory">
-    Create a new directory under `src/channels/<name>/` with an adapter file:
+  <Step title="Implement the Channel interface">
+    Create a new directory under `src/channels/<name>/` and a class that implements `Channel` (from `src/channels/channel.ts`):
 
     ```
     src/channels/my-channel/
-      adapter.ts
+      my-channel-adapter.ts
     ```
+
+    Register on the bus at the `channel` layer — the hard security boundary limits a channel to publishing `inbound.message` and subscribing to `outbound.message`. It cannot invoke skills, read memory, or trigger agent tasks.
   </Step>
-  <Step title="Register with the bus">
-    Register your adapter as a channel-layer module. The bus will enforce that you can only publish channel-allowed event types.
+  <Step title="Add a catalog descriptor">
+    Add a `ChannelDescriptor` to `src/channels/catalog.ts` so the registry knows about your channel and what credentials it needs:
 
     ```typescript
-    bus.register({
-      id: 'my-channel-adapter',
-      layer: 'channel',
-    });
+    {
+      name: 'my-channel',
+      description: 'My platform integration',
+      isToggleable: true,
+      credentialFields: [
+        { key: 'api_token', label: 'API token', secret: true },
+      ],
+      requiredSecretKeys: ['api_token'],
+    }
     ```
+
+    Each credential is stored in the vault under `channel.<name>.<field>` — here, `channel.my-channel.api_token`. The registry will not let the channel be enabled until every `requiredSecretKeys` entry resolves.
   </Step>
   <Step title="Handle inbound messages">
     When your platform delivers a message, normalize it into an `inbound.message` event and publish it on the bus:
@@ -63,25 +78,22 @@ Every channel adapter:
     | `low` | Weak identity guarantees (email addresses can be spoofed) |
   </Step>
   <Step title="Handle outbound messages">
-    Subscribe to `outbound.message` events and deliver them through your platform's API:
+    In `start()`, subscribe to `outbound.message` at the `channel` layer and deliver messages addressed to your channel:
 
     ```typescript
-    bus.subscribe('outbound.message', async (event) => {
-      if (event.payload.channel !== 'my-channel') return;
+    bus.subscribe('outbound.message', 'channel', async (event) => {
+      if (event.payload.channelId !== 'my-channel') return;
       await myPlatformApi.sendMessage(
         event.payload.conversationId,
-        event.payload.text,
+        event.payload.content,
       );
     });
     ```
 
-    Filter by channel name so you only handle messages destined for your channel.
+    Filter by `channelId` so you only handle messages destined for your channel.
   </Step>
-  <Step title="Add configuration">
-    Add a config section to `config/default.yaml` for any channel-specific settings (API keys, polling intervals, etc.). Use `env:VAR_NAME` references for secrets.
-  </Step>
-  <Step title="Wire it up">
-    Add your adapter to the bootstrap sequence in `src/index.ts` so it starts with the rest of the system.
+  <Step title="Add configuration and wire it up">
+    Add any non-secret settings (polling intervals, endpoints) to `config/default.yaml`; credentials go in the vault via the catalog, not in YAML. Then add your channel to the bootstrap sequence in `src/index.ts` so it starts with the rest of the system.
   </Step>
 </Steps>
 

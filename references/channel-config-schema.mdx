@@ -1,11 +1,46 @@
 ---
 title: "Channel configuration schema"
-description: "YAML schema reference for Curia channel configuration — email accounts and sender exclusions."
+description: "Reference for Curia channel configuration — the channel registry, credential vault keys, and multi-account email YAML."
 ---
 
-Channel configuration lives in `config/local.yaml` under `channel_accounts`. Currently, email is the only channel that supports multi-account configuration. Signal and CLI are configured via environment variables only.
+Channels have two configuration surfaces:
+
+1. **The channel registry** — a DB-backed record of which channels are installed and enabled, plus their credentials in the vault. Managed from the Channels page in the console, not from YAML. See [Managing skills, agents, and channels](/core-concepts/registry).
+2. **`config/local.yaml` under `channel_accounts`** — used only for the multi-account email layout (one set of credentials per logical account). Single-account email, Signal, CLI, and HTTP do not need this block.
+
+## The channel registry
+
+Each channel is described by a catalog entry and tracked by a row in the `channel_registry` table (`enabled`, `is_toggleable`, install/enable provenance). A channel implements a small interface:
+
+```typescript
+interface Channel {
+  readonly name: string;          // 'email' | 'signal' | 'http' | 'cli'
+  readonly isToggleable: boolean; // false for http and cli — see below
+  start(): Promise<void>;         // connect / begin listening
+  stop(): Promise<void>;          // graceful, idempotent teardown
+}
+```
+
+Outbound delivery does not go through this interface — all sends are routed through the outbound gateway.
+
+<Note>
+  **HTTP and CLI are always on.** They have `isToggleable: false` and cannot be disabled or uninstalled — this is an operator-lockout safeguard, so you can never accidentally cut off your own access to the instance. Email and Signal are toggleable: install/enable them from the Channels page once their credentials are in the vault.
+</Note>
+
+### Credential fields and vault keys
+
+Each channel declares its credential fields in the catalog. Every field is stored in the vault under a namespaced key following the convention `channel.<name>.<field>`:
+
+| Channel | Vault keys |
+|---|---|
+| `email` | `channel.email.nylas_api_key`, `channel.email.nylas_grant_id`, `channel.email.nylas_self_email` |
+| `signal` | `channel.signal.signal_phone_number` |
+
+A field marked required must resolve before the channel can be enabled — the registry blocks enabling a channel whose required credentials are missing, the same way [`install.requires_secrets`](/references/skill-manifest-schema#install) gates skills.
 
 ## Email accounts
+
+The `channel_accounts.email` block in `config/local.yaml` is for connecting **multiple** email accounts. A single-account deployment does not need it — its credentials come from the vault keys above.
 
 ```yaml
 # config/local.yaml
@@ -66,7 +101,7 @@ channel_accounts:
 ```
 
 <Note>
-When `channel_accounts.email` is present in `config/local.yaml`, the single-account environment variable mode (`NYLAS_API_KEY` / `NYLAS_GRANT_ID` / `NYLAS_SELF_EMAIL`) is ignored.
+When `channel_accounts.email` is present in `config/local.yaml`, the single-account mode sourced from the vault keys `channel.email.nylas_api_key` / `channel.email.nylas_grant_id` / `channel.email.nylas_self_email` is ignored.
 </Note>
 
 <CardGroup cols={2}>

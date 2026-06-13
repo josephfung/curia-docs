@@ -5,6 +5,27 @@ description: "Complete reference for all Curia configuration options in config/l
 
 This page documents every configurable setting in `config/local.yaml`. For initial setup and environment variables, see [Initial configuration](/get-started/configuration).
 
+## Secrets and the vault
+
+Secrets are not configured in YAML or `.env`. They live in an [encrypted vault](/get-started/secrets-vault) (AES-256-GCM, stored in Postgres) and are resolved at runtime through a scoped accessor. Only four bootstrap values stay in `.env`: `DB_USER`, `DB_PASSWORD`, `DATABASE_URL`, and `SECRET_ENCRYPTION_KEY` (the base64 master key that decrypts the vault).
+
+**Seed a secret** by setting it transiently and running the seed script — the value is read from the process environment, encrypted, and stored under its canonical vault key:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... pnpm run seed-vault
+```
+
+**Rotate the master key** by supplying the old and new keys; every stored secret is re-encrypted under the new key:
+
+```bash
+SECRET_ENCRYPTION_KEY_OLD=<old-base64> \
+SECRET_ENCRYPTION_KEY_NEW=<new-base64> \
+DATABASE_URL=<url> \
+pnpm exec tsx scripts/rotate-secret-key.ts
+```
+
+After rotation, replace `SECRET_ENCRYPTION_KEY` in `.env` with the new key and recreate the container. See [Secrets vault](/get-started/secrets-vault) for the full workflow, the canonical key names, and backup guidance.
+
 ## Rate limiting
 
 Curia enforces two independent rate limits in the dispatch layer to protect against message flooding from malfunctioning channels, abusive senders, or compromised integrations.

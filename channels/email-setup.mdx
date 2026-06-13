@@ -7,7 +7,7 @@ Curia's email channel is powered by [Nylas](https://nylas.com) — a unified API
 
 ## Single account setup
 
-The quickest way to get email working is to connect one account using three environment variables.
+The quickest way to get email working is to connect one account using three vault secrets.
 
 <Steps>
   <Step title="Create a Nylas account">
@@ -15,37 +15,38 @@ The quickest way to get email working is to connect one account using three envi
   </Step>
 
   <Step title="Create an application">
-    In the Nylas dashboard, create a new application and choose **Email** as the product. Once created, copy your **API key** — this becomes `NYLAS_API_KEY`.
+    In the Nylas dashboard, create a new application and choose **Email** as the product. Once created, copy your **API key** — this becomes `nylas_api_key`.
   </Step>
 
   <Step title="Connect an email account">
-    Inside your application, go to **Grants** and add a new grant. This walks you through an OAuth flow to connect a Gmail, Outlook, or other email account to Nylas. After completing the flow, copy the **Grant ID** — this becomes `NYLAS_GRANT_ID`.
+    Inside your application, go to **Grants** and add a new grant. This walks you through an OAuth flow to connect a Gmail, Outlook, or other email account to Nylas. After completing the flow, copy the **Grant ID** — this becomes `nylas_grant_id`.
 
     <Tip>
       Use a dedicated email address for Curia (e.g., `curia@yourdomain.com`) rather than your primary inbox. Curia will read and process all incoming messages on this account.
     </Tip>
   </Step>
 
-  <Step title="Set your environment variables">
-    Open your `.env` file and fill in all three values:
+  <Step title="Seed the credentials into the vault">
+    Set all three values transiently and run the seed script — they are encrypted and stored in the [vault](/get-started/secrets-vault), not in `.env`:
 
-    ```env
-    NYLAS_API_KEY=nyk_v0_...
-    NYLAS_GRANT_ID=<grant-id-from-dashboard>
-    NYLAS_SELF_EMAIL=curia@yourdomain.com
+    ```bash
+    NYLAS_API_KEY=nyk_v0_... \
+    NYLAS_GRANT_ID=<grant-id-from-dashboard> \
+    NYLAS_SELF_EMAIL=curia@yourdomain.com \
+    pnpm run seed-vault
     ```
 
-    `NYLAS_SELF_EMAIL` is the address of the connected account. Curia uses it to filter self-sent messages and sign outbound emails.
+    They are stored under the vault keys `nylas_api_key`, `nylas_grant_id`, and `nylas_self_email`. `nylas_self_email` is the address of the connected account — Curia uses it to filter self-sent messages and sign outbound emails.
   </Step>
 
   <Step title="Apply the change">
-    Recreate the Curia container so it picks up the new environment variables:
+    Recreate the Curia container so it picks up the new secrets:
 
     ```bash
     docker compose up -d --force-recreate curia
     ```
 
-    The email channel activates automatically when all three Nylas variables are present. `docker compose logs curia` will show the email adapter initializing.
+    The email channel activates automatically when all three Nylas secrets are in the vault. `docker compose logs curia` will show the email adapter initializing.
   </Step>
 </Steps>
 
@@ -69,7 +70,7 @@ channel_accounts:
 Each key (`curia`, `personal`) becomes an account name that you pass to email skills via the `account` parameter. Outbound email sending is governed by the [autonomy engine](/core-concepts/autonomy) — when the score is below the skill's `action_risk` floor, sends are blocked and saved as drafts instead.
 
 <Note>
-  When using `channel_accounts.email`, the single-account env vars (`NYLAS_API_KEY`, `NYLAS_GRANT_ID`, `NYLAS_SELF_EMAIL`) are no longer used. All accounts must be defined in the YAML block. You still need `NYLAS_API_KEY` in your environment — it's the application-level key shared by all accounts.
+  When using `channel_accounts.email`, the single-account vault keys (`nylas_grant_id`, `nylas_self_email`) are no longer used for routing — all accounts must be defined in the YAML block. You still need `nylas_api_key` in the vault: it's the application-level key shared by all accounts.
 </Note>
 
 ## Email skills
@@ -96,20 +97,20 @@ Outbound email skills (`email-send`, `email-reply`, and their CEO-inbox counterp
 
 <AccordionGroup>
   <Accordion title="Email channel not activating">
-    All three Nylas variables must be present. If any are missing, the channel disables itself at startup with one of these log messages:
+    All three Nylas secrets (`nylas_api_key`, `nylas_grant_id`, `nylas_self_email`) must be in the vault. If any is missing, the channel disables itself at startup with one of these log messages:
 
     ```
     NYLAS_API_KEY/NYLAS_GRANT_ID not set — email channel disabled
     NYLAS_SELF_EMAIL not set — email adapter disabled
     ```
 
-    Check your `.env` file and restart Curia.
+    Confirm what is seeded with `pnpm run seed-vault` (it verifies and lists keys), re-seed any missing value, and recreate the container.
   </Accordion>
 
   <Accordion title="Messages not appearing">
-    Curia polls the Nylas Messages API every 30 seconds by default. If messages are slow to appear, confirm the email account's OAuth grant is active in the Nylas dashboard and that the grant ID matches `NYLAS_GRANT_ID`.
+    Curia polls the Nylas Messages API every 30 seconds by default. If messages are slow to appear, confirm the email account's OAuth grant is active in the Nylas dashboard and that the grant ID matches the vault's `nylas_grant_id`.
 
-    You can also adjust the polling interval:
+    You can also adjust the polling interval (non-secret config in `.env`):
 
     ```env
     NYLAS_POLL_INTERVAL_MS=15000
