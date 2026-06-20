@@ -70,20 +70,18 @@ Every inbound message is tagged with the trust level of the channel it arrived o
 Trust levels gate consequential actions. A request arriving over email to change financial settings, export data, or take irreversible action will be declined or held for verification, even if the sender's name is recognized — the Coordinator asks the sender to confirm through a higher-trust channel.
 
 <Note>
-Channel trust is separate from **contact trust** (`low` → `medium` → `high` → `ceo`). Channel trust reflects how much identity assurance the transport provides. Contact trust reflects how much you trust a specific person. Both feed into the [message trust score](/core-concepts/contacts-trust) that governs what actions Curia will take.
+Channel trust is separate from a contact's **capability tier** (`blocked` → `unknown` → `known` → `trusted` → `principal`). Channel trust reflects how much identity assurance the transport provides; the tier reflects how much you trust a specific person. Both feed into the [message trust score](/core-concepts/contacts-trust) and the gates that govern what actions Curia will take.
 </Note>
 
 ## Unknown sender policy
 
 Each channel can be configured with one of two policies for messages from senders not yet in your contacts:
 
-- **`hold_and_notify`** — the message is held in a queue and you are notified via a high-trust channel (CLI or Signal). You can identify the sender, dismiss the message, or block them. Once identified, the message is replayed through normal processing.
+- **`allow`** (the default) — Curia auto-creates the sender as an `unknown`-tier contact and routes the message to the coordinator under read-only constraints: it may reply or ask a clarifying question, but takes no actions and shares no private context. There's no holding step. As you correspond, the contact elevates to `known` automatically; you can also identify or block them at any time.
 - **`ignore`** — messages from unknown senders are silently discarded.
 
-The default is `hold_and_notify`. When a held message is waiting, the Coordinator proactively mentions it the next time you interact: "By the way, you have a held email from `stranger@example.com` about 'Q3 Numbers'. Want me to identify them?"
-
 <Note>
-Dismissing a held message discards the message — it does not delete the sender's contact record. Their email address remains in your contacts as provisional. You can look them up later with `contact-lookup`.
+Curia no longer queues unknown-sender messages for review (the old `hold_and_notify` policy was removed). Automated senders — noreply addresses, newsletters, bulk mail — are detected and kept out of your way rather than surfaced.
 </Note>
 
 ## Context bridging on non-threaded channels

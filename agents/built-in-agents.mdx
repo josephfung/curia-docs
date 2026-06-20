@@ -25,7 +25,7 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 - Knowledge graph queries and memory storage
 - Autonomy score management
 - Web research (search, fetch, browse)
-- Held message processing for unknown senders
+- Handling unknown senders in read-only mode (auto-created at the `unknown` tier)
 
 **What it delegates to specialists:**
 - Calendar operations and scheduling intelligence → Calendar Specialist
@@ -38,7 +38,7 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 - Resolves possessive pronouns ("my calendar", "your schedule") to explicit entity identities before delegating to any specialist
 - Adapts its communication style based on who it's talking to — candid with the CEO, professional and opaque with external contacts
 - Never exposes internal system details, tool names, or agent architecture to non-CEO users
-- Enforces authorization decisions from the dispatch layer (provisional contacts, blocked senders, permission denials)
+- Enforces authorization decisions from the dispatch layer (unknown-tier contacts, blocked senders, permission denials)
 - Respects trust score thresholds before taking action on external requests
 - Recognizes when it was CC'd (vs. directly addressed) on email and adjusts behavior — reads the thread for context, infers what's expected, and replies via the correct account
 
