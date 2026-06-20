@@ -3,10 +3,10 @@ title: "How Curia verifies contacts and authorizes senders"
 description: "Curia verifies every sender before acting on their behalf, using trust scores, channel authentication, and deterministic permissions that you control."
 ---
 
-Every person who contacts Curia — whether through email, Signal, or the HTTP API — is treated as a contact with an assigned trust level. Before Curia takes any action on a sender's behalf, it checks who they are, how confident it is in their identity, and whether the channel they're using is trusted enough for what they're asking. These checks are deterministic: a sender either has permission or they don't.
+Every person who contacts Curia — whether through email, Signal, or the HTTP API — is a contact with a **capability tier**. Before Curia takes any action on a sender's behalf, it checks who they are, how confident it is in their identity, and whether the channel they're using is trusted enough for what they're asking. These checks are deterministic: a sender either has permission or they don't.
 
 <Warning>
-  Contacts start as **provisional** until confirmed — either by you explicitly or by [automatic promotion](#automatic-promotion-of-provisional-contacts) when Curia detects evidence of a real relationship. Provisional contacts have no permissions — Curia will acknowledge their message but will not take any actions on their behalf. You'll be notified so you can decide whether to confirm, dismiss, or block them.
+  New contacts start at the **`unknown`** tier. An unknown sender isn't ignored — Curia will read and reply to them under read-only constraints (it won't take actions, share your private context, or commit anything on your behalf). Contacts move up to **`known`** automatically as a real relationship becomes evident, and you can promote anyone to **`trusted`** explicitly. See [capability tiers](#capability-tiers) below.
 </Warning>
 
 ## How trust scores work
@@ -31,16 +31,7 @@ messageTrustScore =
 | HTTP API | Medium | 0.6 |
 | Email | Low | 0.3 |
 
-Separately, **contact trust levels** indicate how much Curia trusts a specific person, regardless of channel. The full hierarchy from lowest to highest:
-
-| Trust level | Who gets it |
-|---|---|
-| `low` | Default for newly confirmed contacts |
-| `medium` | Contacts with moderate interaction history |
-| `high` | Contacts you've explicitly trusted — EA, CFO, board members |
-| `ceo` | Reserved for the CEO. Set automatically at startup via the bootstrap process — cannot be assigned through `contact-set-trust`. |
-
-The `ceo` trust level outranks all others. It bypasses PII redaction, outbound content filters, and trust score thresholds. The `meetsMinimumTrust()` check uses ordinal comparison, so `ceo` satisfies any gate that requires `high`, `medium`, or `low`.
+Separately, a contact's **capability tier** indicates how much Curia trusts a specific person, regardless of channel. See [capability tiers](#capability-tiers) below for the full model — `principal` (you) outranks all others and bypasses PII redaction, outbound content filters, and trust-score thresholds.
 
 **Contact confidence** accumulates over time as signal builds. A brand-new email sender starts at zero. A CEO-verified Signal contact with a long interaction history may carry 0.95.
 
@@ -56,6 +47,24 @@ Contact confidence is computed automatically by the **confidence scoring pipelin
 The pipeline supports two modes: **incremental** (triggered on each qualifying event, applied as a delta) and **full recompute** (recalculates from all stored history). Both modes converge to the same value. You never set `contact_confidence` directly — it is always derived from observable history.
 
 **Content risk** reduces the score when the dispatch layer detects injection-like patterns in the message body. Clean messages incur no penalty.
+
+## Capability tiers
+
+A contact's **tier** is the single ordered gate on what Curia will do for them. It replaced the older split of a `status` field (`provisional`/`confirmed`/`blocked`) and a separate `trust_level`. From lowest to highest:
+
+| Tier | Who gets it | What they can drive |
+|---|---|---|
+| `blocked` | Senders you've blocked | Nothing — messages may be dropped |
+| `unknown` | New / unrecognized senders (the default) | Read-only: Curia may reply or ask a question, but takes no actions and shares no private context |
+| `known` | Recognized correspondents (reached automatically) | Routine actions and light context |
+| `trusted` | People you've explicitly elevated — EA, CFO, board | Elevated actions and disclosure |
+| `principal` | You, the CEO | Full authority |
+
+Alongside the tier, each contact has a **kind** describing what it is: `person`, `organization` (a company, not an individual), `automated` (a noreply/newsletter sender — kept out of your way), `agent` (one of Curia's own agents), or `principal` (you). Kind is a label, not a permission gate; `automated` senders are the one kind that's actively filtered out of your attention.
+
+The `principal` tier outranks all others and is set structurally at startup — it can't be assigned with `contact-set-tier`, and a merge can never delete or downgrade it. Tier comparisons use a `meetsMinimumTier()` ordinal check, so `principal` satisfies any gate that requires `trusted`, `known`, etc.
+
+You set a tier conversationally — "treat Dana as trusted" runs the `contact-set-tier` skill (it refuses to mint a `principal`). Promotions to `known` happen on their own; see [automatic elevation](#automatic-elevation) below.
 
 ### Score examples
 
@@ -80,7 +89,7 @@ The coordinator checks the sender's `messageTrustScore` before taking action. If
 These thresholds are configured in `config/default.yaml` under `security.trust_thresholds` and can be adjusted without a code change. Startup fails if this block is missing or malformed.
 
 <Note>
-  Trust thresholds do not apply to you (the CEO). Messages arriving via CLI, or from a contact with the `ceo` role, are always trusted regardless of score. Curia never explains the trust system or mentions scores to external senders.
+  Trust thresholds do not apply to you (the CEO). Messages arriving via CLI, or from the `principal` contact, are always trusted regardless of score. Curia never explains the trust system or mentions scores to external senders.
 </Note>
 
 ## Email sender verification
@@ -96,32 +105,26 @@ When a message arrives with `senderVerified: false`, the coordinator will not ta
 
 ## Handling unknown senders
 
-When Curia receives a message from someone not in your contacts, it follows the **hold and notify** policy for email and Signal: the message is held in a queue, and Curia mentions it to you at the next opportunity.
+When Curia receives a message from someone not in your contacts, it doesn't queue it for you to triage. Each channel has an **unknown-sender policy** — either `allow` (the default for email and Signal) or `ignore`.
 
 <Steps>
   <Step title="Message arrives from an unknown sender">
-    The dispatch layer looks up the sender's channel identifier (`email address`, `Signal number`) in the contacts database. No match is found. The message is placed in the held messages queue. An audit event is written with the sender identifier, channel, and routing decision.
+    The dispatch layer looks up the sender's channel identifier (`email address`, `Signal number`) in the contacts database. No match is found, so Curia auto-creates a contact at the **`unknown`** tier and writes an audit event with the sender identifier, channel, and routing decision.
   </Step>
-  <Step title="Curia notifies you">
-    At the next conversation, Curia mentions the oldest held message: "By the way, you have a held email from `stranger@example.com` about 'Q3 Numbers'. Want me to identify them?"
-
-    Curia surfaces one held message at a time — not a list — to avoid interrupting the conversation flow. You can ask for the full list at any time.
+  <Step title="Curia handles it in low-trust mode">
+    Under the `allow` policy the message goes straight to the coordinator with read-only constraints: Curia may reply or ask a clarifying question, but it won't take actions, share your private context, or reveal that it's operating under restrictions. There's no holding step — the sender gets a timely, careful response. Under the `ignore` policy the message is silently dropped.
   </Step>
-  <Step title="You decide what to do">
-    You have three options for each held message:
-
-    - **Identify** — tell Curia who the sender is. Curia creates a confirmed contact and replays the held message through normal processing with full contact context.
-    - **Dismiss** — discard the message. The sender's provisional contact record is preserved in case they reach out again.
-    - **Block** — discard the message and mark the sender as blocked. Future messages from this sender are dropped without acknowledgment.
+  <Step title="Automated senders are filtered">
+    Before replying, Curia classifies the sender. Noreply addresses, newsletters, and bulk senders are marked `kind=automated` and kept out of your way — they don't generate the attention an actual person would.
   </Step>
-  <Step title="Confirmed contacts can act">
-    Once you confirm a contact, they gain the permissions assigned to their role. If they send another message, it is processed normally — no more holds.
+  <Step title="You identify or elevate them">
+    Once you tell Curia who someone is (or it works it out from your correspondence), the channel identity links to a real contact and the tier rises to `known`. You can elevate further at any time: "treat Dana as trusted." To shut someone out, block them — their messages are dropped without acknowledgment.
   </Step>
 </Steps>
 
 ## Automatic contact creation from email
 
-When Curia processes an inbound email, it auto-creates provisional contacts for every participant in the From, To, and CC headers that isn't already in your contacts. This builds your contact database naturally as emails flow through.
+When Curia processes an inbound email, it auto-creates `unknown`-tier contacts for every participant in the From, To, and CC headers that isn't already in your contacts. This builds your contact database naturally as emails flow through.
 
 To protect against spam campaigns that flood your contacts with thousands of junk entries, auto-creation is rate-limited:
 
@@ -144,18 +147,16 @@ contact_creation_limits:
 Existing contacts are not counted toward the limits — only genuinely new contact creations. If a 20-person thread has 18 known contacts, only the 2 new ones count.
 </Note>
 
-## Automatic promotion of provisional contacts
+## Automatic elevation
 
-Provisional contacts are automatically promoted to **confirmed** when Curia detects evidence of a real relationship. Three signals trigger promotion:
+An `unknown`-tier contact is elevated to **`known`** automatically when Curia sees evidence of a real relationship — no confirmation step from you, and no fixed daily sweep. Three kinds of signal drive it:
 
-1. **Curia outbound** — Curia has sent an outbound message to the contact's email address (any account).
-2. **CEO sent email** — the CEO has sent them an email directly (detected via a daily Sent folder scan).
-3. **Calendar acceptance** — the CEO has accepted a calendar event where the contact is an attendee.
-
-A daily 8 AM background sweep by the contacts agent reconciles all provisional contacts against these signals. Promotions can also happen in real-time when Curia sends an outbound message.
+1. **Correspondence** — when Curia (or you) sends an outbound message to the contact, the outbound gateway raises their tier to at least `known` before the message goes out. Two-way communication is enough.
+2. **Judgment** — a weekly background scan and the dispatch-layer scoring pipeline weigh signals like email domain, relationship context, and communication patterns, elevating contacts that cross the confidence threshold.
+3. **Backfill** — a one-shot maintenance script re-evaluates existing `unknown` contacts against the same criteria.
 
 <Note>
-  Auto-promotion only applies to provisional contacts whose email was established through a trusted source (email participant headers, calendar attendees). It never applies to self-claimed channel identities — those always require explicit CEO confirmation.
+  Automatic elevation only ever reaches `known`. Moving a contact to `trusted` or `principal` always requires an explicit step from you. Elevation also never marks a *self-claimed* channel identity as verified — that still requires your confirmation.
 </Note>
 
 ## Adding contacts proactively
@@ -192,11 +193,14 @@ Curia never auto-merges contacts. You confirm every merge.
 
 ## How authorization works
 
-Authorization runs through a three-layer check on every request from a non-CEO sender:
+Authorization runs through a layered check on every request from a non-principal sender:
 
-1. **Per-contact overrides** — explicit grants and denials you've set for this specific contact. These always win over role defaults.
-  2. **Role defaults** — the default permissions and denials for the contact's role (CFO, board member, direct report, advisor, etc.).
-3. **Channel trust gate** — even if role and overrides permit an action, the channel must be trusted enough. Financial and data actions require a high-trust channel.
+1. **Tier gate** — `unknown` and `blocked` contacts get zero permissions before anything else is considered. The contact must be at least `known` to hold any permission at all.
+2. **Per-contact overrides** — explicit grants and denials you've set for this specific contact. These always win over role defaults.
+3. **Role defaults** — the default permissions and denials for the contact's role (CFO, board member, direct report, advisor, etc.).
+4. **Channel trust gate** — even if role and overrides permit an action, the channel must be trusted enough. Financial and data actions require a high-trust channel.
+
+Separately, a **consequential-action gate** weighs the *initiating* contact's tier against the action's stakes: a `known` contact can get a reply to themselves, but a third-party-facing or higher-stakes action escalates to you for a decision. When the call isn't clear-cut, an escalation judge classifies it and, by design, escalates rather than guesses.
 
 The outcome is one of: `Allowed`, `Denied`, `Blocked by channel trust`, or `Needs CEO decision`.
 
@@ -245,10 +249,12 @@ Curia uses the `contact-set-identity-status` skill. Status is orthogonal to veri
 
 If someone messages on a new channel and claims to be an existing contact ("Hi, it's Jenna"), that identity is tagged `self_claimed` and treated as unverified until you confirm it. Curia never auto-promotes self-claimed identities to verified status. An unverified identity is gated the same as an unknown sender for any consequential action.
 
-## Contact statuses at a glance
+## Tiers at a glance
 
-| Status | Who | Permissions |
+| Tier | Who | What they can drive |
 |---|---|---|
-| **Provisional** | New contacts — not yet confirmed by you | None. Curia acknowledges but takes no action. |
-| **Confirmed** | Contacts you've verified or that arrived from authoritative sources (CRM, calendar) | Role defaults + any per-contact overrides |
-| **Blocked** | Contacts you've blocked | None. Messages are dropped without response. |
+| **`blocked`** | Contacts you've blocked | None. Messages are dropped without response. |
+| **`unknown`** | New / unrecognized senders (the default) | None — Curia replies under read-only constraints but takes no action. |
+| **`known`** | Recognized correspondents (reached automatically) | Role defaults + any per-contact overrides; routine actions |
+| **`trusted`** | People you've explicitly elevated | Elevated actions and disclosure |
+| **`principal`** | You, the CEO | Full authority |

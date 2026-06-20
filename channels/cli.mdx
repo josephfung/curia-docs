@@ -26,12 +26,12 @@ The CLI adapter publishes `inbound.message` events on the bus, just like every o
 | **Reasoning** | Local access only — no network exposure, no identity spoofing |
 | **Sender identity** | Always treated as the CEO (`contactId: "primary-user"`) |
 
-Because the CLI is local-only, messages from it bypass the trust score thresholds that apply to external channels. You never need to worry about held messages or provisional contact restrictions when using the CLI.
+Because the CLI is local-only, messages from it bypass the trust score thresholds that apply to external channels. You never need to worry about unknown-tier restrictions when using the CLI.
 
 ## When to use the CLI
 
 - **Development and testing** — the fastest way to interact with Curia during development
-- **Administrative tasks** — checking autonomy score, managing contacts, processing held messages
+- **Administrative tasks** — checking autonomy score, managing contacts, adjusting contact tiers
 - **Troubleshooting** — direct access with full trust, useful when debugging channel-specific issues
 - **Direct host runs** — when developing against `pnpm local` rather than the Docker stack, the CLI is available immediately, before any external channels are configured
 

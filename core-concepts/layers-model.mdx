@@ -29,10 +29,10 @@ The Dispatch layer applies several policy gates before a message reaches any age
 | Factor | Default weight | What it measures |
 |---|---|---|
 | Channel trust | 0.4 | How trustworthy the channel is (from Layer 1) |
-| Contact confidence | 0.4 | How well Curia knows the sender (confirmed, provisional, or unknown) |
+| Contact confidence | 0.4 | How well Curia knows the sender, built up from correspondence history |
 | Injection risk penalty | 0.2 max | Whether prompt injection patterns were detected |
 
-Messages below the trust score floor (default: 0.2) are held regardless of channel policy.
+A low trust score keeps an unrecognized sender (`unknown` tier) in read-only mode; it no longer triggers a held-message queue.
 
 **Rate limiting** — global and per-sender rate limits protect against flooding. Excess messages are dropped silently and audit-logged.
 

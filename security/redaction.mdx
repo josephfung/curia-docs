@@ -31,11 +31,8 @@ When an outbound message is ready for delivery, the redactor evaluates it in thi
   <Step title="Kill switch check">
     If `outbound_redaction.enabled` is `false`, the message passes through unmodified. This is an emergency override, not a recommended configuration.
   </Step>
-  <Step title="CEO bypass">
-    If the recipient is the CEO (matched by contact UUID, resolved at startup), the message passes through unredacted. The CEO always sees full content.
-  </Step>
-  <Step title="Trust override">
-    If the recipient's trust level is in the `trust_override` list (e.g., `['ceo', 'high']`), the message passes through. This allows high-trust contacts to receive unredacted content.
+  <Step title="Principal bypass">
+    If the recipient is you, the principal (matched structurally by contact UUID, resolved at startup), the message passes through unredacted. You always see full content. This is the only bypass — there is no trust-level override; even `trusted` contacts have PII redacted (what they're allowed to *receive* is governed separately by the tier-keyed disclosure gate on the outbound filter).
   </Step>
   <Step title="PII detection">
     The message content is scanned for all built-in and custom PII patterns.
@@ -59,7 +56,6 @@ Different channels may have different sensitivity requirements. Configure per-ch
 # config/local.yaml
 outbound_redaction:
   enabled: true
-  trust_override: ['ceo', 'high']
   default: 'block'           # block PII on channels without an explicit policy
   channel_policies:
     email:
