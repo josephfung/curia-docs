@@ -50,6 +50,28 @@ The quickest way to get email working is to connect one account using three vaul
   </Step>
 </Steps>
 
+## Console credential entry (recommended for production)
+
+Instead of setting environment variables, you can enter Nylas credentials directly in Curia's web console — no restart required once they are saved.
+
+<Steps>
+  <Step title="Open Settings → Channels">
+    In the Curia console, go to **Settings → Channels** and find the **Email** channel.
+  </Step>
+
+  <Step title="Enter your credentials">
+    Paste your `NYLAS_API_KEY`, `NYLAS_GRANT_ID`, and `NYLAS_SELF_EMAIL` into the respective fields. Each field shows a live status indicator (vault / env / missing) so you can see which values are already configured.
+  </Step>
+
+  <Step title="Confirm the connection">
+    Ask the setup wizard to confirm your email channel is active. It calls the live status check and tells you whether the channel is ready or what is still missing.
+  </Step>
+</Steps>
+
+<Note>
+  Channel credentials entered via the console are stored in Curia's encrypted vault and take precedence over environment variables. A restart is required for the email adapter to pick up newly entered credentials.
+</Note>
+
 ## Multiple email accounts
 
 For more advanced deployments — for example, connecting multiple inboxes — configure named accounts in `config/local.yaml` using the `channel_accounts.email` block.
