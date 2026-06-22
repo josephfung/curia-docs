@@ -124,6 +124,18 @@
         ]
       },
       {
+        "tab": "Integrations",
+        "groups": [
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/tavily",
+              "integrations/openai-embeddings"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Security",
         "groups": [
           {

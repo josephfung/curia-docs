@@ -84,6 +84,29 @@ Because Signal carries `high` trust, you can use it to:
   Trust levels determine which actions Curia can take on a sender's behalf. Signal's `high` trust level is equivalent to CLI access — Curia treats Signal messages with the same confidence it treats local terminal sessions.
 </Info>
 
+## Console credential entry
+
+Once signal-cli is running and your phone number is registered, you can enter the connection details in Curia's console instead of setting environment variables.
+
+<Steps>
+  <Step title="Open Settings → Channels">
+    In the Curia console, go to **Settings → Channels** and find the **Signal** channel.
+  </Step>
+
+  <Step title="Enter the socket path and phone number">
+    - **Socket path:** The Unix socket path that signal-cli exposes (set automatically by Docker Compose as `/var/run/signal-cli/socket`).
+    - **Phone number:** Your registered Signal number in E.164 format (e.g. `+12223334444`).
+  </Step>
+
+  <Step title="Confirm with the setup wizard">
+    Ask the setup wizard to verify your Signal channel. It checks live status and tells you whether the channel is ready.
+  </Step>
+</Steps>
+
+<Note>
+  Device linking (the QR-scan step to link a secondary device) is a separate manual step not currently guided by the setup wizard. See [Step 2 — Bootstrap signal-cli](#step-2-bootstrap-signal-cli) above for instructions.
+</Note>
+
 ## Troubleshooting
 
 <AccordionGroup>
