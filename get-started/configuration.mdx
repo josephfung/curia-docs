@@ -42,6 +42,8 @@ intentDrift:
 | `TIMEZONE` | No | IANA timezone (e.g. `America/Toronto`). Used to resolve relative dates in agent prompts. |
 | `HTTP_PORT` / `POSTGRES_PORT` | No | Host ports for the app and Postgres. Defaults `3000` / `5432`. |
 | `NYLAS_POLL_INTERVAL_MS` | No | Email poll interval in ms (default `30000`). Non-secret. |
+| `APP_ORIGIN` | No | Public base URL of the deployment (e.g. `https://curia.example.com`). Used to build magic-link URLs such as secret-capture links. Falls back to `http://localhost:<HTTP_PORT>` in development. |
+| `LOG_LEVEL` | No | pino log level: `error`, `warn`, `info`, `debug` (default `info`). |
 | `NODE_EXTRA_CA_CERTS` | No | Path to a CA bundle (macOS TLS workaround). |
 
 ```env
