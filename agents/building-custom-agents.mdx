@@ -24,11 +24,7 @@ name: expense-tracker
 description: Tracks and categorizes expenses from receipts and bank notifications
 
 model:
-  provider: anthropic
-  model: claude-sonnet-4-6
-  fallback:
-    provider: openai
-    model: gpt-4o
+  tier: standard
 
 system_prompt: |
   You are an expense tracking assistant for a CEO.
@@ -61,25 +57,27 @@ Restart Curia after adding the file — agents are loaded at startup.
 |---|---|
 | `name` | Unique identifier used in the Bullpen, audit log, and the `delegate` skill |
 | `description` | One-sentence summary; the Coordinator reads this to decide when to delegate |
-| `model` | LLM provider and model name |
+| `model` | Capability tier: `{ tier: fast | standard | powerful }` |
 | `system_prompt` | The agent's instructions |
 
 ## Optional fields
 
 <AccordionGroup>
-  <Accordion title="model — provider, model, fallback">
-    Curia supports three providers. Configure a `fallback` so the agent continues working if the primary provider is unavailable:
+  <Accordion title="model — capability tier">
+    Agents declare a capability tier rather than a specific model. The operator maps tiers to concrete models in `config/local.yaml`, so the same agent YAML works across deployments:
 
     ```yaml
     model:
-      provider: anthropic
-      model: claude-sonnet-4-6
-      fallback:
-        provider: openai
-        model: gpt-4o
+      tier: standard   # fast | standard | powerful
     ```
 
-    Supported providers: `anthropic`, `openai`, `ollama`. For `ollama`, set `model` to the name of a locally pulled model (e.g., `llama3`).
+    | Tier | Default model | Use for |
+    |---|---|---|
+    | `fast` | Claude Haiku | High-frequency structured agents (calendar, contacts) |
+    | `standard` | Claude Sonnet | General-purpose agents (coordinator, inbox) |
+    | `powerful` | Claude Opus | Agents needing maximum reasoning depth |
+
+    See the [configuration reference](/references/configuration) for how to remap tiers to models in `config/local.yaml`.
   </Accordion>
 
   <Accordion title="pinned_skills and allow_discovery">
@@ -164,11 +162,7 @@ name: investor-relations
 description: Tracks investor communications, prepares updates, and monitors cap table events
 
 model:
-  provider: anthropic
-  model: claude-sonnet-4-6
-  fallback:
-    provider: openai
-    model: gpt-4o
+  tier: standard
 
 system_prompt: |
   You are an investor relations specialist for a CEO.
@@ -209,8 +203,7 @@ handler: ./research-analyst.handler.ts
 description: Conducts web research and provides analysis
 
 model:
-  provider: anthropic
-  model: claude-sonnet-4-6
+  tier: fast
 
 system_prompt: |
   You are a research analyst. When given a topic, conduct thorough research

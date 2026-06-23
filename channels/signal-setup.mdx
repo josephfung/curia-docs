@@ -50,15 +50,9 @@ Before Curia can use Signal, you need to register a phone number with `signal-cl
   </Step>
 </Steps>
 
-## Step 2 — Seed the phone number into the vault
+## Step 2 — Add the phone number to the vault
 
-Set the number transiently and run the seed script. Use the same E.164 number you registered in Step 1:
-
-```bash
-SIGNAL_PHONE_NUMBER=+12223334444 pnpm run seed-vault
-```
-
-It is encrypted and stored under the vault key `signal_phone_number`.
+In the Curia console, go to **Settings → Channels → Signal** and enter the E.164 number you registered in Step 1 (e.g. `+12223334444`). It is stored under the vault key `signal_phone_number`.
 
 ## Step 3 — Apply the change
 
@@ -113,7 +107,7 @@ Once signal-cli is running and your phone number is registered, you can enter th
   <Accordion title="Signal adapter not starting">
     Check that:
 
-    1. `signal_phone_number` is in the vault (re-seed with `pnpm run seed-vault` if unsure)
+    1. `signal_phone_number` is in the vault (check Settings → Channels → Signal in the console)
     2. The `signal-data` Docker volume is populated (see Step 1, Step 3 above)
     3. The `signal-cli` container is running: `docker compose ps`
 

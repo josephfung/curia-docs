@@ -9,11 +9,7 @@ This page documents every configurable setting in `config/local.yaml`. For initi
 
 Secrets are not configured in YAML or `.env`. They live in an [encrypted vault](/get-started/secrets-vault) (AES-256-GCM, stored in Postgres) and are resolved at runtime through a scoped accessor. Only four bootstrap values stay in `.env`: `DB_USER`, `DB_PASSWORD`, `DATABASE_URL`, and `SECRET_ENCRYPTION_KEY` (the base64 master key that decrypts the vault).
 
-**Seed a secret** by setting it transiently and running the seed script — the value is read from the process environment, encrypted, and stored under its canonical vault key:
-
-```bash
-ANTHROPIC_API_KEY=sk-ant-... pnpm run seed-vault
-```
+**Add or update vault secrets** via the Curia console (Settings → Channels for channel credentials) or through the initial `pnpm run setup` flow. See [Secrets vault](/get-started/secrets-vault) for vault key names and channel-by-channel guidance.
 
 **Rotate the master key** by supplying the old and new keys; every stored secret is re-encrypted under the new key:
 
@@ -210,7 +206,7 @@ model_routing:
       model: claude-sonnet-4-6
 ```
 
-To route a tier through OpenRouter (requires `OPENROUTER_API_KEY` in `.env`), set the model to an OpenRouter model ID:
+To route a tier through OpenRouter (requires `openrouter_api_key` in the vault), set the model to an OpenRouter model ID:
 
 ```yaml
 model_routing:

@@ -23,10 +23,9 @@ role: coordinator | specialist
 # Required — human-readable description of the agent's purpose
 description: string
 
-# Required — LLM model configuration
+# Required — LLM capability tier
 model:
-  provider: anthropic | openai | ollama   # LLM provider
-  model: string                            # model identifier (e.g. "claude-sonnet-4-6")
+  tier: fast | standard | powerful   # maps to a concrete model via config/local.yaml
 
 # Required — the system prompt injected on every task
 # Supports ${variable} interpolation for runtime values
@@ -74,13 +73,13 @@ Unique identifier used for routing, delegation, and logging. Must be unique acro
 
 ### `model`
 
-The LLM provider and model used for this agent's reasoning. Currently supported providers:
+The capability tier used to select the LLM for this agent. Tiers are mapped to concrete models by the operator in `config/local.yaml` under `model_routing.tiers` — see the [configuration reference](/references/configuration).
 
-| Provider | Example models |
-|---|---|
-| `anthropic` | `claude-sonnet-4-6`, `claude-haiku-4-5-20251001` |
-| `openai` | `gpt-4o`, `gpt-4o-mini` |
-| `ollama` | Any locally-hosted model |
+| Tier | Default model | Typical use |
+|---|---|---|
+| `fast` | Claude Haiku | High-frequency structured agents (calendar, contacts) |
+| `standard` | Claude Sonnet | General-purpose agents (coordinator, inbox) |
+| `powerful` | Claude Opus | Agents requiring maximum reasoning depth |
 
 ### `system_prompt`
 

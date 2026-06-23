@@ -37,9 +37,9 @@ You just ran `pnpm run setup`, logged in with your bootstrap secret, and the for
   <Step title="Add channels as you need them">
     After the first conversation closes, your instance is configured but minimal: it can answer questions, do web research, and manage memory. Add channels when you're ready:
 
-    - **Email** — set `NYLAS_API_KEY`, `NYLAS_GRANT_ID`, `NYLAS_SELF_EMAIL` in `.env` and recreate the container. See [installation §Email](/get-started/installation#email-nylas).
-    - **Signal** — register a phone with `signal-cli`, set `SIGNAL_PHONE_NUMBER`, and recreate. See [installation §Signal messaging](/get-started/installation#signal-messaging).
-    - **Web search** — set `TAVILY_API_KEY` and the `web-search` skill picks it up on next use (no restart needed).
+    - **Email** — add credentials via the Curia console (Settings → Channels → Email) and recreate the container. See [installation §Email](/get-started/installation#email-nylas).
+    - **Signal** — register a phone with `signal-cli`, add `signal_phone_number` via Settings → Channels → Signal, and recreate. See [installation §Signal messaging](/get-started/installation#signal-messaging).
+    - **Web search** — add `tavily_api_key` via Settings → Channels and enable the `web-search` skill from the registry.
 
     You can also ask the setup-wizard for help any time: "Help me set up Nylas" or "What can you do?" both route back to it.
   </Step>
@@ -69,7 +69,7 @@ Curia ships with the autonomy engine seeded at **score 75 (approval-required ban
 
 ## Connecting a second email account
 
-The single-account env-var setup connects one Nylas grant via `NYLAS_API_KEY`, `NYLAS_GRANT_ID`, and `NYLAS_SELF_EMAIL`. To run multiple accounts — say, a Curia-only address that sends autonomously and a personal address that always drafts for review — define them in `config/local.yaml` under `channel_accounts.email`. See [configuration §Multiple email accounts](/get-started/configuration#multiple-email-accounts) for the YAML shape.
+The default setup connects one Nylas grant (`nylas_api_key`, `nylas_grant_id`, `nylas_self_email` in the vault). To run multiple accounts — say, a Curia-only address that sends autonomously and a personal address that always drafts for review — define them in `config/local.yaml` under `channel_accounts.email`. See [configuration §Multiple email accounts](/get-started/configuration#multiple-email-accounts) for the YAML shape.
 
 After editing `local.yaml`, recreate the container so the dispatch layer picks up the new account map:
 
