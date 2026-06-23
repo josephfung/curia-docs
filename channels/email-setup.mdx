@@ -14,15 +14,11 @@ Email accounts are managed from **Settings → Channels → Email → Email acco
     Sign up at [app.nylas.com](https://app.nylas.com). The free tier is sufficient for development and small deployments.
   </Step>
 
-  <Step title="Create a Nylas application and seed the API key">
-    In the Nylas dashboard, create a new application and choose **Email** as the product. Once created, copy your **API key** and seed it into the vault — this is a one-time, app-level step shared across all email accounts:
-
-    ```bash
-    NYLAS_API_KEY=nyk_v0_... pnpm run seed-vault
-    ```
+  <Step title="Create a Nylas application and add the API key">
+    In the Nylas dashboard, create a new application and choose **Email** as the product. Once created, copy your **API key** and enter it in the Curia console under **Settings → Channels → Email** — this is a one-time, app-level step shared across all email accounts.
 
     <Tip>
-      Only `NYLAS_API_KEY` needs to be seeded manually. Individual account grants are connected through the console in the next step.
+      Only the Nylas API key needs to be entered here. Individual account grants are connected through the console in the next step.
     </Tip>
   </Step>
 
@@ -48,7 +44,7 @@ Email accounts are managed from **Settings → Channels → Email → Email acco
 </Steps>
 
 <Note>
-  You can connect as many email accounts as you need. All accounts share the same app-level `NYLAS_API_KEY`. The `account` parameter on email skills lets agents target a specific account by name; omit it to use Curia's own account.
+  You can connect as many email accounts as you need. All accounts share the same app-level Nylas API key (`nylas_api_key` in the vault). The `account` parameter on email skills lets agents target a specific account by name; omit it to use Curia's own account.
 </Note>
 
 ## Email skills
@@ -81,7 +77,7 @@ Outbound email skills (`email-send`, `email-reply`, and their CEO-inbox counterp
     NYLAS_API_KEY not set — email channel disabled
     ```
 
-    Confirm the API key is seeded with `pnpm run seed-vault`, then verify accounts are configured in the console. Recreate the container after any change.
+    Confirm the API key is in the vault (Settings → Channels → Email in the console), then verify accounts are configured in the console. Recreate the container after any change.
   </Accordion>
 
   <Accordion title="Messages not appearing">

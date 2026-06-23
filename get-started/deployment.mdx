@@ -25,7 +25,7 @@ The setup process is identical whether you're on a laptop or a server:
 - **The stack restarts automatically.** Both the `postgres` and `curia` services use `restart: unless-stopped`, so the instance comes back after a server reboot or a crash without manual intervention.
 - **Secrets live in the encrypted vault.** Application credentials are stored in the [vault](/get-started/secrets-vault), not in `.env`. Only four bootstrap values stay in `.env`: `DB_USER`, `DB_PASSWORD`, `DATABASE_URL`, and `SECRET_ENCRYPTION_KEY`. Treat `.env` as sensitive — back it up securely and keep it out of version control.
 - **Back up `SECRET_ENCRYPTION_KEY` separately and keep it safe.** It is the master key that decrypts the vault. If you lose it, every stored secret becomes unrecoverable and you have to re-seed the vault from scratch. Store a copy somewhere independent of the server (a password manager or secrets store).
-- **Applying configuration changes.** After seeding a vault secret (`VAR=value pnpm run seed-vault`) or editing `.env` on the server, recreate the container to pick up the change: `docker compose up -d --force-recreate curia`.
+- **Applying configuration changes.** After adding a vault secret via the console or editing `.env` on the server, recreate the container to pick up the change: `docker compose up -d --force-recreate curia`.
 
 ## Next steps
 

@@ -145,13 +145,7 @@ Declare secrets your skill needs in the `secrets` array in `skill.json`:
 "secrets": ["slack_bot_token"]
 ```
 
-Then seed the value into the [encrypted vault](/get-started/secrets-vault) — set it transiently and run the seed script:
-
-```bash
-SLACK_BOT_TOKEN=xoxb-... pnpm run seed-vault
-```
-
-The script stores it under the canonical key `slack_bot_token`. Access it in your handler via `ctx.secret('slack_bot_token')`. Values are resolved from the vault (with an env-var fallback applied at bootstrap); the LLM never sees the value — only your handler does.
+Then add the value to the [encrypted vault](/get-started/secrets-vault) under the key `slack_bot_token` — use the console (Settings → Channels) or `pnpm run setup` for initial seeding. Access it in your handler via `ctx.secret('slack_bot_token')`. The LLM never sees the value — only your handler does.
 
 If your skill should not be usable until its credential is configured, also declare the key in `install.requires_secrets`. The registry will then refuse to enable the skill until the secret is in the vault:
 
