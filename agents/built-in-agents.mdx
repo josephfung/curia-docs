@@ -13,7 +13,7 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 |---|---|
 | **Role** | coordinator |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Skills** | 30+ pinned skills (email, memory, scheduling, tasks, web research, autonomy, and more) |
+| **Skills** | 60+ pinned skills (email, memory, scheduling, tasks, web research, autonomy, Google Workspace, and more) |
 | **Discovery** | Enabled — can find and invoke skills not in its pinned list |
 | **Task management** | Enabled (`enable_task_management`) — owns and advances the task backlog |
 
@@ -50,16 +50,16 @@ A specialist agent that owns the full calendar domain.
 |---|---|
 | **Role** | specialist |
 | **Model** | Fast tier (Claude Haiku by default) |
-| **Skills** | calendar-*, date-resolve, email-send, email-reply, memory-query |
+| **Skills** | calendar-*, contact-lookup, entity-context, date-resolve, memory-query, memory-store, bullpen |
 | **Discovery** | Disabled |
 
 **What it handles:**
 - Scheduling intelligence — finds free time, resolves conflicts, and makes scheduling decisions based on stored CEO preferences
 - Free/busy queries across multiple calendars and participants
 - Event CRUD (create, update, delete) with timezone-aware slot finding
-- Scheduling-related email composition — meeting requests, reschedules, cancellations
+- Scheduling-related message drafting — meeting requests, reschedules, cancellations (the Calendar Specialist has no email skills; it returns the drafted text to the Coordinator to send)
 
-The Coordinator delegates scheduling intent in natural language ("schedule a 30-minute call with Sarah next week"). The Calendar Specialist resolves entities, queries memory for the CEO's scheduling preferences, finds available time, creates the event, and composes any outgoing email — returning the result to the Coordinator.
+The Coordinator delegates scheduling intent in natural language ("schedule a 30-minute call with Sarah next week"). The Calendar Specialist resolves entities, queries memory for the CEO's scheduling preferences, finds available time, creates the event, and drafts any outgoing message — returning the result to the Coordinator, which sends it.
 
 ## Contact Specialist
 
@@ -69,7 +69,7 @@ A specialist agent that owns the full contact domain.
 |---|---|
 | **Role** | specialist |
 | **Model** | Fast tier (Claude Haiku by default) |
-| **Skills** | contact-*, memory-query, memory-store, entity-context |
+| **Skills** | contact-*, scan-grant-recommendations, approve-grant-recommendation, decline-grant-recommendation, query-relationships, delete-relationship, calendar-list-events (read-only), scheduler-report, context-bridge-release, context-bridge-clear, entity-context, memory-query, memory-store |
 | **Discovery** | Disabled |
 
 **What it handles:**
@@ -88,7 +88,7 @@ A specialist agent for conducting web research and providing analysis.
 |---|---|
 | **Role** | specialist |
 | **Model** | Fast tier (Claude Haiku by default) |
-| **Skills** | web-search, web-fetch, memory-store, memory-query, entity-context, scheduler-create, scheduler-list, scheduler-cancel |
+| **Skills** | web-search, web-fetch, request-clarification, scheduler-create, scheduler-list, scheduler-cancel, memory-query, memory-store, contact-update |
 | **Discovery** | Disabled |
 
 **Research workflow:**
@@ -108,7 +108,7 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 |---|---|
 | **Role** | specialist |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Skills** | ceo-inbox-* (incl. `ceo-inbox-draft-compose`), task-* (via task management), contact-register, signal-send, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve |
+| **Skills** | ceo-inbox-* (incl. `ceo-inbox-draft-compose`), task-* (via task management), contact-register, contact-update, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve, scheduler-report, context-bridge-release, context-bridge-clear |
 | **Discovery** | Disabled |
 | **Task management** | Enabled (`enable_task_management`) |
 | **Schedule** | Every 15 minutes |
@@ -135,13 +135,13 @@ A specialist agent that owns the first-conversation experience after a new insta
 |---|---|
 | **Role** | specialist |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Skills** | behavioral-preferences-update, scheduler-create, scheduler-list, scheduler-cancel, skill-registry, memory-store, executive-profile-update |
+| **Skills** | setup-status, setup-defer, behavioral-preferences-update, scheduler-create, scheduler-list, scheduler-cancel, skill-registry, memory-store, executive-profile-update, system-secret-capture-request |
 | **Discovery** | Disabled |
 | **inject_specialists** | False |
 
 **When it runs:**
 - Auto-triggered on the first chat message after the form wizard at `/setup` completes. The chat view sends a one-shot kickoff message that the Coordinator routes here.
-- On demand when the principal asks "help me set up Nylas / Twilio / Signal / OpenAI" or similar — the specialist returns the env var names, restart instructions, and a note that in-app integration flows are coming in a future release.
+- On demand when the principal asks "help me set up Nylas / Signal / Tavily / OpenAI" or similar. For channel credentials (email, Signal) it hands off to the console (Settings → Channels) and confirms via `setup-status`; for one-key secrets (Tavily, OpenAI) it mints a one-time secure capture link via `system-secret-capture-request` so the key goes straight to the vault without the agent ever seeing it.
 - On "what can you do?" — returns a plain-language capability summary grouped by category.
 
 **First-conversation flow:**
@@ -160,7 +160,7 @@ A proactive specialist agent that scans the CEO's calendar for recently-ended ex
 |---|---|
 | **Role** | specialist |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Skills** | calendar-*, email-draft-save, email-send, scheduler-*, task-*, bullpen, memory-query, memory-store, config-store, entity-context |
+| **Skills** | calendar-list-events, calendar-create-event, calendar-check-conflicts, contact-lookup, email-draft-save, task-*, bullpen, memory-query, memory-store, config-store, entity-context, date-resolve, context-bridge-clear |
 | **Discovery** | Disabled |
 | **Schedule** | Every 5 minutes |
 

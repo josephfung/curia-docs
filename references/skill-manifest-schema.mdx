@@ -115,6 +115,9 @@ Declares which privileged services this skill needs from the execution layer. On
 | `tempFileStore` | Write binary buffers to tmpfs; returns `file://` URLs for MCP tool handoff |
 | `infraLlm` | Constrained LLM access — `classify()` and `extract()` only, no raw `chat()` |
 | `outboundContext` | Register/release outbound-context entries for delegation-aware reply correlation. Pre-scoped to the current conversation. |
+| `taskRepo` | Task backlog read/write — used by the `task-*` skills and the dedup scanner |
+| `secretCapture` | Mint-only minter for agent-initiated secret-capture links; returns a one-time link, never the secret value. Restricted to the capture-request skills. |
+| `secretResolver` | By-reference resolver for reading resolved vault secrets at run time. Hard allowlist — only `web-browser` may declare it. |
 
 Services not listed here (`contactService`, `entityContextAssembler`, `agentPersona`) are universal — available to every skill without declaration.
 

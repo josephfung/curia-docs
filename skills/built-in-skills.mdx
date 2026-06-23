@@ -3,7 +3,7 @@ title: "Built-in skills"
 description: "Catalog of the skills Curia ships with — organized by category, with action_risk levels and descriptions."
 ---
 
-Curia ships with 75+ skills organized into functional categories. Every skill declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it. Skills with `action_risk: none` can always run; higher-risk skills trigger the [approval workflow](/security/approval-workflow) when the score is below their floor.
+Curia ships with 90+ skills organized into functional categories. Every skill declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it. Skills with `action_risk: none` can always run; higher-risk skills trigger the [approval workflow](/security/approval-workflow) when the score is below their floor.
 
 ## Contact management
 
@@ -20,10 +20,14 @@ Curia ships with 75+ skills organized into functional categories. Every skill de
 | `contact-grant-permission` | low | Grant a specific permission to a contact |
 | `contact-revoke-permission` | low | Revoke a permission from a contact |
 | `contact-merge` | low | Merge duplicate contacts (supports dry-run preview) |
-| `contact-find-duplicates` | none | Scan for potential duplicate contacts |
+| `contact-find-duplicates` | low | Scan for potential duplicate contacts |
 | `contact-register` | low | Register or resolve a contact from outside the dispatcher pipeline (used by direct-channel agents such as ceo-inbox) |
 | `contact-set-identity-status` | low | Mark a channel identity as `active`, `defunct`, or `bounced` |
 | `contact-update` | low | Set a contact's canonical attributes (title, organization, primary email/phone, timezone, location, pronouns, and more); phone numbers are normalized to E.164 |
+| `contact-dedup-exclude` | low | Record a permanent exclusion so a pair of contacts is never proposed as duplicates again; pinned exclusively to the contacts agent |
+| `scan-grant-recommendations` | none | Scan contacts and proactively suggest capability grants for those who have earned them through demonstrated trust patterns (runs on a schedule, not on request) |
+| `approve-grant-recommendation` | low | Approve a pending grant recommendation and immediately grant the underlying permission to the contact |
+| `decline-grant-recommendation` | low | Decline a pending grant recommendation; permanently suppresses it so Curia never surfaces that recommendation again |
 
 ## Email
 
@@ -34,7 +38,7 @@ Curia ships with 75+ skills organized into functional categories. Every skill de
 | `email-list` | none | List recent messages in an inbox |
 | `email-get` | none | Fetch the full body of a specific message |
 | `email-draft-save` | low | Save a draft reply for CEO review |
-| `send-draft` | medium | Send a previously saved draft |
+| `send-draft` | none | Send a previously saved draft |
 | `email-archive` | low | Archive a message |
 | `context-for-email` | none | Assemble context for composing an email |
 | `email-label` | low | Apply one or more labels to an email message (creates the label if it doesn't exist) |
@@ -42,7 +46,7 @@ Curia ships with 75+ skills organized into functional categories. Every skill de
 | `email-list-folders` | none | List all folders and labels in an email account |
 | `email-create-folder` | low | Create a new folder or label in an email account |
 | `email-download-attachment` | low | Download an email attachment and return content as base64 (10 MB limit) |
-| `drive-download-file` | low | Download a Google Drive file (native or Google-native export) to the temp-file store and return a `file://` URL, so Drive files can be attached to outbound email |
+| `drive-download-file` | none | Download a Google Drive file (native or Google-native export) to the temp-file store and return a `file://` URL, so Drive files can be attached to outbound email |
 
 ## CEO Inbox
 
@@ -68,7 +72,7 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 | Skill | action_risk | Description |
 |---|---|---|
 | `calendar-list-calendars` | none | List all registered calendars |
-| `calendar-register` | low | Register a new calendar |
+| `calendar-register` | high | Register a new calendar |
 | `calendar-list-events` | none | List events in a date range |
 | `calendar-create-event` | high | Create a new calendar event |
 | `calendar-update-event` | high | Update an existing event |
@@ -94,9 +98,9 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `scheduler-create` | high | Create a recurring or one-shot scheduled task |
+| `scheduler-create` | low | Create a recurring or one-shot scheduled task |
 | `scheduler-list` | none | List active scheduled jobs |
-| `scheduler-cancel` | high | Cancel a scheduled job |
+| `scheduler-cancel` | low | Cancel a scheduled job |
 | `scheduler-report` | none | Generate a report on scheduled task activity (system skill) |
 
 ## Tasks
@@ -117,8 +121,8 @@ Track deferred, multi-step, and waiting work in the unified [tasks backlog](/cor
 | `signal-send` | medium | Send a Signal message. Accepts an optional `context_bridge` JSON for delegation-aware reply routing. |
 | `bullpen` | low | Open or contribute to an inter-agent discussion thread |
 | `request-clarification` | none | Pause a delegated task mid-execution to ask the CEO a clarifying question; the runtime short-circuits the tool loop and returns a typed result with a resume token so the coordinator can re-delegate seamlessly once the CEO replies |
-| `context-bridge-release` | none | Coordinator-only — explicitly close an active outbound-context entry once the LLM detects a conversation thread has ended, freeing the slot before TTL expiry |
-| `context-bridge-clear` | none | Release all active outbound-context entries for a named meeting subject across the full active table; used by the meeting-debrief agent after "clear meeting X" to ensure every entry is freed, not just the one in the injected window |
+| `context-bridge-release` | low | Coordinator-only — explicitly close an active outbound-context entry once the LLM detects a conversation thread has ended, freeing the slot before TTL expiry |
+| `context-bridge-clear` | low | Release all active outbound-context entries for a named meeting subject across the full active table; used by the meeting-debrief agent after "clear meeting X" to ensure every entry is freed, not just the one in the injected window |
 
 ## Web research
 
@@ -126,30 +130,31 @@ Track deferred, multi-step, and waiting work in the unified [tasks backlog](/cor
 |---|---|---|
 | `web-search` | none | Search the web via Tavily. Requires `tavily_api_key` in the vault — declared in `install.requires_secrets`, so the registry will not enable the skill until the key is provisioned. |
 | `web-fetch` | none | Fetch and extract content from a URL |
-| `web-browser` | none | Interact with JavaScript-rendered pages via Playwright |
+| `web-browser` | medium | Interact with JavaScript-rendered pages via Playwright |
 
 ## File parsing
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `file-parse` | none | Extract structured data from CSV, PDF, HTML, and image files. Accepts either inline `content_base64` or a `temp_file_url` pointing at a file in the configured `CURIA_TEMPFILE_DIR` (paths are validated against the base directory). |
+| `file-parse` | medium | Extract structured data from CSV, PDF, HTML, and image files. Accepts either inline `content_base64` or a `temp_file_url` pointing at a file in the configured `CURIA_TEMPFILE_DIR` (paths are validated against the base directory). |
 
 ## Templates
 
 | Skill | action_risk | Description |
 |---|---|---|
-| `template-doc-request` | medium | Generate a document request |
+| `template-doc-request` | none | Generate a document request |
 
 ## Autonomy
 
 | Skill | action_risk | Description |
 |---|---|---|
 | `get-autonomy` | none | Read the current autonomy score, trend, and history |
-| `set-autonomy` | critical | Change the autonomy score (CEO only) |
+| `set-autonomy` | high | Change the autonomy score (CEO only) |
 | `list-pending-actions` | none | List all open approval requests |
 | `approve-action` | none | Approve a pending Curia action request |
 | `deny-action` | none | Deny a pending action request |
 | `dismiss-action` | none | Dismiss a pending request without approving or denying |
+| `approval-expiry-sweep` | none | Expire stale pending approval requests and notify the CEO of any high/critical expirations (runs on a schedule) |
 
 ## System and utility
 
@@ -157,13 +162,16 @@ Track deferred, multi-step, and waiting work in the unified [tasks backlog](/cor
 |---|---|---|
 | `delegate` | none | Delegate a task to a specialist agent |
 | `executive-profile-get` | none | Get the CEO's writing voice profile |
-| `executive-profile-update` | low | Update the CEO's writing voice profile |
+| `executive-profile-update` | medium | Update the CEO's writing voice profile |
 | `behavioral-preferences-update` | low | Append or replace entries in `OfficeIdentity.behavioralPreferences` (used by the [setup-wizard](/agents/built-in-agents#setup-wizard) and any "remember that I…" turn) |
 | `config-store` | low | Read or write namespaced persistent configuration (company info, meeting links, travel preferences, loyalty programs, writing config, and more) |
 | `image-generate` | low | Generate an image |
 | `skill-registry` | none | Search all registered skills by keyword |
 | `setup-status` | none | Return the setup catalog with each task's live-derived status (`done` / `pending` / `deferred`); used by the setup-wizard agent to surface what still needs to be configured |
 | `setup-defer` | low | Persist or clear a deferral for a named setup task; deferred tasks are skipped by the setup-wizard until explicitly resumed |
+| `date-resolve` | none | Verify or resolve dates deterministically (day-of-week for a date, relative expressions like "next Monday"). LLMs are unreliable at date arithmetic, so agents call this instead of computing dates themselves |
+| `secret-capture-request` | low | Mint a one-time, 30-minute link for the user to enter a new personal secret (e.g. a website password) straight into the vault under a `user.<slug>` key; the skill returns only the link and never sees the value |
+| `system-secret-capture-request` | none | Mint a one-time, 30-minute link for the user to enter a system secret (an API key or channel credential) during setup; value goes straight to the vault, never seen by the agent. Setup-wizard only |
 
 <CardGroup cols={2}>
   <Card title="Building custom skills" icon="plus" href="/skills/building-custom-skills">

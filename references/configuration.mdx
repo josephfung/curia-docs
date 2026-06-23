@@ -22,6 +22,20 @@ pnpm exec tsx scripts/rotate-secret-key.ts
 
 After rotation, replace `SECRET_ENCRYPTION_KEY` in `.env` with the new key and recreate the container. See [Secrets vault](/get-started/secrets-vault) for the full workflow, the canonical key names, and backup guidance.
 
+## Channels
+
+Top-level channel settings. Per-channel credentials live in the vault (see above); this block controls channel-wide behavior. Signal activation is driven by vault credentials, not this file.
+
+```yaml
+# config/local.yaml
+channels:
+  cli:
+    enabled: true          # the local CLI channel (always-on, not toggleable at runtime)
+  max_message_bytes: 102400 # 100 KB — inbound messages larger than this are rejected before routing
+```
+
+`max_message_bytes` is the hard cap on a single inbound message across all channels; oversized messages are dropped before they reach an agent.
+
 ## Rate limiting
 
 Curia enforces two independent rate limits in the dispatch layer to protect against message flooding from malfunctioning channels, abusive senders, or compromised integrations.
@@ -63,6 +77,22 @@ All skill results are sanitized and truncated before being fed to the LLM. Raise
 skillOutput:
   maxLength: 200000   # characters (~50k tokens at 4 chars/token)
 ```
+
+## Web browser
+
+Controls the headless browser the `web-browser` skill drives (Playwright). Sessions are pooled and swept on a timer so logins can persist across calls without leaking idle browser processes.
+
+```yaml
+# config/local.yaml
+browser:
+  sessionTtlMs: 600000     # how long a session stays alive after its last action (10 min)
+  sweepIntervalMs: 120000  # how often expired sessions are swept (2 min)
+  profileDir: ""           # persistent profile dir; empty → ${HOME}/.curia/browser-profile
+  channel: ""              # "chrome" for real Chrome (must be in the image); empty → bundled Playwright Chromium
+  locale: "en-US"          # context locale (BCP 47)
+```
+
+Mount `profileDir` on a volume in production so browser logins survive container restarts.
 
 ## Security rules
 
@@ -140,6 +170,35 @@ skillOutput:
     </Warning>
   </Accordion>
 </AccordionGroup>
+
+## Outbound content filter (LLM judge)
+
+Stage 2 of the outbound content filter is a single-purpose LLM judge that blocks messages leaking internal monologue, system/agent status, or side-channel notes to a mixed audience. Stage 1 (deterministic rules) always runs and has no config. The judge is skipped entirely when the principal is the sole recipient. Use a different model family than your agent tiers for diversity — an attack tuned for the coordinator should not also fool the reviewer.
+
+```yaml
+# config/local.yaml
+filter:
+  llmJudge:
+    enabled: true
+    model: claude-haiku-4-5
+    timeout_ms: 5000
+    failMode: split   # split (default) | open | closed
+```
+
+`failMode` controls what happens on judge timeout or error: `split` sends to principal-only recipients but blocks mixed-audience sends, `open` sends anyway, `closed` blocks.
+
+## Escalation policy judge
+
+A separate LLM judge classifies outbound disclosures and proposed actions, then maps trust tier × class to allow or escalate. It is fail-closed: on timeout or error the action escalates. As with the content filter, prefer a different model family than the coordinator.
+
+```yaml
+# config/local.yaml
+escalation:
+  judge:
+    enabled: true
+    model: claude-haiku-4-5
+    timeout_ms: 5000
+```
 
 ## Contact creation limits
 
