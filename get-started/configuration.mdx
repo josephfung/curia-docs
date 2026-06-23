@@ -6,7 +6,7 @@ description: "Set up environment variables, LLM providers, email, and Signal for
 Curia uses two configuration layers: a `config/default.yaml` file that ships with the repository and defines all defaults, and a `config/local.yaml` file that you create to override specific values for your deployment. Secrets — API keys, credentials, and tokens — live in an [encrypted vault](/get-started/secrets-vault), not in `.env` and not in YAML files. Only the four values needed to reach and unlock that vault, plus non-secret deployment config, stay in `.env`.
 
 <Note>
-  First-time setup configures everything for you. `pnpm run setup` writes the four bootstrap values to `.env`, prompts for your Anthropic API key, and seeds it (along with the generated API token and login secret) into the encrypted vault after migrations. The in-app setup wizard then captures your assistant's identity, voice, and decision posture conversationally. This page covers everything you might want to change later — additional channels, multiple email accounts, custom LLM routing, and adding secrets to the vault.
+  First-time setup configures everything for you. `pnpm run setup` writes the four bootstrap values to `.env`, prompts for your Anthropic API key, and seeds it (along with the generated API token and login secret) into the encrypted vault after migrations. The in-app setup wizard then captures your identity, operational details, and the assistant's voice and posture. This page covers everything you might want to change later — channels, MCP skill credentials, custom LLM routing, and adding secrets to the vault.
 </Note>
 
 <Warning>
@@ -39,7 +39,6 @@ intentDrift:
 | `DB_PASSWORD` | Yes | PostgreSQL password. |
 | `DATABASE_URL` | Yes | Postgres connection string. Constructed from `DB_USER`, `DB_PASSWORD`, and `POSTGRES_PORT` by `pnpm run setup`. |
 | `SECRET_ENCRYPTION_KEY` | Yes | Base64-encoded 32-byte AES-256 master key that encrypts the vault. Generate with `openssl rand -base64 32`; `pnpm run setup` fills it in. **Back this up — losing it makes the vault unrecoverable.** |
-| `CEO_PRIMARY_EMAIL` | No | Your primary email address. Ensures your messages are never held as an unknown sender at startup. |
 | `TIMEZONE` | No | IANA timezone (e.g. `America/Toronto`). Used to resolve relative dates in agent prompts. |
 | `HTTP_PORT` / `POSTGRES_PORT` | No | Host ports for the app and Postgres. Defaults `3000` / `5432`. |
 | `NYLAS_POLL_INTERVAL_MS` | No | Email poll interval in ms (default `30000`). Non-secret. |
@@ -50,7 +49,6 @@ DB_USER=curia
 DB_PASSWORD=<generated-by-setup>
 DATABASE_URL=postgres://curia:<password>@localhost:5432/curia
 SECRET_ENCRYPTION_KEY=<openssl rand -base64 32>
-CEO_PRIMARY_EMAIL=you@yourdomain.com
 TIMEZONE=America/Toronto
 ```
 
@@ -83,19 +81,17 @@ The script maps each environment variable to its canonical vault key:
   </Accordion>
 
   <Accordion title="Email (Nylas)">
-    All three must be present in the vault for the single-account email channel to activate. If any is missing, the channel disables itself at startup.
+    Only the app-level API key needs to be seeded into the vault. Individual email account grants are managed from the console (Settings → Channels → Email → Email accounts) — they are stored automatically in the vault when you connect an account.
 
     | Env var (transient) | Vault key | Notes |
     |---|---|---|
-    | `NYLAS_API_KEY` | `nylas_api_key` | Application API key from the Nylas dashboard. |
-    | `NYLAS_GRANT_ID` | `nylas_grant_id` | Identifier for the connected email account (from Nylas Grants). |
-    | `NYLAS_SELF_EMAIL` | `nylas_self_email` | The email address Curia reads and sends from. |
+    | `NYLAS_API_KEY` | `nylas_api_key` | Application API key from the Nylas dashboard. Required for the email channel to start. |
 
     ```bash
-    NYLAS_API_KEY=nyk_v0_... NYLAS_GRANT_ID=<grant-id> NYLAS_SELF_EMAIL=curia@yourdomain.com pnpm run seed-vault
+    NYLAS_API_KEY=nyk_v0_... pnpm run seed-vault
     ```
 
-    For multiple email accounts, see [Multiple email accounts](#multiple-email-accounts) below.
+    See [Email setup](/channels/email-setup) for the full walkthrough.
   </Accordion>
 
   <Accordion title="Signal">
@@ -114,31 +110,6 @@ The script maps each environment variable to its canonical vault key:
     The `web-search` skill declares `tavily_api_key` in its `install.requires_secrets`, so the registry will not let you enable it until the key is in the vault. See [Managing skills, agents, and channels](/core-concepts/registry).
   </Accordion>
 </AccordionGroup>
-
-## Multiple email accounts
-
-The default Nylas setup connects a single email account via environment variables. To connect multiple accounts, define them in `config/local.yaml` using `channel_accounts.email`.
-
-Each account has a logical name, a Nylas grant ID, and a self-email address. Outbound sending is governed globally by the [autonomy engine](/core-concepts/autonomy) — when the score is below the skill's `action_risk` floor, sends are blocked and saved as drafts instead.
-
-```yaml
-# config/local.yaml
-channel_accounts:
-  email:
-    curia:
-      nylas_grant_id: "env:NYLAS_GRANT_ID_CURIA"
-      self_email:     "env:NYLAS_SELF_EMAIL_CURIA"
-
-    personal:
-      nylas_grant_id: "env:NYLAS_GRANT_ID_PERSONAL"
-      self_email:     "env:NYLAS_SELF_EMAIL_PERSONAL"
-```
-
-Use `env:VAR_NAME` to reference environment variables rather than inlining credential values directly in the YAML file.
-
-<Note>
-  When `channel_accounts.email` is present in `config/local.yaml`, the single-account mode sourced from the vault keys `nylas_api_key` / `nylas_grant_id` / `nylas_self_email` is ignored.
-</Note>
 
 ## Next steps
 

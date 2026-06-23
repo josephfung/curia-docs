@@ -118,6 +118,7 @@ Track deferred, multi-step, and waiting work in the unified [tasks backlog](/cor
 | `bullpen` | low | Open or contribute to an inter-agent discussion thread |
 | `request-clarification` | none | Pause a delegated task mid-execution to ask the CEO a clarifying question; the runtime short-circuits the tool loop and returns a typed result with a resume token so the coordinator can re-delegate seamlessly once the CEO replies |
 | `context-bridge-release` | none | Coordinator-only — explicitly close an active outbound-context entry once the LLM detects a conversation thread has ended, freeing the slot before TTL expiry |
+| `context-bridge-clear` | none | Release all active outbound-context entries for a named meeting subject across the full active table; used by the meeting-debrief agent after "clear meeting X" to ensure every entry is freed, not just the one in the injected window |
 
 ## Web research
 
@@ -161,6 +162,8 @@ Track deferred, multi-step, and waiting work in the unified [tasks backlog](/cor
 | `config-store` | low | Read or write namespaced persistent configuration (company info, meeting links, travel preferences, loyalty programs, writing config, and more) |
 | `image-generate` | low | Generate an image |
 | `skill-registry` | none | Search all registered skills by keyword |
+| `setup-status` | none | Return the setup catalog with each task's live-derived status (`done` / `pending` / `deferred`); used by the setup-wizard agent to surface what still needs to be configured |
+| `setup-defer` | low | Persist or clear a deferral for a named setup task; deferred tasks are skipped by the setup-wizard until explicitly resumed |
 
 <CardGroup cols={2}>
   <Card title="Building custom skills" icon="plus" href="/skills/building-custom-skills">

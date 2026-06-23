@@ -62,9 +62,9 @@ Before you start, install the following:
   <Step title="Log in and finish in the app">
     Open [http://localhost:3000](http://localhost:3000) and enter your bootstrap secret to create your account.
 
-    Once you're in, the **setup wizard** at `/setup` runs automatically. It's a short five-step form: your name (the CEO Curia works for), the assistant's identity, baseline tone, decision-making posture, and a review screen. Submitting the last step writes everything through, restarts external channels if needed, and drops you directly into the chat view at `/chat`.
+    Once you're in, the **setup wizard** at `/setup` runs automatically. It's a six-step form: your name (the CEO Curia works for), your operational details (timezone, email, working hours), the assistant's identity, baseline tone, decision-making posture, and a review screen. Submitting the last step writes everything through, restarts external channels if needed, and drops you directly into the chat view at `/chat`.
 
-    At `/chat`, Curia greets you, asks what takes up most of your time, and walks through working hours and a recommended debrief cadence — this is the **setup-wizard specialist agent** running its first-conversation flow. Reply to it the same way you'd talk to any other agent; the preferences it captures get appended to the same office identity the form wizard wrote. The whole personalization step takes a few minutes and makes every subsequent interaction noticeably more useful.
+    At `/chat`, the **setup-wizard specialist agent** greets you and takes an outcome-backward approach: it surfaces what's already done, asks what you most want Curia to do for you, and walks you to the shortest path to that first working integration. Remaining tasks can be deferred and picked up in any future session. The whole thing takes a few minutes and makes every subsequent interaction noticeably more useful.
 
     <Note>
       Checkpoint: Curia is running on Anthropic and Postgres. Agents are live, the web app is working, and the assistant knows enough about you to be useful. Add email, semantic search, or Signal below whenever you need them.
