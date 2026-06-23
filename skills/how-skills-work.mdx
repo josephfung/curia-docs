@@ -36,9 +36,18 @@ Curia supports two types of skills, and agents work with both using the same int
           Authorization: "Bearer <token>"
         action_risk: low
         permissions: ["workspace:read", "workspace:write"]
+        secrets:                        # optional — declare vault keys this server needs
+          - key: google_oauth_client_id
+            label: "Google OAuth Client ID"
+            masked: false
+          - key: google_oauth_client_secret
+            label: "Google OAuth Client Secret"
+            masked: true
     ```
 
     Supported transports are `http` (StreamableHTTP, recommended for hosted servers) and `stdio` (local subprocess).
+
+    **MCP credential management.** When a server declares a `secrets:` block, Curia registers the required keys in the console under **Settings → MCP Skills**. Each key gets a labelled input field (masked or plain text based on `masked`), and the console writes the value to the encrypted vault. The server is only enabled once all declared secrets are present — the same gate used by local skills' `install.requires_secrets`. At spawn time, the vault values are injected into the subprocess environment so the MCP server can read them without Curia hardcoding credentials in the config file.
   </Tab>
 </Tabs>
 
