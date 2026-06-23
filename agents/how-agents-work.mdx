@@ -23,8 +23,7 @@ name: coordinator
 role: coordinator
 description: Central coordinator — routes all messages, delegates to specialists, maintains the unified persona
 model:
-  provider: anthropic
-  model: claude-sonnet-4-6
+  tier: standard
 system_prompt: |
   You are Alex, executive assistant to the CEO.
   You are the single point of contact for all communications.
@@ -53,8 +52,7 @@ name: research-analyst
 role: specialist
 description: Conducts web research, summarizes findings, and provides analysis
 model:
-  provider: anthropic
-  model: claude-sonnet-4-6
+  tier: fast
 system_prompt: |
   You are a research analyst working as part of an executive assistant team.
   Conduct thorough research and provide clear, actionable summaries.
@@ -79,11 +77,7 @@ name: expense-tracker
 description: Tracks and categorizes expenses from receipts and emails
 
 model:
-  provider: anthropic
-  model: claude-sonnet-4-6
-  fallback:
-    provider: openai
-    model: gpt-4o
+  tier: standard
 
 system_prompt: |
   You are an expense tracking assistant for a CEO.
@@ -111,9 +105,7 @@ error_budget:
 
 | Field | Description |
 |---|---|
-| `model.provider` | LLM provider: `anthropic`, `openai`, or `ollama` |
-| `model.model` | Model identifier for the chosen provider |
-| `model.fallback` | Optional fallback provider + model if the primary is unavailable |
+| `model.tier` | Capability tier: `fast`, `standard`, or `powerful` — mapped to a concrete model by the operator in config |
 | `pinned_skills` | Skills always available to this agent in every task |
 | `allow_discovery` | When `true`, the agent can search the skill registry for capabilities not in its pinned list |
 | `memory.scopes` | Named memory scopes the agent can read from and write to |
@@ -121,20 +113,22 @@ error_budget:
 | `error_budget.max_turns` | Maximum LLM round-trips per task execution — hard cap |
 | `error_budget.max_cost_usd` | Maximum dollar spend per task execution — hard cap |
 
-### Model configuration and fallback
+### Model tiers
 
-Each agent specifies its own LLM provider and model. If the primary provider is unavailable, Curia automatically switches to the configured fallback — no manual intervention required.
+Each agent declares a capability tier rather than a specific model. The operator maps tiers to concrete models in `config/local.yaml`, so the same agent YAML works across deployments with different model choices.
 
 ```yaml
 model:
-  provider: anthropic
-  model: claude-sonnet-4-6
-  fallback:
-    provider: openai
-    model: gpt-4o
+  tier: standard   # fast | standard | powerful
 ```
 
-Supported providers are Anthropic (Claude), OpenAI (GPT-4o and variants), and Ollama for local models where no data leaves your server.
+| Tier | Default model | Use for |
+|---|---|---|
+| `fast` | Claude Haiku | High-frequency specialist agents — structured lookups, calendar ops, contact work |
+| `standard` | Claude Sonnet | General-purpose agents — coordinator, inbox, meeting debrief |
+| `powerful` | Claude Opus | Agents requiring maximum reasoning depth (rarely needed) |
+
+The tier-to-model mapping is controlled in `config/local.yaml` under `model_routing.tiers`. See the [configuration reference](/references/configuration) for details.
 
 ### Error budgets
 

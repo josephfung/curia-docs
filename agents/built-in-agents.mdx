@@ -12,7 +12,7 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 | Field | Value |
 |---|---|
 | **Role** | coordinator |
-| **Model** | Claude Sonnet |
+| **Model** | Standard tier (Claude Sonnet by default) |
 | **Skills** | 30+ pinned skills (email, memory, scheduling, tasks, web research, autonomy, and more) |
 | **Discovery** | Enabled — can find and invoke skills not in its pinned list |
 | **Task management** | Enabled (`enable_task_management`) — owns and advances the task backlog |
@@ -49,7 +49,7 @@ A specialist agent that owns the full calendar domain.
 | Field | Value |
 |---|---|
 | **Role** | specialist |
-| **Model** | Claude Sonnet |
+| **Model** | Fast tier (Claude Haiku by default) |
 | **Skills** | calendar-*, date-resolve, email-send, email-reply, memory-query |
 | **Discovery** | Disabled |
 
@@ -68,7 +68,7 @@ A specialist agent that owns the full contact domain.
 | Field | Value |
 |---|---|
 | **Role** | specialist |
-| **Model** | Claude Sonnet |
+| **Model** | Fast tier (Claude Haiku by default) |
 | **Skills** | contact-*, memory-query, memory-store, entity-context |
 | **Discovery** | Disabled |
 
@@ -87,7 +87,7 @@ A specialist agent for conducting web research and providing analysis.
 | Field | Value |
 |---|---|
 | **Role** | specialist |
-| **Model** | Claude Sonnet |
+| **Model** | Fast tier (Claude Haiku by default) |
 | **Skills** | web-search, web-fetch, memory-store, memory-query, entity-context, scheduler-create, scheduler-list, scheduler-cancel |
 | **Discovery** | Disabled |
 
@@ -107,7 +107,7 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 | Field | Value |
 |---|---|
 | **Role** | specialist |
-| **Model** | Claude Sonnet |
+| **Model** | Standard tier (Claude Sonnet by default) |
 | **Skills** | ceo-inbox-* (incl. `ceo-inbox-draft-compose`), task-* (via task management), contact-register, signal-send, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve |
 | **Discovery** | Disabled |
 | **Task management** | Enabled (`enable_task_management`) |
@@ -134,7 +134,7 @@ A specialist agent that owns the first-conversation experience after a new insta
 | Field | Value |
 |---|---|
 | **Role** | specialist |
-| **Model** | Claude Sonnet |
+| **Model** | Standard tier (Claude Sonnet by default) |
 | **Skills** | behavioral-preferences-update, scheduler-create, scheduler-list, scheduler-cancel, skill-registry, memory-store, executive-profile-update |
 | **Discovery** | Disabled |
 | **inject_specialists** | False |
@@ -159,7 +159,7 @@ A proactive specialist agent that scans the CEO's calendar for recently-ended ex
 | Field | Value |
 |---|---|
 | **Role** | specialist |
-| **Model** | Claude Sonnet |
+| **Model** | Standard tier (Claude Sonnet by default) |
 | **Skills** | calendar-*, email-draft-save, email-send, scheduler-*, task-*, bullpen, memory-query, memory-store, config-store, entity-context |
 | **Discovery** | Disabled |
 | **Schedule** | Every 5 minutes |
