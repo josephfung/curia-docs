@@ -1,9 +1,9 @@
 ---
 title: "GET /api/health — instance health check endpoint"
-description: "Returns the live status of your Curia instance including database connectivity, registered agents, and loaded skills. No authentication required."
+description: "Returns the live status of your Curia instance across seven service checks. No authentication required. Returns 503 only when a critical service (database or bus) is unreachable."
 ---
 
-`GET /api/health` tells you whether your Curia instance is running and healthy. It checks database connectivity, reports which agents and skills are loaded, and returns how long the server has been up. Because no authentication is required, you can point any uptime monitor or load balancer health probe directly at this endpoint without managing tokens.
+`GET /api/health` reports whether your Curia instance is healthy. It checks seven services in real time — database, message bus, email, Signal, browser automation, Google Workspace, and the task scheduler — and returns a single `status` field that summarises the result. No authentication is required, so you can point any uptime monitor or load balancer probe directly at this endpoint.
 
 ## Request
 
@@ -14,31 +14,69 @@ GET /api/health
 No `Authorization` header is needed. The endpoint is intentionally open so monitoring infrastructure can reach it without credentials.
 
 ```bash
-curl http://localhost:3000/api/health
+curl https://your-curia-instance.example.com/api/health
 ```
 
+Rate-limited to 60 requests per minute.
+
 ## Response
+
+### Status values
+
+| `status` | HTTP | Meaning |
+|---|---|---|
+| `ok` | `200` | All enabled checks pass |
+| `degraded` | `200` | A non-critical service is down (Signal, email, browser, MCP, or scheduler) |
+| `down` | `503` | A critical service is unreachable (database or bus) — Curia cannot function |
+
+Both `ok` and `degraded` return `200`. Your uptime monitor should watch for `503` to detect outages, and optionally check the response body for `"status":"degraded"` to catch softer failures.
 
 ### Response fields
 
 <ResponseField name="status" type="string" required>
-  Overall health of the instance. Either `"ok"` (all systems nominal) or `"degraded"` (at least one subsystem has a problem — typically the database).
+  Overall health of the instance: `"ok"`, `"degraded"`, or `"down"`. See the table above for semantics.
 </ResponseField>
 
-<ResponseField name="database" type="string" required>
-  Database connectivity status. Either `"connected"` (a `SELECT 1` probe succeeded) or `"disconnected"` (the probe failed). When this is `"disconnected"`, `status` will be `"degraded"` and the HTTP response code will be `503`.
+<ResponseField name="uptime_s" type="number" required>
+  Seconds since the HTTP server started. Resets to `0` on each restart.
 </ResponseField>
 
-<ResponseField name="agents" type="string[]" required>
-  The names of all agents registered at startup. Use this to verify that your agent configuration loaded correctly.
-</ResponseField>
+<ResponseField name="checks" type="object" required>
+  Per-service check results. Each value is `"ok"`, `"fail"`, or `"skipped"`. A `"skipped"` result means the service is not configured and is excluded from the overall status calculation.
 
-<ResponseField name="skills" type="string[]" required>
-  The names of all skills loaded at startup. Use this to confirm that skill manifests were found and parsed successfully.
-</ResponseField>
+  <Expandable title="checks fields">
+    <ResponseField name="checks.db" type="string" required>
+      Database connectivity. `"fail"` causes `status: "down"` and a `503` response.
+    </ResponseField>
 
-<ResponseField name="uptime" type="number" required>
-  Seconds since the HTTP server started. This resets to `0` on each restart.
+    <ResponseField name="checks.bus" type="string" required>
+      Internal message bus. `"fail"` causes `status: "down"` and a `503` response.
+    </ResponseField>
+
+    <ResponseField name="checks.email" type="string" required>
+      Email adapter (Nylas). `"skipped"` when email is not configured.
+    </ResponseField>
+
+    <ResponseField name="checks.signal" type="string" required>
+      Signal-cli socket. `"skipped"` when Signal is not configured.
+    </ResponseField>
+
+    <ResponseField name="checks.browser" type="string" required>
+      Playwright browser context. `"skipped"` when browser automation is not configured.
+    </ResponseField>
+
+    <ResponseField name="checks.mcp" type="object" required>
+      MCP server checks, keyed by server name. Each value is `"ok"`, `"fail"`, or `"skipped"`.
+
+      ```json
+      "mcp": { "google_workspace": "ok" }
+      ```
+    </ResponseField>
+
+    <ResponseField name="checks.scheduler" type="string" required>
+      Task scheduler heartbeat. `"fail"` if the scheduler has not ticked within its expected window.
+    </ResponseField>
+  </Expandable>
 </ResponseField>
 
 ### Healthy response (200)
@@ -46,61 +84,95 @@ curl http://localhost:3000/api/health
 ```json
 {
   "status": "ok",
-  "database": "connected",
-  "agents": ["coordinator", "researcher"],
-  "skills": ["get-calendar-events", "send-email", "web-search"],
-  "uptime": 3842
+  "uptime_s": 3812,
+  "checks": {
+    "db":        "ok",
+    "bus":       "ok",
+    "signal":    "skipped",
+    "email":     "ok",
+    "browser":   "ok",
+    "mcp":       { "google_workspace": "ok" },
+    "scheduler": "ok"
+  }
 }
 ```
 
-### Degraded response (503)
+### Degraded response (200)
 
-When the database is unreachable, the endpoint returns `503 Service Unavailable`:
+A non-critical service is down. The instance is still operational — other services continue to work.
 
 ```json
 {
   "status": "degraded",
-  "database": "disconnected",
-  "agents": ["coordinator", "researcher"],
-  "skills": ["get-calendar-events", "send-email", "web-search"],
-  "uptime": 120
+  "uptime_s": 7200,
+  "checks": {
+    "db":        "ok",
+    "bus":       "ok",
+    "signal":    "fail",
+    "email":     "ok",
+    "browser":   "skipped",
+    "mcp":       { "google_workspace": "skipped" },
+    "scheduler": "ok"
+  }
+}
+```
+
+### Down response (503)
+
+A critical service (database or bus) is unreachable. Curia cannot process agent requests.
+
+```json
+{
+  "status": "down",
+  "uptime_s": 120,
+  "checks": {
+    "db":        "fail",
+    "bus":       "ok",
+    "signal":    "skipped",
+    "email":     "skipped",
+    "browser":   "skipped",
+    "mcp":       {},
+    "scheduler": "fail"
+  }
 }
 ```
 
 <Warning>
-  A `503` response does not mean Curia has crashed. The server is still accepting requests, but agent actions that depend on the database (memory retrieval, knowledge graph queries, scheduled jobs) will fail. Fix your database connection and the endpoint will return `200` again on the next probe.
+  A `503` response does not mean Curia has crashed — the HTTP server is still running and returning this response. It means the database or message bus is unreachable, which prevents agent actions from completing. Restore connectivity and the endpoint will return `200` on the next probe.
 </Warning>
 
 ## HTTP status codes
 
 | Status | Meaning |
 |---|---|
-| `200` | Instance is healthy — database connected, all systems nominal |
-| `503` | Instance is degraded — database connectivity probe failed |
+| `200` | Instance is healthy or degraded — critical services are up |
+| `503` | Instance is down — database or bus is unreachable |
+
+## Which checks are critical vs. non-critical
+
+**Critical (down on failure, 503):** `db`, `bus`
+
+**Non-critical (degraded on failure, 200):** `email`, `signal`, `browser`, `mcp.*`, `scheduler`
+
+The rationale: a crashed Signal socket or a stale scheduler should raise a warning, not page as a full outage when email and the database are healthy.
 
 ## Use cases
 
 <CardGroup cols={2}>
-  <Card title="Load balancer health probe" icon="server">
-    Configure your load balancer (AWS ALB, nginx, HAProxy) to probe `GET /api/health` every 10–30 seconds. Route traffic only to instances that return `200`.
-  </Card>
   <Card title="Uptime monitoring" icon="chart-line">
-    Add the health endpoint to Uptime Robot, Better Uptime, or any HTTP monitor. Set an alert when the status code changes from `200` or when `"status"` is not `"ok"`.
+    Point Better Stack, Uptime Robot, or any HTTP monitor at this endpoint. Alert on `503` for outages. Add a keyword check on `"status":"degraded"` for a softer warning.
+  </Card>
+  <Card title="Load balancer health probe" icon="server">
+    Configure your load balancer (AWS ALB, nginx, HAProxy) to probe `GET /api/health` every 10–30 seconds. Route traffic only to instances returning `200`.
   </Card>
   <Card title="Deployment verification" icon="circle-check">
-    After deploying a new version, poll the health endpoint until it returns `200` before switching traffic. A non-`200` response during startup usually means the database migration has not completed yet.
+    After deploying a new version, poll the health endpoint until it returns `200` before switching traffic.
   </Card>
-  <Card title="Startup readiness check" icon="hourglass">
-    In container orchestration (Kubernetes, ECS), use this endpoint as a readiness probe. Curia is ready to serve traffic once the database reports `"connected"`.
+  <Card title="Kubernetes readiness probe" icon="hourglass">
+    Use this endpoint as a readiness probe. Curia is ready to serve traffic once `status` is `"ok"` or `"degraded"` (i.e., the HTTP response code is `200`).
   </Card>
 </CardGroup>
 
-## Monitoring tips
-
 <Tip>
-  Check the `agents` and `skills` arrays after every deployment. If an agent or skill you expect is missing from the list, the corresponding configuration file likely has a syntax error that prevented it from loading. Fix the config and restart — no code change needed.
+  For a full guide to configuring uptime monitors and the daily credential canary (which sends heartbeat pings on a schedule), see [Health monitoring setup](/get-started/health-monitoring).
 </Tip>
-
-<Info>
-  The `uptime` field counts seconds since the HTTP server process started, not since the last successful request or the last time the database was healthy. Use your process manager or container runtime for absolute uptime tracking.
-</Info>
