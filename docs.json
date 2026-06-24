@@ -75,6 +75,7 @@
               "get-started/configuration",
               "get-started/secrets-vault",
               "get-started/deployment",
+              "get-started/health-monitoring",
               "get-started/playbooks"
             ]
           }

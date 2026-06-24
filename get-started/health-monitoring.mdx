@@ -1,0 +1,152 @@
+---
+title: "Health monitoring"
+description: "Set up uptime monitors and credential canaries so you know immediately when your Curia instance needs attention."
+---
+
+Curia exposes two monitoring hooks: a live health endpoint you can poll from any uptime monitor, and a daily canary job that validates your credentials and external dependencies on a schedule. This page walks through setting both up.
+
+## The health endpoint
+
+`GET /api/health` returns the current status of your instance across seven services. No authentication is required.
+
+```bash
+curl https://your-curia-instance.example.com/api/health
+```
+
+The response includes a top-level `status` field and a `checks` object with per-service results:
+
+```json
+{
+  "status": "ok",
+  "uptime_s": 3812,
+  "checks": {
+    "db":        "ok",
+    "bus":       "ok",
+    "email":     "ok",
+    "signal":    "skipped",
+    "browser":   "ok",
+    "mcp":       { "google_workspace": "ok" },
+    "scheduler": "ok"
+  }
+}
+```
+
+`"skipped"` means a service is not configured — it is excluded from the overall status. See the [API reference](/references/http-api-health) for the full response schema.
+
+### The three status values
+
+| `status` | HTTP | When it fires |
+|---|---|---|
+| `ok` | `200` | All enabled services are healthy |
+| `degraded` | `200` | A non-critical service is down (email, Signal, browser, MCP, scheduler) |
+| `down` | `503` | The database or message bus is unreachable |
+
+The key distinction: both `ok` and `degraded` return `200`. A `degraded` instance is still processing agent requests — something optional is misbehaving. Only `down` (503) means Curia cannot function.
+
+## Setting up an uptime monitor
+
+Use two monitors for complete coverage:
+
+<Steps>
+  <Step title="Create an uptime monitor for outages">
+    Point your monitoring service (Better Stack, Uptime Robot, Pingdom, etc.) at `https://your-curia-instance.example.com/api/health`.
+
+    Alert condition: **HTTP status is not `200`**
+
+    This fires when the database or bus is down and Curia cannot process requests. A 5–10 second probe interval is sufficient.
+  </Step>
+  <Step title="Add a keyword monitor for degraded state (optional)">
+    Create a second monitor on the same URL.
+
+    Alert condition: **response body contains `"status":"degraded"`**
+
+    This fires when a non-critical service fails — Signal drops, the browser process crashes, the scheduler falls behind — without triggering a full outage alert.
+
+    <Info>
+      Degraded alerts are softer. You may want to route them to a different channel (a Slack message rather than a PagerDuty page) since Curia continues to operate when degraded.
+    </Info>
+  </Step>
+</Steps>
+
+## The daily canary job
+
+The uptime monitor tells you if something is broken right now. The canary job tells you if a credential has expired or an external dependency has drifted — before users hit it.
+
+Every day at 06:00 server time (configurable), the canary job:
+
+1. Runs a lightweight validation for each configured service
+2. On success, sends an HTTP GET to a heartbeat URL — your monitoring service pages you if the ping stops arriving
+
+If a service is not configured, its canary is skipped entirely. An idle service (configured but no recent activity) is treated as `ok`.
+
+### Configuring heartbeat URLs
+
+Add a `health.heartbeats` block to `config/default.yaml`. Each key maps to a service, and the value is the heartbeat URL your monitoring service provides.
+
+```yaml
+health:
+  heartbeats:
+    llm_fast:         "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
+    llm_standard:     "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
+    llm_powerful:     "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
+    embeddings:       "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
+    nylas:            "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
+    signal:           "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
+    google_workspace: "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
+    tavily:           "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
+```
+
+You don't need to configure all of them. Only add heartbeat URLs for services you want to monitor. Heartbeat URLs must use `https://` — non-https URLs are silently ignored at startup.
+
+To change the canary schedule, set `health.canary_schedule` to a cron expression:
+
+```yaml
+health:
+  canary_schedule: "0 6 * * *"   # default: 06:00 server time daily
+```
+
+### What each canary checks
+
+| Key | What it validates | Skipped when |
+|---|---|---|
+| `llm_fast` / `llm_standard` / `llm_powerful` | Last recorded outcome for that LLM tier (no billed API call made) | No model configured for that tier |
+| `embeddings` | Last recorded embedding call outcome | No `OPENAI_API_KEY` |
+| `image_gen` | Last `image-generate` skill outcome | No `OPENAI_API_KEY` |
+| `nylas` | Fetches one message via the Nylas client | Email not configured |
+| `signal` | Pings the Signal-cli socket | Signal not configured |
+| `google_workspace` | Checks that the credential file is readable and the refresh token has not expired | Google Workspace MCP server not registered |
+| `tavily` | Checks that the Tavily API key is present | Key not configured |
+
+<Note>
+  LLM canaries make no billed API calls. They read the outcome of the most recent real call to that tier, recorded by the telemetry layer. An idle tier — key configured, no recent calls, no errors — is always reported as `ok`. The canary only fails if the most recent recorded call was an error.
+</Note>
+
+### Setting up heartbeat monitors in Better Stack
+
+For each service you want to monitor:
+
+<Steps>
+  <Step title="Create a heartbeat monitor">
+    In Better Stack, go to **Monitors** and create a new **Heartbeat** monitor. Set the expected period to **25 hours** (giving the daily canary a one-hour grace window). Set the grace period to **30 minutes**.
+  </Step>
+  <Step title="Copy the heartbeat URL">
+    Better Stack provides a URL like `https://uptime.betterstack.com/api/v1/heartbeat/<token>`. Copy it.
+  </Step>
+  <Step title="Add it to your config">
+    Paste the URL under the matching key in `health.heartbeats` in `config/default.yaml`, then restart Curia to pick up the change.
+  </Step>
+  <Step title="Verify the first ping">
+    The canary runs at 06:00 server time. After the first run, the heartbeat monitor in Better Stack should show a received ping. If it does not arrive within an hour of the scheduled time, check the Curia logs for canary output.
+  </Step>
+</Steps>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Health endpoint reference" icon="book" href="/references/http-api-health">
+    Full API schema — response fields, status codes, and check semantics.
+  </Card>
+  <Card title="Configuration reference" icon="sliders" href="/references/configuration">
+    All health configuration options, including liveness thresholds and canary schedule.
+  </Card>
+</CardGroup>
