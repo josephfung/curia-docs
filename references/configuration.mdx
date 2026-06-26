@@ -80,7 +80,7 @@ skillOutput:
 
 ## Web browser
 
-Controls the headless browser the `web-browser` skill drives (Playwright). Sessions are pooled and swept on a timer so logins can persist across calls without leaking idle browser processes.
+Controls the headless browser the `web-browser` skill drives (Patchright, a stealth-hardened Playwright fork). Sessions are pooled and swept on a timer so logins can persist across calls without leaking idle browser processes.
 
 ```yaml
 # config/local.yaml
@@ -88,7 +88,7 @@ browser:
   sessionTtlMs: 600000     # how long a session stays alive after its last action (10 min)
   sweepIntervalMs: 120000  # how often expired sessions are swept (2 min)
   profileDir: ""           # persistent profile dir; empty → ${HOME}/.curia/browser-profile
-  channel: ""              # "chrome" for real Chrome (must be in the image); empty → bundled Playwright Chromium
+  channel: ""              # "chrome" for real Chrome (must be in the image); empty → bundled Patchright Chromium
   locale: "en-US"          # context locale (BCP 47)
 ```
 

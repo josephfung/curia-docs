@@ -49,14 +49,17 @@ A specialist agent that owns the full calendar domain.
 | Field | Value |
 |---|---|
 | **Role** | specialist |
-| **Model** | Fast tier (Claude Haiku by default) |
-| **Skills** | calendar-*, contact-lookup, entity-context, date-resolve, memory-query, memory-store, bullpen |
+| **Model** | Standard tier (Claude Sonnet by default) — scheduling and RSVP judgment |
+| **Skills** | calendar-* (incl. holds and invite RSVPs), contact-lookup, entity-context, date-resolve, memory-query, memory-store, bullpen |
 | **Discovery** | Disabled |
 
 **What it handles:**
-- Scheduling intelligence — finds free time, resolves conflicts, and makes scheduling decisions based on stored CEO preferences
+- Scheduling intelligence — finds free time, resolves conflicts, and makes scheduling decisions based on stored CEO preferences (`free`-status events are treated as available)
 - Free/busy queries across multiple calendars and participants
 - Event CRUD (create, update, delete) with timezone-aware slot finding
+- Tentative holds — places `HOLD (TBC)` events on offered slots so they are not double-offered while a negotiation is in flight, auto-releases them when a real event is booked, and sweeps expired holds daily
+- Scheduling consults — answers `CONSULT REQUEST`s from the CEO Inbox (and other agents) over a Bullpen thread: resolves free slots, places holds, and replies with timezone-labelled options before a scheduling email is drafted
+- Calendar invite RSVPs — evaluates formal invites (relationship tier, sender kind, conflicts) and sends accept / decline / tentative responses via Nylas, releasing any matching hold
 - Scheduling-related message drafting — meeting requests, reschedules, cancellations (the Calendar Specialist has no email skills; it returns the drafted text to the Coordinator to send)
 
 The Coordinator delegates scheduling intent in natural language ("schedule a 30-minute call with Sarah next week"). The Calendar Specialist resolves entities, queries memory for the CEO's scheduling preferences, finds available time, creates the event, and drafts any outgoing message — returning the result to the Coordinator, which sends it.
@@ -119,11 +122,13 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 - Cold-outreach drafts — composes new (non-reply) drafts into the CEO's Gmail Drafts via `ceo-inbox-draft-compose`
 - Escalation — sends a Signal alert and opens a Bullpen thread for URGENT items; opens a Bullpen thread mentioning the appropriate specialist for ACTIONABLE items
 - Standing rules and decision tagging — maintains a configurable set of per-sender instructions and auto-labels via `config-store`
+- Scheduling replies via calendar consult — for meeting and scheduling emails it consults the Calendar Specialist over a Bullpen thread (which checks conflicts and places tentative holds) and parks the draft pending the reply, rather than guessing times blind; a `consult-timeout` safety wake falls back to a blind draft or escalation if no reply arrives
+- Invite triage — formal calendar invites are linked to calendar events and routed to the Calendar Specialist, which evaluates the invite and sends the RSVP, releasing any matching hold
 - Inbox queries — searches, reads, and labels messages on demand when delegated by the Coordinator
 
 The CEO Inbox agent runs directly against the CEO's personal email account via Nylas. It never replies directly to senders — all outbound replies go through draft creation for CEO review.
 
-**Tasks keep the loop closed.** When a reply depends on something not yet available (a document the CEO must provide, a fact to look up), the agent creates a tracked follow-up [task](/core-concepts/scheduling#tasks-and-the-backlog) rather than sending a bare "the CEO will follow up" — it resolves the dependency first where it can, and resumes drafting when the task wakes. On a backed-up inbox it processes the top-priority handful inline and defers the tail as `inbox-overflow` tasks, so the time spent per run no longer grows with the backlog.
+**Tasks keep the loop closed.** When a reply depends on something not yet available (a document the CEO must provide, a fact to look up), the agent creates a tracked follow-up [task](/core-concepts/scheduling#tasks-and-the-backlog) rather than sending a bare "the CEO will follow up" — it resolves the dependency first where it can, and resumes drafting when the task wakes. On a backed-up inbox it drains messages in fixed-size, self-continuing batches (keyed on read/archive status) until the inbox is clear, so the time spent per run stays bounded regardless of backlog.
 
 **Urgent alerts route through the coordinator.** When the CEO Inbox classifies a message as URGENT, it does not call `signal-send` directly — it opens a Bullpen thread mentioning the coordinator and asks for an outbound alert. The coordinator's send is what hits Signal, which means the alert participates in the same delegation-aware reply correlation as any other coordinator-initiated message. If the CEO replies to the alert, the coordinator routes the reply back to the inbox agent via the normal delegation path.
 

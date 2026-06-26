@@ -55,7 +55,7 @@ You can add an optional reason: "Set your autonomy score to 85 — I want you to
 Score changes take effect immediately on the next task — no restart required. The Coordinator loads the current score from Postgres at the start of every task, so a change you make mid-session applies on the very next action.
 
 <Warning>
-Only the CEO can change the autonomy score. The `set-autonomy` skill requires a CEO-level caller context. Requests from external email senders or unverified contacts will be rejected.
+Only the CEO can change the autonomy score, and only in the moment. `set-autonomy` is an **elevated** skill: it runs solely during a live CEO turn, so a scheduled job or a woken task that merely carries the CEO's lineage cannot raise (or lower) the score on its own. Requests from external email senders or unverified contacts are rejected.
 </Warning>
 
 ## How to calibrate your score
