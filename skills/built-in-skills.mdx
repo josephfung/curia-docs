@@ -5,6 +5,8 @@ description: "Catalog of the skills Curia ships with — organized by category, 
 
 Curia ships with 90+ skills organized into functional categories. Every skill declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it. Skills with `action_risk: none` can always run; higher-risk skills trigger the [approval workflow](/security/approval-workflow) when the score is below their floor.
 
+Some skills are also **`elevated`**: they exercise CEO authority directly, so they run only during a *live CEO turn* (a fresh inbound from you, or a synchronous delegation within it) and never autonomously or from a scheduled/woken task. These are the autonomy and approval controls (`set-autonomy`, `approve-action`, `deny-action`, `dismiss-action`), the grant-recommendation decisions (`approve-grant-recommendation`, `decline-grant-recommendation`), the authorization-altering contact skills (`contact-set-tier`, `contact-set-role`, `contact-grant-permission`, `contact-revoke-permission`), and `system-secret-capture-request`. See [Sensitivity](/skills/how-skills-work#sensitivity-normal-and-elevated).
+
 ## Contact management
 
 | Skill | action_risk | Description |
@@ -13,23 +15,25 @@ Curia ships with 90+ skills organized into functional categories. Every skill de
 | `contact-lookup` | none | Look up a contact by name (supports partial matching) |
 | `contact-list` | none | List all contacts |
 | `contact-rename` | low | Rename a contact |
-| `contact-set-role` | low | Set a contact's role (e.g., CFO, board member) |
-| `contact-set-tier` | low | Set a contact's capability tier (e.g., known, trusted) |
+| `contact-set-role` | high | Set a contact's role (e.g., CFO, board member). **Elevated** — requires a live CEO turn |
+| `contact-set-tier` | high | Set a contact's capability tier (e.g., known, trusted). **Elevated** — requires a live CEO turn |
 | `contact-link-identity` | low | Link a channel identity (email, phone) to a contact |
 | `contact-unlink-identity` | low | Remove a channel identity from a contact |
-| `contact-grant-permission` | low | Grant a specific permission to a contact |
-| `contact-revoke-permission` | low | Revoke a permission from a contact |
-| `contact-merge` | low | Merge duplicate contacts (supports dry-run preview) |
+| `contact-grant-permission` | critical | Grant a specific permission to a contact. **Elevated** — requires a live CEO turn |
+| `contact-revoke-permission` | critical | Revoke a permission from a contact. **Elevated** — requires a live CEO turn |
+| `contact-merge` | medium | Merge duplicate contacts (supports dry-run preview) |
 | `contact-find-duplicates` | low | Scan for potential duplicate contacts |
 | `contact-register` | low | Register or resolve a contact from outside the dispatcher pipeline (used by direct-channel agents such as ceo-inbox) |
 | `contact-set-identity-status` | low | Mark a channel identity as `active`, `defunct`, or `bounced` |
 | `contact-update` | low | Set a contact's canonical attributes (title, organization, primary email/phone, timezone, location, pronouns, and more); phone numbers are normalized to E.164 |
 | `contact-dedup-exclude` | low | Record a permanent exclusion so a pair of contacts is never proposed as duplicates again; pinned exclusively to the contacts agent |
 | `scan-grant-recommendations` | none | Scan contacts and proactively suggest capability grants for those who have earned them through demonstrated trust patterns (runs on a schedule, not on request) |
-| `approve-grant-recommendation` | low | Approve a pending grant recommendation and immediately grant the underlying permission to the contact |
-| `decline-grant-recommendation` | low | Decline a pending grant recommendation; permanently suppresses it so Curia never surfaces that recommendation again |
+| `approve-grant-recommendation` | low | Approve a pending grant recommendation and immediately grant the underlying permission to the contact. **Elevated** — requires a live CEO turn |
+| `decline-grant-recommendation` | low | Decline a pending grant recommendation; permanently suppresses it so Curia never surfaces that recommendation again. **Elevated** — requires a live CEO turn |
 
 ## Email
+
+Outbound email and console rendering share one sanitized converter: markdown in a draft or reply body becomes HTML with clickable links, bare-URL autolinks, and tables.
 
 | Skill | action_risk | Description |
 |---|---|---|
@@ -77,8 +81,11 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 | `calendar-create-event` | high | Create a new calendar event |
 | `calendar-update-event` | high | Update an existing event |
 | `calendar-delete-event` | high | Delete a calendar event |
-| `calendar-find-free-time` | none | Find available time slots |
-| `calendar-check-conflicts` | none | Check for scheduling conflicts |
+| `calendar-find-free-time` | none | Find available time slots (treats `free`-status events as available) |
+| `calendar-check-conflicts` | none | Check for scheduling conflicts (`free`-status events do not count) |
+| `calendar-create-hold` | medium | Place a tentative `HOLD (TBC)` event on an offered slot so it is not re-offered while scheduling is in flight |
+| `calendar-holds-sweep` | low | Remove expired tentative holds (runs daily on a schedule) |
+| `calendar-respond-to-invite` | medium | Send an RSVP (accept / decline / tentative) to a formal calendar invite via Nylas, and release any matching hold |
 
 ## Memory and knowledge graph
 
@@ -130,7 +137,7 @@ Track deferred, multi-step, and waiting work in the unified [tasks backlog](/cor
 |---|---|---|
 | `web-search` | none | Search the web via Tavily. Requires `tavily_api_key` in the vault — declared in `install.requires_secrets`, so the registry will not enable the skill until the key is provisioned. |
 | `web-fetch` | none | Fetch and extract content from a URL |
-| `web-browser` | medium | Interact with JavaScript-rendered pages via Playwright |
+| `web-browser` | medium | Interact with JavaScript-rendered pages via a Patchright-driven browser with a human-behavior layer (curved mouse paths, paced typing, post-load dwell) to reduce bot-detection blocking |
 
 ## File parsing
 
@@ -161,6 +168,7 @@ Track deferred, multi-step, and waiting work in the unified [tasks backlog](/cor
 | Skill | action_risk | Description |
 |---|---|---|
 | `delegate` | none | Delegate a task to a specialist agent |
+| `activity-log` | none | Read-only end-of-day recap of recently completed actions (queries the audit log); surfaces autonomous RSVPs and other consequential work for the daily debrief |
 | `executive-profile-get` | none | Get the CEO's writing voice profile |
 | `executive-profile-update` | medium | Update the CEO's writing voice profile |
 | `behavioral-preferences-update` | low | Append or replace entries in `OfficeIdentity.behavioralPreferences` (used by the [setup-wizard](/agents/built-in-agents#setup-wizard) and any "remember that I…" turn) |

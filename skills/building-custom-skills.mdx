@@ -54,7 +54,7 @@ The manifest describes what the skill does, what it needs, and how risky it is. 
 | `name` | Yes | Unique skill name, used to invoke the skill |
 | `description` | Yes | Tells agents and the skill registry what this skill does |
 | `version` | Yes | Semantic version string |
-| `sensitivity` | Yes | `normal` (auto-approvable) or `elevated` (requires CEO role) |
+| `sensitivity` | Yes | `normal` (governed by `action_risk`) or `elevated` (requires a live CEO turn; for authority primitives only) |
 | `action_risk` | Yes | Risk level — determines the minimum autonomy score required |
 | `inputs` | Yes | Named input parameters with types. Append `?` for optional fields |
 | `outputs` | Yes | Named output fields returned on success |
@@ -133,7 +133,7 @@ The `ctx` object gives your handler access to inputs, secrets, logging, and call
 | `ctx.secret(name)` | `(name: string) => string` | Read a vault secret declared in `secrets`. Throws if undeclared. |
 | `ctx.log` | `Logger` | Scoped pino logger — use instead of `console.log` |
 | `ctx.agentPersona` | `AgentPersona \| undefined` | Display name, title, email signature of the calling agent |
-| `ctx.caller` | `CallerContext \| undefined` | Caller identity — always present for elevated skills |
+| `ctx.caller` | `CallerContext \| undefined` | Caller identity for audit and context — not the elevated-gate signal |
 | `ctx.contactService` | `ContactService \| undefined` | Read-only contact lookups |
 | `ctx.selfEmail` | `string \| undefined` | Email address of the active Curia account — use this to filter Curia's own address from CC lists |
 

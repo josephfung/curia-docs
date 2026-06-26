@@ -60,8 +60,10 @@ A raw number (0–100) can be used for precision (e.g., `75` for a skill that sh
 
 | Value | Meaning |
 |---|---|
-| `normal` | Can be auto-approved based on autonomy score |
-| `elevated` | Requires human approval on first use, regardless of autonomy score |
+| `normal` | Governed by the autonomy engine via `action_risk` (and `allowed_callers` where set) |
+| `elevated` | Requires a live principal (CEO) turn on every invocation; never runs autonomously or from a woken/scheduled task. Reserved for CEO-authority primitives |
+
+`elevated` is the live-principal gate: the skill runs only when the current turn originated from a fresh CEO inbound (or a synchronous delegation within one). It is not a one-time "approve once" prompt. See [Sensitivity](/skills/how-skills-work#sensitivity-normal-and-elevated) for the full model.
 
 ### `inputs` and `outputs`
 
@@ -106,7 +108,7 @@ Declares which privileged services this skill needs from the execution layer. On
 | `autonomyService` | Autonomy score management |
 | `executiveProfileService` | CEO writing voice profile |
 | `officeIdentityService` | Office identity — assistant name/title, tone, decision posture, and behavioral preferences. Used by `behavioral-preferences-update`. |
-| `browserService` | Playwright browser for web interaction |
+| `browserService` | Patchright browser for web interaction |
 | `bullpenService` | Inter-agent discussion threads |
 | `skillSearch` | Search the skill registry |
 | `actionLogRepo` | Autonomy action log for approval lifecycle management |

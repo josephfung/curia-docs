@@ -85,7 +85,7 @@ Every local skill includes a `skill.json` manifest that the execution layer vali
 |---|---|
 | `name` | Unique identifier used by agents and the skill registry |
 | `description` | Human-readable description — shown to the LLM and in the registry |
-| `sensitivity` | `normal` or `elevated` — controls first-use approval behavior |
+| `sensitivity` | `normal` or `elevated` — `elevated` requires a live CEO turn (see below) |
 | `action_risk` | Risk level used by the autonomy engine — see below |
 | `inputs` | Input schema — validated before the handler is called |
 | `outputs` | Output schema — documents what the skill returns |
@@ -108,14 +108,16 @@ Every skill declares an `action_risk` value that indicates its potential impact 
 
 The autonomy engine uses these values to determine whether a given skill can run at the current autonomy score. See [Autonomy engine](/core-concepts/autonomy) for the full picture.
 
-## Sensitivity and first-use approval
+## Sensitivity: normal and elevated
 
-The `sensitivity` field controls what happens the first time an agent tries to use a skill it was not explicitly configured with:
+The `sensitivity` field controls the elevated-skill gate in the execution layer:
 
-- **`normal`** — the skill is auto-approved if the agent has `allow_discovery: true`
-- **`elevated`** — skills like payment processing or bulk deletion require your explicit approval the first time an agent requests them; once approved for that agent, they do not ask again
+- **`normal`** — no elevated gate. The skill is governed by the autonomy engine via its `action_risk` (and, where set, the list of callers allowed to invoke it).
+- **`elevated`** — the skill exercises CEO authority itself, so it only runs during a **live principal turn**: a turn that originated from a fresh inbound from you (the CEO), or a synchronous delegation made inside one. A scheduled job, a woken task, or any task that merely carries your *lineage* can never invoke it.
 
-This means you review elevated-sensitivity skills once, not on every invocation.
+Elevated is reserved for authority primitives — approving, denying, or dismissing a queued action, changing the autonomy level, and altering a contact's trust tier, role, or permissions. This is what closes the self-approval loophole: Curia acting on its own (woken by a schedule or a reply) can never approve its own pending action or grant itself new permissions. Only you, acting in the moment, can.
+
+This gate is checked on **every** invocation — it is not a one-time "approve once and never ask again." (Consequential but non-authority actions, like sending email or booking calendar events, are `normal` skills governed by `action_risk` and the approval workflow instead.)
 
 ## Secrets: credentials the LLM never sees
 
@@ -154,13 +156,13 @@ Curia ships with more than 90 built-in skills across several categories:
     `email-send`, `email-reply`, `email-list`, `email-get`, `email-archive`, `email-draft-save` — send, reply, browse, and draft emails via the Nylas API across multiple configured accounts.
   </Accordion>
   <Accordion title="Calendar">
-    `calendar-list-calendars`, `calendar-list-events`, `calendar-create-event`, `calendar-update-event`, `calendar-delete-event`, `calendar-find-free-time`, `calendar-check-conflicts`, `calendar-register` — full calendar management via Nylas.
+    `calendar-list-calendars`, `calendar-list-events`, `calendar-create-event`, `calendar-update-event`, `calendar-delete-event`, `calendar-find-free-time`, `calendar-check-conflicts`, `calendar-create-hold`, `calendar-holds-sweep`, `calendar-respond-to-invite`, `calendar-register` — full calendar management via Nylas, including tentative holds and invite RSVPs.
   </Accordion>
   <Accordion title="Contacts">
     `contact-create`, `contact-lookup`, `contact-list`, `contact-link-identity`, `contact-set-role`, `contact-merge`, `contact-find-duplicates`, `contact-grant-permission`, `contact-revoke-permission`, `contact-unlink-identity`, `contact-set-tier` — manage contacts and their capability tiers.
   </Accordion>
   <Accordion title="Web research">
-    `web-search`, `web-fetch`, `web-browser` — search the web via Tavily, fetch static pages, or use a full Playwright-backed browser for JavaScript-rendered sites.
+    `web-search`, `web-fetch`, `web-browser` — search the web via Tavily, fetch static pages, or drive a full Patchright-backed browser (with a human-behavior layer) for JavaScript-rendered sites.
   </Accordion>
   <Accordion title="Knowledge and memory">
     `entity-context`, `context-for-email`, `memory-store`, `memory-query`, `memory-confirm`, `decay-warnings-list`, `config-store`, `query-relationships`, `delete-relationship`, `extract-facts`, `extract-relationships` — query, write to, and manage the knowledge graph.
