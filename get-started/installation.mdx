@@ -166,7 +166,7 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
   </Step>
 
   <Step title="Add your phone number to the vault">
-    In the Curia console, go to **Settings → Channels → Signal** and enter the E.164 number you registered (e.g. `+12223334444`). It is stored under the vault key `signal_phone_number`. Do not configure `SIGNAL_SOCKET_PATH` — the deployment layer manages this automatically.
+    In the Curia console, go to **Settings → Channels → Signal** and enter the E.164 number you registered (e.g. `+12223334444`). It is stored under the vault key `channel.signal.phone_number`. Do not configure `SIGNAL_SOCKET_PATH` — the deployment layer manages this automatically.
   </Step>
 
   <Step title="Apply the change">
@@ -174,7 +174,7 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
     docker compose up -d --force-recreate curia
     ```
 
-    The Signal channel activates when `signal_phone_number` is in the vault and the `signal-data` volume is populated.
+    The Signal channel activates when `channel.signal.phone_number` is in the vault and the `signal-data` volume is populated.
   </Step>
 </Steps>
 
