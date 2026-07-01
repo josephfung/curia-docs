@@ -54,7 +54,7 @@ A specialist agent that owns the full calendar domain.
 | **Discovery** | Disabled |
 
 **What it handles:**
-- Scheduling intelligence — finds free time, resolves conflicts, and makes scheduling decisions based on stored CEO preferences (`free`-status events are treated as available)
+- Scheduling intelligence — finds free time, resolves conflicts, and applies the CEO's scheduling rules, loaded deterministically from config-store at the start of each task so preferences (no-meeting windows, default durations) are reliably enforced (`free`-status events are treated as available)
 - Free/busy queries across multiple calendars and participants
 - Event CRUD (create, update, delete) with timezone-aware slot finding
 - Tentative holds — places `HOLD (TBC)` events on offered slots so they are not double-offered while a negotiation is in flight, auto-releases them when a real event is booked, and sweeps expired holds daily
@@ -62,7 +62,7 @@ A specialist agent that owns the full calendar domain.
 - Calendar invite RSVPs — evaluates formal invites (relationship tier, sender kind, conflicts) and sends accept / decline / tentative responses via Nylas, releasing any matching hold
 - Scheduling-related message drafting — meeting requests, reschedules, cancellations (the Calendar Specialist has no email skills; it returns the drafted text to the Coordinator to send)
 
-The Coordinator delegates scheduling intent in natural language ("schedule a 30-minute call with Sarah next week"). The Calendar Specialist resolves entities, queries memory for the CEO's scheduling preferences, finds available time, creates the event, and drafts any outgoing message — returning the result to the Coordinator, which sends it.
+The Coordinator delegates scheduling intent in natural language ("schedule a 30-minute call with Sarah next week"). The Calendar Specialist resolves entities, loads the CEO's scheduling rules from config-store, finds available time, creates the event, and drafts any outgoing message — returning the result to the Coordinator, which sends it.
 
 ## Contact Specialist
 
