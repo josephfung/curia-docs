@@ -138,6 +138,12 @@ When an agent creates a persistent task, Curia:
 
 The agent doesn't stay running between bursts. All state lives in Postgres — if Curia restarts mid-task, the next burst picks up exactly where the last one stopped.
 
+### Projects: breaking a goal into steps
+
+Not every task is a single stretch of work. When a goal is genuinely multi-step — plan an offsite, run a diligence process, prepare a board packet — an agent can break it into a small set of child steps with dependencies, then work them in order as earlier steps unblock later ones. You don't set this up; the agent decides when a goal is big enough to warrant it.
+
+The upshot for you is visible progress. When you ask "what's open?" or read the daily digest, a project reports as **"3 of 5 steps done"** rather than one opaque line, so you can see how far along it is and what it's waiting on.
+
 ## Tasks and the backlog
 
 Scheduled jobs answer *when* something should happen. **Tasks** answer *what* work is open, who owns it, and whether anyone is waiting. Curia keeps a single backlog of tasks — deferred follow-ups, multi-step projects, things you've asked it to remember — that it can advance on its own and that you can query in plain language.
@@ -166,6 +172,17 @@ A scheduled job is a trigger; a task is a unit of work. A task that needs to wak
 ### Keeping the backlog moving: the heartbeat
 
 A deterministic **hourly heartbeat** is the backstop that keeps open work from lingering. It does no AI reasoning — it simply notices tasks that have gone quiet (an idle task Curia owns, or a "waiting" task whose expected reply never came) and wakes the owning agent to advance or re-evaluate them. Most work actually advances faster than that, driven by incoming replies and per-task wake timers; the heartbeat only catches the stragglers. Task management is enabled per agent via the `enable_task_management` capability and tuned under the `tasks` block in `config/default.yaml`.
+
+### When a task gets stuck
+
+Long-running work doesn't always go smoothly, and Curia is explicit when something needs you. Rather than a bare "still working" line, a stuck task escalates into the daily digest with the *reason* and enough detail to act on. There are four shapes:
+
+- **Stalled** — it stopped making progress, so Curia paused it instead of spinning.
+- **Hit a limit** — it reached a configured ceiling (time, cost, or number of attempts).
+- **Blocked on a person** — it's waiting on a reply or a decision from someone.
+- **Couldn't finish** — the agent tried and reported it can't complete the work as scoped.
+
+Each escalation carries where it got to (progress so far, and a rough ETA or cost where relevant) plus a suggested next action — so the digest tells you what to do about it, not just that it happened.
 
 ## Task-scope fence for scheduled runs
 
