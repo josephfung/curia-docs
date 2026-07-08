@@ -1,19 +1,21 @@
 ---
 title: "Deployment and self-hosting"
-description: "Run Curia on your own server. Setup is the same single command as local — this page covers what's different in production."
+description: "Run Curia on your own server with the image-based installer — this page covers the topology choices and what's different in production."
 ---
 
-Curia is single-tenant and self-hosted: one instance per principal, running on infrastructure you control. Getting it running on a server is the same one-command flow as local development, so this page doesn't repeat the steps — it points you at the install guide and covers what's specific to production.
+Curia is single-tenant and self-hosted: one instance per principal, running on infrastructure you control. On a server, the [image-based install](/get-started/installation) is the right path — it needs only Docker and curl, pulls the published container image, and requires no source checkout or toolchain on the box. This page doesn't repeat the install steps; it covers what's specific to running in production.
 
 ## Install
 
-The setup process is identical whether you're on a laptop or a server:
+The [`install.sh`](/get-started/installation) flow is the same on a server as on a laptop, with one production-relevant choice: when it asks how you'll reach the instance, pick the topology that matches your setup.
 
-- Follow the [installation guide](/get-started/installation) to run `pnpm run setup`, which generates your secrets, starts Postgres and the app in Docker, and runs migrations.
-- Add the channels and capabilities you need — email, semantic search, web research, Signal — from the same guide's [full setup](/get-started/installation#full-setup) section.
+- **Public domain + HTTPS** — the installer configures a bundled [Caddy](https://caddyserver.com) reverse proxy that obtains and renews Let's Encrypt certificates automatically. You provide a domain with a DNS A record pointing at the host, and ports 80/443 open. This is the usual choice for an internet-facing instance.
+- **Public IP / my own proxy** — Curia serves plain HTTP on `:3000` and you terminate TLS upstream (a load balancer or an existing reverse proxy).
+
+Then add the channels and capabilities you need — email, semantic search, web research, Signal — from the install guide's [full setup](/get-started/installation#full-setup) section.
 
 <Card title="Installation guide" icon="download" href="/get-started/installation">
-  The complete quick start and full setup steps.
+  The complete image-based quick start and full setup steps.
 </Card>
 
 ## Production considerations
@@ -26,6 +28,7 @@ The setup process is identical whether you're on a laptop or a server:
 - **Secrets live in the encrypted vault.** Application credentials are stored in the [vault](/get-started/secrets-vault), not in `.env`. Only four bootstrap values stay in `.env`: `DB_USER`, `DB_PASSWORD`, `DATABASE_URL`, and `SECRET_ENCRYPTION_KEY`. Treat `.env` as sensitive — back it up securely and keep it out of version control.
 - **Back up `SECRET_ENCRYPTION_KEY` separately and keep it safe.** It is the master key that decrypts the vault. If you lose it, every stored secret becomes unrecoverable and you have to re-seed the vault from scratch. Store a copy somewhere independent of the server (a password manager or secrets store).
 - **Applying configuration changes.** After adding a vault secret via the console or editing `.env` on the server, recreate the container to pick up the change: `docker compose up -d --force-recreate curia`.
+- **Upgrading.** Re-run `install.sh` to move to a newer image. It detects the completed install, regenerates nothing, re-applies migrations idempotently, and restarts the stack on the new image. Because no secrets rotate, live sessions and the encrypted vault are preserved.
 
 ## Next steps
 

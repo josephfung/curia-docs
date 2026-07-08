@@ -1,0 +1,134 @@
+---
+title: "Build from source"
+description: "Clone the repository and run Curia from source with hot reload — the path for contributors and anyone who wants to customize their instance."
+---
+
+If you just want to run Curia, the [image-based install](/get-started/installation) is faster and needs no toolchain. This page is for developers who want to **change** Curia: contribute upstream, add a custom agent or skill, or hack on their own instance. It clones the repository and builds from source, so your edits hot-reload into the running stack.
+
+The flow is the same in spirit as the image install — one command, an Anthropic key, a bootstrap secret — but it runs against a local checkout using the development compose overlay instead of the published image.
+
+## Prerequisites
+
+Before you start, install the following:
+
+- **Node.js 24 or later** — verify with `node --version`
+- **Docker and Docker Compose** — Postgres and the app both run in Docker; install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI
+- **pnpm** — install with `npm install -g pnpm`
+
+<Note>
+  Setup also uses `openssl` to generate secrets. It ships by default on macOS and most Linux distributions, so you likely already have it.
+</Note>
+
+## Quick start
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/josephfung/curia.git
+    cd curia
+    ```
+  </Step>
+
+  <Step title="Run setup">
+    ```bash
+    pnpm run setup
+    ```
+
+    This single command does everything needed to get Curia running from source:
+
+    - Checks that Docker, Node, and pnpm are available
+    - Generates the database password and the vault master key (`SECRET_ENCRYPTION_KEY`) and writes them to `.env`
+    - Prompts you for an Anthropic API key — get one at [console.anthropic.com](https://console.anthropic.com)
+    - Starts Postgres, waits for it to be healthy, and runs database migrations
+    - Seeds the encrypted vault with the generated API token, the login secret, and your Anthropic key (these are never written to `.env`)
+    - Builds and starts the full Curia stack with the development compose overlay (`docker-compose.dev.yml`), which builds from your local checkout and hot-reloads changes
+
+    The Anthropic key is the only value you supply. Everything else is generated for you. Secrets land in the [encrypted vault](/get-started/secrets-vault); only the four bootstrap values needed to reach and unlock it stay in `.env`.
+  </Step>
+
+  <Step title="Save your bootstrap secret">
+    When setup finishes, it prints a summary box with your login URL and a **bootstrap secret**:
+
+    ```
+    ╔══════════════════════════════════════════════════════════════════════╗
+    ║   Curia is running.                                                    ║
+    ║   Open:    http://localhost:3000                                       ║
+    ║   Bootstrap secret (save this to a password manager):                  ║
+    ║   a1b2c3d4...                                                          ║
+    ╚══════════════════════════════════════════════════════════════════════╝
+    ```
+
+    Save the bootstrap secret to a password manager now. You'll use it to log in, and it won't be shown again.
+  </Step>
+
+  <Step title="Log in and finish in the app">
+    Open [http://localhost:3000](http://localhost:3000) and enter your bootstrap secret to create your account. The in-app **setup wizard** and the **setup-wizard specialist agent** then walk you through the rest — this is identical to the image install, so see the [quick start](/get-started/installation#quick-start) for the details.
+
+    <Note>
+      Checkpoint: Curia is running from your local source with hot reload. Edit a file under `src/`, and the app rebuilds. Add email, semantic search, or Signal from the [Full setup](/get-started/installation#full-setup) section whenever you need them.
+    </Note>
+  </Step>
+</Steps>
+
+<Accordion title="Running setup again">
+  If `.env` already exists, `pnpm run setup` won't overwrite it. Instead it offers a short menu:
+
+  - **Start the stack** — bring the containers back up (`docker compose up -d`)
+  - **Resume setup** — re-run database migrations and startup against your existing `.env`, useful if a previous run didn't finish
+  - **Full reset** — regenerate all secrets. This invalidates active sessions and requires typing `yes` to confirm
+
+  Your secrets are never silently regenerated, because rotating them would invalidate live sessions.
+</Accordion>
+
+## Adding channels and capabilities
+
+Email, semantic search, web research, and Signal are added the same way as on the image install — add the credential to the [vault](/get-started/secrets-vault) via the console, then recreate the container. Follow the [Full setup](/get-started/installation#full-setup) steps.
+
+The only difference is the recreate command: because the source build uses the development overlay, include it when recreating so Compose rebuilds from your checkout rather than pulling the image:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build --force-recreate curia
+```
+
+## Contributing
+
+If you're contributing changes upstream rather than just running your own instance, read [`CONTRIBUTING.md`](https://github.com/josephfung/curia/blob/main/CONTRIBUTING.md) in the repository for the branch, commit, and pull-request conventions, and the test and type-check commands to run before opening a PR.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Setup says my .env already exists">
+    This is expected on a second run. `pnpm run setup` never overwrites an existing `.env` — instead it offers a menu to start the stack, resume setup, or do a full reset. Full reset is the only option that regenerates secrets, and it asks for confirmation first.
+  </Accordion>
+
+  <Accordion title="macOS: HTTPS requests fail with 'unable to get local issuer certificate'">
+    Node installed via nvm or fnm bundles its own CA store and doesn't trust macOS system certificates. Export your system certs and point Node at them:
+
+    ```bash
+    security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain > ~/.config/curia/macos-ca-certs.pem
+    ```
+
+    Then uncomment this line in `.env` and recreate the container:
+
+    ```env
+    NODE_EXTRA_CA_CERTS=/Users/yourname/.config/curia/macos-ca-certs.pem
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Building custom agents" icon="robot" href="/agents/building-custom-agents">
+    Create, register, and test a new agent in your instance.
+  </Card>
+  <Card title="Building custom skills" icon="wrench" href="/skills/building-custom-skills">
+    Add a new capability as a skill with its own manifest and handler.
+  </Card>
+  <Card title="Configuration reference" icon="book" href="/references/configuration">
+    Every configurable setting: rate limits, security rules, and more.
+  </Card>
+  <Card title="Core concepts" icon="lightbulb" href="/core-concepts/introduction">
+    Understand how agents, skills, memory, and channels fit together.
+  </Card>
+</CardGroup>

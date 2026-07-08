@@ -72,6 +72,7 @@
             "group": "Get Started",
             "pages": [
               "get-started/installation",
+              "get-started/development",
               "get-started/configuration",
               "get-started/secrets-vault",
               "get-started/deployment",

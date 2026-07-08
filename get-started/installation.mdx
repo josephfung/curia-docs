@@ -1,51 +1,68 @@
 ---
 title: "Install Curia"
-description: "Get Curia running with a single command, then add the channels and capabilities you need."
+description: "Run Curia from the published container image with a single script — no source checkout, no toolchain, just Docker."
 ---
 
-Getting Curia running takes one command and about five minutes. `pnpm run setup` generates your secrets, starts the database and app in Docker, and runs migrations — the only thing you provide is an Anthropic API key. Once it's running, you finish configuration inside the app and add optional capabilities (email, search, Signal) whenever you need them.
+Getting Curia running takes one script and about five minutes. `install.sh` pulls the published container image, generates your secrets, starts the database and app in Docker, and runs migrations — the only thing you provide is an Anthropic API key. Nothing is built from source, so you don't need Node, pnpm, or a checkout of the code. Once it's running, you finish configuration inside the app and add optional capabilities (email, search, Signal) whenever you need them.
+
+<Note>
+  Want to modify Curia, not just run it? The [build from source](/get-started/development) path clones the repo and hot-reloads your changes. This page is the fastest route to a running instance.
+</Note>
 
 ## Prerequisites
 
-Before you start, install the following:
+The image-based install runs everything inside the container, so the host needs very little:
 
-- **Node.js 24 or later** — verify with `node --version`
-- **Docker and Docker Compose** — Postgres and the app both run in Docker; install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI
-- **pnpm** — install with `npm install -g pnpm`
+- **Docker with the Compose plugin** — Postgres and the app both run in Docker; install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI (Docker 20.10+)
+- **curl** — used once to download the installer and the compose files
 
 <Note>
-  Setup also uses `openssl` to generate secrets. It ships by default on macOS and most Linux distributions, so you likely already have it.
+  You do **not** need Node, pnpm, or openssl on the host. Migrations, secret generation, and vault seeding all run inside the pulled image.
 </Note>
 
 ## Quick start
 
 <Steps>
-  <Step title="Clone the repository">
+  <Step title="Download the installer">
     ```bash
-    git clone https://github.com/josephfung/curia.git
-    cd curia
+    curl -fsSL https://raw.githubusercontent.com/josephfung/curia/main/install.sh -o install.sh
     ```
+
+    <Warning>
+      Download the script first, then run it — do **not** pipe curl straight into bash (`curl … | bash`). The installer uses interactive prompts that need a real terminal, and piped input has no TTY. Reviewing the script before running it is also just good practice.
+    </Warning>
   </Step>
 
-  <Step title="Run setup">
+  <Step title="Run it">
     ```bash
-    pnpm run setup
+    bash install.sh
     ```
 
-    This single command does everything needed to get Curia running:
+    The installer does everything needed to get Curia running, without a source checkout:
 
-    - Checks that Docker, Node, and pnpm are available
+    - Checks that Docker, the Compose plugin, and curl are available
+    - Fetches the compose files and the `.env` template next to the script
     - Generates the database password and the vault master key (`SECRET_ENCRYPTION_KEY`) and writes them to `.env`
     - Prompts you for an Anthropic API key — get one at [console.anthropic.com](https://console.anthropic.com)
-    - Starts Postgres, waits for it to be healthy, and runs database migrations
-    - Seeds the encrypted vault with the generated API token, the login secret, and your Anthropic key (these are never written to `.env`)
-    - Starts the full Curia stack in Docker
+    - Asks how you'll reach Curia (the deployment topology step below)
+    - Pulls the published image, starts Postgres, runs database migrations **inside the image**, and seeds the encrypted vault
+    - Brings the full Curia stack up and waits for it to become healthy
 
     The Anthropic key is the only value you supply. Everything else is generated for you. Secrets land in the [encrypted vault](/get-started/secrets-vault); only the four bootstrap values needed to reach and unlock it stay in `.env`.
   </Step>
 
+  <Step title="Choose your deployment topology">
+    The installer asks how you plan to reach the instance and configures the stack accordingly:
+
+    - **Local / evaluation** — `http://localhost:3000`, no TLS. The right choice for a laptop or a quick trial.
+    - **Public domain + HTTPS** — automatic Let's Encrypt certificates via a bundled Caddy reverse proxy. You supply a domain (with a DNS A record pointing at the host and ports 80/443 open).
+    - **Public IP / my own proxy** — plain HTTP on `:3000`, for when you terminate TLS at an upstream load balancer or proxy.
+
+    You can change this later by editing `.env` and re-running the installer.
+  </Step>
+
   <Step title="Save your bootstrap secret">
-    When setup finishes, it prints a summary box with your login URL and a **bootstrap secret**:
+    When the installer finishes, it prints a summary box with your login URL and a **bootstrap secret**:
 
     ```
     ╔══════════════════════════════════════════════════════════════════════╗
@@ -60,7 +77,7 @@ Before you start, install the following:
   </Step>
 
   <Step title="Log in and finish in the app">
-    Open [http://localhost:3000](http://localhost:3000) and enter your bootstrap secret to create your account.
+    Open your instance (`http://localhost:3000` for a local install, or your domain) and enter your bootstrap secret to create your account.
 
     Once you're in, the **setup wizard** at `/setup` runs automatically. It's a six-step form: your name (the CEO Curia works for), your operational details (timezone, email, working hours), the assistant's identity, baseline tone, decision-making posture, and a review screen. Submitting the last step writes everything through, restarts external channels if needed, and drops you directly into the chat view at `/chat`.
 
@@ -72,14 +89,14 @@ Before you start, install the following:
   </Step>
 </Steps>
 
-<Accordion title="Running setup again">
-  If `.env` already exists, `pnpm run setup` won't overwrite it. Instead it offers a short menu:
+<Accordion title="Running the installer again">
+  `install.sh` is safe to re-run. Once a fresh install completes, it writes a `SETUP_COMPLETE` marker to `.env`, and every subsequent run takes a non-rotating **upgrade/restart** path:
 
-  - **Start the stack** — bring the containers back up (`docker compose up -d`)
-  - **Resume setup** — re-run database migrations and startup against your existing `.env`, useful if a previous run didn't finish
-  - **Full reset** — regenerate all secrets. This invalidates active sessions and requires typing `yes` to confirm
+  - **No secrets are regenerated** — your database credentials and vault master key are preserved, so existing encrypted secrets stay readable.
+  - **Migrations are re-applied idempotently** — already-applied migrations are skipped, so this is safe on every run and is how you pick up a new image version.
+  - **The vault is verified, not re-seeded** — the installer confirms the required secrets are present and fails loudly if any are missing, rather than overwriting them.
 
-  Your secrets are never silently regenerated, because rotating them would invalidate live sessions.
+  Because secrets are never silently regenerated, re-running is the normal way to upgrade or restart the stack.
 </Accordion>
 
 ## Full setup
@@ -231,8 +248,8 @@ no manual SQL step.
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Setup says my .env already exists">
-    This is expected on a second run. `pnpm run setup` never overwrites an existing `.env` — instead it offers a menu to start the stack, resume setup, or do a full reset. Full reset is the only option that regenerates secrets, and it asks for confirmation first.
+  <Accordion title="Re-running the installer on an existing install">
+    This is expected and safe. Once the first install completes, `install.sh` detects the `SETUP_COMPLETE` marker in `.env` and switches to upgrade/restart mode: it never regenerates secrets, re-applies migrations idempotently, and verifies (rather than re-seeds) the vault. If the vault verification fails because required secrets are missing, run a fresh install from a clean directory.
   </Accordion>
 
   <Accordion title="Postgres connection refused">
@@ -242,7 +259,7 @@ no manual SQL step.
     docker compose ps
     ```
 
-    The database password is generated during `pnpm run setup` and shared with the container automatically through `.env`, so the credentials match by default. If you've edited `.env` by hand, make sure `DATABASE_URL` is still consistent with `DB_USER` and `DB_PASSWORD`.
+    The database password is generated during install and shared with the container automatically through `.env`, so the credentials match by default. If you've edited `.env` by hand, make sure `DATABASE_URL` is still consistent with `DB_USER` and `DB_PASSWORD`.
   </Accordion>
 
   <Accordion title="Email channel not activating">
@@ -251,17 +268,11 @@ no manual SQL step.
     Remember to recreate the container after adding secrets: `docker compose up -d --force-recreate curia`.
   </Accordion>
 
-  <Accordion title="macOS: HTTPS requests fail with 'unable to get local issuer certificate'">
-    Node installed via nvm or fnm bundles its own CA store and doesn't trust macOS system certificates. Export your system certs and point Node at them:
+  <Accordion title="Let's Encrypt certificate isn't issued (HTTPS topology)">
+    Caddy requests a certificate on first start and needs three things in place: a DNS A record for your domain pointing at the host, ports 80 and 443 reachable from the internet, and the `DOMAIN` value set correctly in `.env`. Check the proxy logs for the ACME challenge result:
 
     ```bash
-    security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain > ~/.config/curia/macos-ca-certs.pem
-    ```
-
-    Then uncomment this line in `.env` and recreate the container:
-
-    ```env
-    NODE_EXTRA_CA_CERTS=/Users/yourname/.config/curia/macos-ca-certs.pem
+    docker compose logs caddy
     ```
   </Accordion>
 </AccordionGroup>
@@ -269,6 +280,12 @@ no manual SQL step.
 ## Next steps
 
 <CardGroup cols={2}>
+  <Card title="Deploy to a server" icon="server" href="/get-started/deployment">
+    Run Curia in production: topology, HTTPS, backups, and what to keep safe.
+  </Card>
+  <Card title="Build from source" icon="code" href="/get-started/development">
+    Clone the repo and hot-reload your changes to contribute or customize Curia.
+  </Card>
   <Card title="Configure your instance" icon="sliders" href="/get-started/configuration">
     Set up multiple email accounts, tune the autonomy engine, and customize security rules.
   </Card>
