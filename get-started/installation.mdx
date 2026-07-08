@@ -178,6 +178,56 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
   </Step>
 </Steps>
 
+## Updating Curia
+
+Curia applies pending database migrations automatically on every startup, under an
+advisory lock, and skips migrations that are already applied. Updating is therefore
+just pulling the new images and restarting; a schema-changing version bump migrates
+unattended, and re-running when you're already up to date is a safe no-op. There is
+no manual SQL step.
+
+<Warning>
+  Always back up your database before updating. Migrations move your schema forward,
+  and a bad interruption mid-migration is far easier to recover from with a fresh dump
+  in hand.
+</Warning>
+
+<Steps>
+  <Step title="Back up the database">
+    ```bash
+    docker compose exec -T postgres pg_dump -U curia -Fc curia > curia-backup-$(date +%Y%m%d).dump
+    ```
+
+    This writes a compressed, custom-format dump you can restore with `pg_restore`.
+    Keep it until you've confirmed the update is healthy.
+  </Step>
+
+  <Step title="Pull and restart">
+    ```bash
+    docker compose pull
+    docker compose up -d
+    ```
+
+    On startup the app runs any pending migrations before serving traffic. Watch the
+    logs (`docker compose logs -f curia`) — a successful boot ends with the health
+    check passing at `http://localhost:3000/api/health`.
+  </Step>
+
+  <Step title="Roll back if needed">
+    If an update misbehaves, restore the backup in place. Stop the app so nothing
+    is writing, restore (`--clean --if-exists` drops and recreates objects), then
+    bring the stack back up:
+
+    ```bash
+    docker compose stop curia
+    docker compose exec -T postgres pg_restore -U curia -d curia --clean --if-exists < curia-backup-YYYYMMDD.dump
+    docker compose up -d
+    ```
+
+    Replace `YYYYMMDD` with your dump's date.
+  </Step>
+</Steps>
+
 ## Troubleshooting
 
 <AccordionGroup>
