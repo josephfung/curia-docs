@@ -3,7 +3,7 @@ title: "Configuration reference"
 description: "Complete reference for all Curia configuration options in config/local.yaml — rate limits, security rules, knowledge graph decay, intent drift, and more."
 ---
 
-This page documents every configurable setting in `config/local.yaml`. For initial setup and environment variables, see [Initial configuration](/get-started/configuration).
+This page documents the configurable settings in `config/local.yaml` that you are most likely to tune. A few internal defaults (health-check thresholds, document-workspace TTLs, bulk-export gates, and the autonomy bypass ladder) are omitted — `config/default.yaml` in the repo is the exhaustive source of truth, and `src/config.ts` holds the validation schema. For initial setup and environment variables, see [Initial configuration](/get-started/configuration).
 
 ## Secrets and the vault
 
@@ -61,12 +61,27 @@ When a conversation grows long, Curia automatically condenses older turns into a
 ```yaml
 # config/local.yaml
 workingMemory:
+  ttlDays: 30       # working-memory turns are purged this many days after they are written
   summarization:
     threshold: 20   # number of turns that triggers a summarization pass
     keepWindow: 10  # most-recent turns to retain as active after summarization
 ```
 
 Constraints: `threshold` must be 2 or greater, `keepWindow` must be 1 or greater, and `keepWindow` must be less than `threshold`.
+
+`ttlDays` (default `30`) is the retention window for individual working-memory turns. The dream engine's nightly purge deletes turns whose `expires_at` has passed, so 30 days means re-opening a conversation up to a month later still has full context. Lower it for high-volume deployments where week-old context isn't worth retaining. Must be a positive integer no greater than `36500` (100 years).
+
+## Conversation checkpoint debounce
+
+After the last agent response in a conversation, Curia waits for a quiet period before firing a `conversation.checkpoint` event, which kicks off background memory extraction (`extract-relationships` and related passes). Debouncing means a burst of rapid turns produces one extraction pass at the end rather than one per turn.
+
+```yaml
+# config/local.yaml
+dispatch:
+  conversationCheckpointDebounceMs: 600000   # 10 minutes of inactivity before extraction fires
+```
+
+Lower it to extract memory sooner after a conversation goes quiet; raise it to batch more turns into a single extraction pass. Must be a positive integer; a non-numeric or non-positive value is a hard startup failure.
 
 ## Skill output length
 
@@ -169,7 +184,53 @@ Mount `profileDir` on a volume in production so browser logins survive container
       Avoid patterns with unbounded nested quantifiers. These patterns run on every LLM-facing error message.
     </Warning>
   </Accordion>
+
+  <Accordion title="Outbound PII redaction">
+    Distinct from `pii.extra_patterns` (which scrubs LLM-facing error strings), this policy governs which detected PII is allowed to leave in **outbound channel messages** (email, Signal). Detection uses the same library as the log scrubber; this block controls only the policy — which detected labels pass through on which channel. Anything not on a channel's allow list is redacted. The principal is exempt structurally (a UUID match on the CEO contact ID), so their own messages are never redacted.
+
+    ```yaml
+    # config/local.yaml
+    pii:
+      outbound_redaction:
+        enabled: true          # kill switch for the whole outbound-redaction pass
+        default: block         # action for label/channel combos not explicitly allowed (block | allow)
+        channel_policies:
+          email:
+            allow: [email]     # email addresses pass through on email replies
+          signal:
+            allow: []          # nothing allowed on Signal (except the principal)
+    ```
+
+    Each key under `channel_policies` is a channel name; its `allow` list holds the lowercase pattern labels permitted on that channel. With `default: block`, omitting a channel means everything is redacted for it.
+  </Accordion>
 </AccordionGroup>
+
+## Knowledge graph sensitivity rules
+
+Every knowledge-graph node is classified into a sensitivity level — `public`, `internal`, `confidential`, or `restricted` — based on its content. These rules drive bulk-export gating: `restricted` nodes are blocked from bulk export entirely, and `confidential` nodes require CEO approval. `sensitivity_rules` is a top-level list; each entry is a category with a sensitivity level and a set of lowercase patterns.
+
+```yaml
+# config/default.yaml — this block is read ONLY from default.yaml (see warning below)
+sensitivity_rules:
+  - category: credentials        # human-readable label, used for logging and category hints
+    sensitivity: restricted      # public | internal | confidential | restricted
+    patterns:                    # lowercase substrings matched case-insensitively
+      - password
+      - api key
+      - secret key
+  - category: financial
+    sensitivity: confidential
+    patterns:
+      - salary
+      - invoice
+      - bank account
+```
+
+<Warning>
+  Unlike every other block on this page, `sensitivity_rules` is loaded directly from `config/default.yaml` at startup — the classifier reads that file by an absolute path, **not** the merged `local.yaml`. Rules placed in `config/local.yaml` are silently ignored. To customize sensitivity classification you must edit `config/default.yaml` in the repo. ([Configuration merge behavior](/get-started/configuration) covers how every other block is layered from `local.yaml`.)
+</Warning>
+
+Rules are evaluated highest-sensitivity-first, so the most protective match always wins — a node matching both a `restricted` and a `confidential` pattern is classified `restricted`. Matching is a case-insensitive substring search across the node's label and all of its string property values, so write patterns in lowercase. The full shipped rule set (credentials, board materials, litigation, strategy, financial, contracts, HR, and personal identifiers) lives in `config/default.yaml`; edit it there to add categories or patterns. See [Contacts and trust](/core-concepts/contacts-trust) for how sensitivity interacts with export controls.
 
 ## Outbound content filter (LLM judge)
 
@@ -227,7 +288,33 @@ dreaming:
       permanent: null          # permanent facts are never touched by the decay pass
       slow_decay: 180          # employer, residence — reliable for months
       fast_decay: 21           # coffee preference, current focus — unreliable after weeks
+    # Decay-warning knobs: warn "important" nodes before archiving them.
+    edgeCountPercentile: 0.95  # a node in the top 5% by edge count counts as important
+    edgeCountFloor: 5          # minimum edge count to be important regardless of percentile
+    warnHoldBackDays: 7        # days to hold a warned node before archiving it anyway
 ```
+
+Before archiving a node, the decay pass checks whether it is **important** — either high-sensitivity (confidential or restricted) or highly connected (edge count at or above the `edgeCountPercentile` of all nodes, with `edgeCountFloor` as a hard minimum). Important nodes are warned rather than silently archived, and held back for `warnHoldBackDays` before archiving proceeds. `edgeCountPercentile` is a fraction between 0 and 1; `edgeCountFloor` and `warnHoldBackDays` are non-negative integers.
+
+## Autonomy auto-scoring
+
+A second dream-engine pass runs daily alongside decay. It scores recently completed actions on three dimensions (Competence, Commitment, Compatibility) with an LLM judge, then nudges the [autonomy score](/core-concepts/autonomy) up or down by a small delta. This is how the score drifts on its own between explicit CEO adjustments.
+
+```yaml
+# config/local.yaml
+dreaming:
+  autonomy_scoring:
+    intervalMs: 86400000      # how often the pass runs (default: daily, same cadence as decay)
+    model_tier: fast          # tier for the scoring judge, resolved via ModelRouter
+    batchSize: 50             # max actions scored per pass
+    minScoredActions: 30      # minimum scored actions before any adjustment fires
+    halfLifeDays: 30          # time-decay half-life for weighting recent vs. older actions
+    weakExpiredWeight: 0.3    # reduced weight for an 'expired' compatibility signal
+    ceoCooldownDays: 7        # days after a manual CEO set-autonomy before auto-adjust resumes
+    errorRateThreshold: 0.20  # competence error rate above which score increases are blocked
+```
+
+`model_tier` is a tier name (`fast` / `standard` / `powerful`), not a raw model string — set the concrete model under [model routing](#model-routing). The older `model` key is rejected at startup; use `model_tier`. `ceoCooldownDays` prevents the background pass from immediately undoing a score the CEO just set by hand. `weakExpiredWeight` and `errorRateThreshold` are fractions between 0 and 1; the interval, batch, and count knobs are positive integers.
 
 ## Intent drift detection
 
@@ -263,7 +350,10 @@ model_routing:
       model: claude-sonnet-4-6
     powerful:
       model: claude-sonnet-4-6
+  default_tier: standard   # tier used when a caller requests a model without naming a tier
 ```
+
+`default_tier` (default `standard`) is the tier the `ModelRouter` falls back to when a caller resolves a model without specifying a tier. It must be one of `fast`, `standard`, or `powerful`; any other value is a hard startup failure.
 
 To route a tier through OpenRouter (requires `openrouter_api_key` in the vault), set the model to an OpenRouter model ID:
 
