@@ -25,12 +25,21 @@ The image-based install runs everything inside the container, so the host needs 
 <Steps>
   <Step title="Download the installer">
     ```bash
-    curl -fsSL https://raw.githubusercontent.com/josephfung/curia/main/install.sh -o install.sh
+    curl -fsSL https://github.com/josephfung/curia/releases/latest/download/install.sh -o install.sh
     ```
 
     <Warning>
       Download the script first, then run it — do **not** pipe curl straight into bash (`curl … | bash`). The installer uses interactive prompts that need a real terminal, and piped input has no TTY. Reviewing the script before running it is also just good practice.
     </Warning>
+
+    <Note>
+      By default the installer uses the **latest release** — both the config files and the container image come from it. Set `CURIA_VERSION` to choose a different one; it pins the config *and* the image together:
+
+      - `CURIA_VERSION=v0.40.1 bash install.sh` — pin a specific release.
+      - `CURIA_VERSION=edge bash install.sh` — track the newest `main` build (advanced / testing).
+
+      The Postgres image is a separate axis, versioned by its major (`CURIA_POSTGRES_TAG=pg16`) rather than the Curia release. On a re-run of an existing install, `CURIA_VERSION` does not change the image tag — edit `CURIA_IMAGE_TAG` in `.env` and `docker compose pull` to upgrade.
+    </Note>
   </Step>
 
   <Step title="Run it">
