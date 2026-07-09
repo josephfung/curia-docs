@@ -43,6 +43,9 @@ Curia was built for executives who cannot afford to run AI agents on trust alone
   <Card title="Outbound safety" icon="paper-plane">
     All outbound messages — regardless of which skill or agent produced them — pass through a single outbound gateway before being sent. A deterministic content filter checks for system prompt fragments, internal field names, secret patterns, and contact data leakage. A second-stage LLM-as-judge then reviews mixed-audience messages for principal-private or internal content leaking to external recipients, blocking the send and notifying you with a principal-safe reason. Display names in inbound emails are validated against the verified sender address to prevent spoofing.
   </Card>
+  <Card title="Bulk export controls" icon="file-export">
+    Sending data out in bulk — email attachments, or exports to Google Drive and Sheets — passes through dedicated gates on top of the outbound filter. An export above a configurable item count escalates for your approval; exports to a destination that is not a known contact are allowed only for higher-sensitivity data; and the most sensitive tier is never bulk-exported at all. Each item's sensitivity is resolved from the knowledge graph, and an approval notification lists exactly what would leave.
+  </Card>
   <Card title="Skill caller restrictions" icon="user-lock">
     Skills can declare which agents are allowed to invoke them via `allowed_callers` in the skill manifest. The execution layer enforces this before any other gate — a structurally forbidden caller is rejected immediately, not routed through autonomy or approval workflows. Agent names are validated at startup; unknown names prevent boot.
   </Card>
