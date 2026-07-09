@@ -1,0 +1,111 @@
+---
+title: "Ant Farm"
+description: "Watch your Curia work — an animated pixel-art office that replays real activity from the audit log, with DVR-style replay and a live edge."
+---
+
+Ant Farm is an animated pixel-art office that lets you *watch* your Curia work. Agents sit at desks, an overhead claw drops scheduled jobs onto them, characters walk over to hand off delegated work, speech and thought bubbles pop up as they talk and think, and task cards appear and get tossed in the wastebasket as work opens and closes.
+
+Every animation is drawn from a real entry in your [audit log](/core-concepts/architecture). Ant Farm doesn't simulate anything and it doesn't make anything happen — it's a read-only lens over activity that already occurred. You can watch, scrub, and rewind, but there's nothing to click that commands an agent or changes state.
+
+<Note>
+Ant Farm is **real-data-only** and **observability-only**. An empty office means there was no audit activity in the window you're looking at, not that something is broken. And because it's purely a viewing surface, there's no control panel — you can't drive an agent from here.
+</Note>
+
+## Getting there
+
+Ant Farm lives at the `/antfarm/` path of your Curia web console, behind the same login as the console itself.
+
+<Steps>
+  <Step title="Sign in to the console">
+    Open your Curia web console and sign in as you normally would. Ant Farm shares the console's session, so this is the only authentication step.
+  </Step>
+  <Step title="Open /antfarm/">
+    Navigate to `/antfarm/` on the same host (for example, `https://your-curia-host/antfarm/`). The office loads with the last 24 hours of activity ready to play.
+  </Step>
+</Steps>
+
+If you land on Ant Farm without a valid console session, it shows a "sign in via the console first" gate rather than any data — so start from the console.
+
+## Replay and live: the "DVR" model
+
+Ant Farm behaves like a DVR. Replay history and the live edge are the same timeline, not two separate screens, so you can move fluidly between "what happened earlier today" and "what's happening right now."
+
+The transport bar across the bottom gives you:
+
+- **Scrub** — drag the playhead to any point in the loaded window to jump backward or forward in time.
+- **Play / pause** — start and stop playback at any point.
+- **Speed** — adjust playback velocity from a slow crawl up to fast-forward when a quiet stretch has nothing to watch.
+- **Live edge** — snap to *now*, where newly-arriving events animate the moment they happen.
+
+When you're at the live edge, fresh audit activity streams in and plays automatically. Scrub back into history and playback detaches from live so you can study a past moment; snap forward again to rejoin the live feed. Clicking an agent or a specific animation opens a detail overlay and pauses playback; closing it resumes where you were.
+
+## What the office is showing you
+
+Each kind of thing your Curia does maps to a small, consistent piece of office choreography. Once you learn the vocabulary, the office reads at a glance:
+
+<CardGroup cols={2}>
+  <Card title="Scheduled job fires" icon="robot">
+    The overhead claw travels along its track and drops the job onto the responsible agent's desk.
+  </Card>
+  <Card title="An agent starts working" icon="bolt">
+    The agent lights up and becomes active at their desk.
+  </Card>
+  <Card title="Work is delegated" icon="person-walking-arrow-right">
+    The agent walks over to another agent's desk and speaks the task they're handing off.
+  </Card>
+  <Card title="A skill is running" icon="brain">
+    A thought bubble appears over the agent while the skill runs, and clears when it finishes.
+  </Card>
+  <Card title="Agents talk" icon="comment">
+    A speech bubble pops up for a conversation between agents (a Bullpen discussion).
+  </Card>
+  <Card title="A message arrives or leaves" icon="tornado">
+    Inbound and outbound messages travel through the office's vacuum tubes.
+  </Card>
+  <Card title="A task opens" icon="note-sticky">
+    A task card appears on the board.
+  </Card>
+  <Card title="A task completes" icon="trash">
+    The task card is thrown in the wastebasket.
+  </Card>
+  <Card title="Something goes wrong" icon="triangle-exclamation">
+    An agent tints red when it hits an error.
+  </Card>
+  <Card title="A decision or block" icon="stamp">
+    A badge pops for a human decision, or when an action is held back by the [autonomy](/core-concepts/autonomy) rules.
+  </Card>
+</CardGroup>
+
+Each agent gets a stable, visually distinct look, so you can tell your coordinator from a specialist at a glance and follow the same character across a whole session.
+
+## Pixel art vs. placeholders
+
+Ant Farm always renders — but *how* it looks depends on which build you're running:
+
+- **Hosted and licensed builds** render the full [LimeZu](https://limezu.itch.io/) pixel-art style: detailed floors, desks, furniture, and animated character sprites that idle and walk in four directions.
+- **A plain open-core build** renders **procedural placeholder art** instead — simple stand-in shapes for every prop and character. Nothing is missing and nothing fails; the office is fully functional, it just looks more schematic.
+
+The choice is automatic based on whether the licensed art is present. Either way, the animations, timeline, and metaphors are identical. Attribution for the art packs is shown in the in-app credits footer.
+
+<Note>
+The licensed art is optional by design. The open-core image ships with placeholders so Ant Farm works out of the box, and licensed pixel art layers in cleanly on hosted builds without changing anything about how you use it.
+</Note>
+
+## What Ant Farm is good for
+
+Ant Farm turns rows of audit data into something you can watch and understand at a glance. It's useful when you want to:
+
+- **See what your Curia has been up to** without reading raw log entries — a delegation storm, a quiet afternoon, or a burst of scheduled jobs all have a distinct shape on screen.
+- **Follow a specific stretch of activity** by scrubbing to it and stepping through at your own pace.
+- **Keep an eye on things live** while Curia works, watching messages flow in and out and tasks open and close in real time.
+
+Because it's a read-only view over the audit log, it's a demonstration and observability surface, not a place to take action. When you want to *do* something — schedule a job, ask a question, review the backlog — that all happens through the console and conversation, not here.
+
+<CardGroup cols={2}>
+  <Card title="Scheduling" icon="clock" href="/core-concepts/scheduling">
+    The jobs, tasks, and backlog that the claw and task cards represent on screen.
+  </Card>
+  <Card title="Architecture" icon="diagram-project" href="/core-concepts/architecture">
+    The layers and audit log that Ant Farm draws its animations from.
+  </Card>
+</CardGroup>

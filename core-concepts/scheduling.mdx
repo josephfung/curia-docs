@@ -240,13 +240,15 @@ When a budget is exceeded, the burst stops cleanly. The job itself remains sched
 
 ## Job status and observability
 
+The web console has a **Jobs** view that lists every scheduled job. You can filter by schedule type and by agent, read a plain-language summary of each schedule, and jump straight from a job to the tasks it has spawned via linked task titles.
+
 The health endpoint reports the number of active and suspended jobs:
 
 ```bash
 curl http://localhost:3000/api/health
 ```
 
-Jobs that fail 3 consecutive times are automatically **suspended**. When this happens, Curia sends you a direct email notification — it bypasses the LLM pipeline entirely so the alert is delivered even if the Anthropic API is unavailable (the most common cause of repeated job failures). The email identifies the job, the agent, the failure count, and the last error.
+Jobs that fail 3 consecutive times are automatically **suspended**. When this happens, Curia sends you a direct email notification — it bypasses the LLM pipeline entirely so the alert is delivered even if the Anthropic API is unavailable (the most common cause of repeated job failures). The email identifies the job, the agent, the failure count, and the last error, and includes the job's objective and recurrence plus a deep link that opens that job directly in the console's Jobs view.
 
 If the scheduler watchdog detects a job stuck in the `running` state (process crashed mid-execution) and resets it back to `pending`, you also receive a direct email — so you know the recovery happened automatically and can review whether the job needs attention.
 
