@@ -210,7 +210,7 @@ Mount `profileDir` on a volume in production so browser logins survive container
 Every knowledge-graph node is classified into a sensitivity level — `public`, `internal`, `confidential`, or `restricted` — based on its content. These rules drive bulk-export gating: `restricted` nodes are blocked from bulk export entirely, and `confidential` nodes require CEO approval. `sensitivity_rules` is a top-level list; each entry is a category with a sensitivity level and a set of lowercase patterns.
 
 ```yaml
-# config/default.yaml — this block is read ONLY from default.yaml (see warning below)
+# config/local.yaml
 sensitivity_rules:
   - category: credentials        # human-readable label, used for logging and category hints
     sensitivity: restricted      # public | internal | confidential | restricted
@@ -226,11 +226,9 @@ sensitivity_rules:
       - bank account
 ```
 
-<Warning>
-  Unlike every other block on this page, `sensitivity_rules` is loaded directly from `config/default.yaml` at startup — the classifier reads that file by an absolute path, **not** the merged `local.yaml`. Rules placed in `config/local.yaml` are silently ignored. To customize sensitivity classification you must edit `config/default.yaml` in the repo. ([Configuration merge behavior](/get-started/configuration) covers how every other block is layered from `local.yaml`.)
-</Warning>
+Like every other array on this page, a `sensitivity_rules` list in `config/local.yaml` **replaces** the shipped default list — it does not merge with or extend it. To add a category, copy the rules you want to keep from `config/default.yaml` into your `local.yaml` block alongside your additions. A malformed override (unknown `sensitivity` value, empty `patterns`, missing `category`) fails startup with a clear error rather than being silently applied or ignored.
 
-Rules are evaluated highest-sensitivity-first, so the most protective match always wins — a node matching both a `restricted` and a `confidential` pattern is classified `restricted`. Matching is a case-insensitive substring search across the node's label and all of its string property values, so write patterns in lowercase. The full shipped rule set (credentials, board materials, litigation, strategy, financial, contracts, HR, and personal identifiers) lives in `config/default.yaml`; edit it there to add categories or patterns. See [Contacts and trust](/core-concepts/contacts-trust) for how sensitivity interacts with export controls.
+Rules are evaluated highest-sensitivity-first, so the most protective match always wins — a node matching both a `restricted` and a `confidential` pattern is classified `restricted`. Matching is a case-insensitive substring search across the node's label and all of its string property values, so write patterns in lowercase. The full shipped rule set (credentials, board materials, litigation, strategy, financial, contracts, HR, and personal identifiers) lives in `config/default.yaml`. See [Contacts and trust](/core-concepts/contacts-trust) for how sensitivity interacts with export controls.
 
 ## Outbound content filter (LLM judge)
 
