@@ -48,7 +48,7 @@ Every event that flows through the bus — every message received, every tool in
 
 ### Secrets never reach the LLM
 
-Agents access credentials through a scoped interface that validates each request against the skill's declared manifest. The LLM sees "email-parser connected to inbox" — never the actual password or API key. Every credential access is audit-logged.
+Agents access credentials through a scoped interface that validates each request against the skill's declared manifest. The LLM sees "email-list connected to inbox" — never the actual password or API key. Every credential access is audit-logged.
 
 ### Tool output sanitization
 

@@ -52,7 +52,7 @@ A typical chain looks like this:
 ```
 inbound.message  (email from vendor@example.com)
   └─ agent.task  (routed to coordinator)
-       └─ skill.invoke  (email-parser)
+       └─ skill.invoke  (file-parse)
             └─ skill.result  (receipt extracted: $142.50, Acme Supplies)
                  └─ skill.invoke  (memory.store — expense node created)
                       └─ agent.response  (coordinator confirms to CEO)
@@ -76,7 +76,7 @@ When a skill calls `ctx.secret()` to access a credential from the [vault](/get-s
 - Which agent and task triggered the skill
 - Whether the value resolved from the vault or an env fallback (`source: vault | env`)
 
-Secret values are never written to the audit log. The log tells you that the email-parser skill accessed the Nylas credential — not what that credential is.
+Secret values are never written to the audit log. The log tells you that the email-get skill accessed the Nylas credential — not what that credential is.
 
 ## PII handling
 
