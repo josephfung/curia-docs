@@ -149,35 +149,50 @@ Nothing from the outside world reaches the LLM unfiltered.
 
 ## Built-in skills
 
-Curia ships with more than 90 built-in skills across several categories:
+Curia ships with more than 90 built-in skills across several categories. The [built-in skills reference](/skills/built-in-skills) is the authoritative catalog — every skill with its `action_risk` level and a full description. The categories below mirror it:
 
 <AccordionGroup>
+  <Accordion title="Contact management">
+    `contact-create`, `contact-lookup`, `contact-list`, `contact-rename`, `contact-set-role`, `contact-set-tier`, `contact-link-identity`, `contact-unlink-identity`, `contact-grant-permission`, `contact-revoke-permission`, `contact-merge`, `contact-find-duplicates`, `contact-register`, `contact-set-identity-status`, `contact-update`, `contact-dedup-exclude`, `scan-grant-recommendations`, `approve-grant-recommendation`, `decline-grant-recommendation` — manage contacts, their channel identities, roles, capability tiers, and permission grants.
+  </Accordion>
   <Accordion title="Email">
-    `email-send`, `email-reply`, `email-list`, `email-get`, `email-archive`, `email-draft-save` — send, reply, browse, and draft emails via the Nylas API across multiple configured accounts.
+    `email-send`, `email-reply`, `email-list`, `email-get`, `email-draft-save`, `send-draft`, `email-archive`, `context-for-email`, `email-label`, `email-mark-read`, `email-list-folders`, `email-create-folder`, `email-download-attachment`, `drive-download-file` — send, reply, browse, label, and draft emails via the Nylas API across multiple configured accounts.
+  </Accordion>
+  <Accordion title="CEO Inbox">
+    `ceo-inbox-list`, `ceo-inbox-read`, `ceo-inbox-search`, `ceo-inbox-draft-compose`, `ceo-inbox-draft-reply`, `ceo-inbox-draft-edit`, `ceo-inbox-download-attachment`, `ceo-inbox-archive`, `ceo-inbox-label`, `ceo-inbox-mark-read`, `ceo-inbox-mark-starred`, `ceo-inbox-update-folders` — triage and draft in the CEO's personal inbox. Pinned exclusively to the `ceo-inbox` agent.
   </Accordion>
   <Accordion title="Calendar">
     `calendar-list-calendars`, `calendar-list-events`, `calendar-create-event`, `calendar-update-event`, `calendar-delete-event`, `calendar-find-free-time`, `calendar-check-conflicts`, `calendar-create-hold`, `calendar-holds-sweep`, `calendar-respond-to-invite`, `calendar-register` — full calendar management via Nylas, including tentative holds and invite RSVPs.
   </Accordion>
-  <Accordion title="Contacts">
-    `contact-create`, `contact-lookup`, `contact-list`, `contact-link-identity`, `contact-set-role`, `contact-merge`, `contact-find-duplicates`, `contact-grant-permission`, `contact-revoke-permission`, `contact-unlink-identity`, `contact-set-tier` — manage contacts and their capability tiers.
+  <Accordion title="Memory and knowledge graph">
+    `entity-context`, `memory-store`, `memory-query`, `memory-confirm`, `decay-warnings-list`, `query-relationships`, `delete-relationship`, `extract-facts`, `extract-relationships` — query, write to, and manage the knowledge graph.
+  </Accordion>
+  <Accordion title="Scheduling">
+    `scheduler-create`, `scheduler-list`, `scheduler-cancel`, `scheduler-report` — create and manage recurring or one-shot scheduled jobs.
+  </Accordion>
+  <Accordion title="Tasks">
+    `task-create`, `task-list`, `task-update`, `task-complete` — track deferred, multi-step, and waiting work in the unified backlog. Auto-pinned together with the Documents skills via `enable_task_management: true`.
+  </Accordion>
+  <Accordion title="Documents (working memory)">
+    `doc-list`, `doc-read`, `doc-search`, `doc-write` — an `ls` / `grep` / `read` / `write` interface over the agent's OKF document workspace: durable, document-like working memory. Auto-pinned together with the Tasks skills via `enable_task_management: true`.
+  </Accordion>
+  <Accordion title="Communication">
+    `signal-send`, `bullpen`, `request-clarification`, `context-bridge-release`, `context-bridge-clear` — send Signal messages, run the Bullpen inter-agent discussion space, pause to ask the CEO a question, and manage outbound reply-routing context.
   </Accordion>
   <Accordion title="Web research">
     `web-search`, `web-fetch`, `web-browser` — search the web via Tavily, fetch static pages, or drive a full Patchright-backed browser (with a human-behavior layer) for JavaScript-rendered sites.
   </Accordion>
-  <Accordion title="Knowledge and memory">
-    `entity-context`, `context-for-email`, `memory-store`, `memory-query`, `memory-confirm`, `decay-warnings-list`, `config-store`, `query-relationships`, `delete-relationship`, `extract-facts`, `extract-relationships` — query, write to, and manage the knowledge graph.
+  <Accordion title="File parsing">
+    `file-parse` — extract structured data from CSV, PDF, HTML, and image files, inline or from the temp-file store.
   </Accordion>
-  <Accordion title="Scheduling">
-    `scheduler-create`, `scheduler-list`, `scheduler-cancel`, `scheduler-report` — create and manage recurring or one-shot scheduled tasks.
+  <Accordion title="Templates">
+    `template-doc-request` — retrieve email-composing guidelines for pre-meeting document requests. Scheduling email (meeting requests, reschedules, cancellations) is composed directly by the Calendar Specialist.
   </Accordion>
-  <Accordion title="Communication templates">
-    `template-doc-request` — structured outbound email template for document requests. Scheduling email (meeting requests, reschedules, cancellations) is now composed directly by the Calendar Specialist.
+  <Accordion title="Autonomy and approvals">
+    `get-autonomy`, `set-autonomy`, `list-pending-actions`, `approve-action`, `deny-action`, `dismiss-action`, `approval-expiry-sweep` — read and change the global autonomy score, and work the approval queue. `set-autonomy` and the approval decisions are elevated (CEO only).
   </Accordion>
-  <Accordion title="Agent coordination">
-    `delegate`, `bullpen`, `skill-registry`, `signal-send` — inter-agent delegation, the Bullpen discussion space, and skill discovery.
-  </Accordion>
-  <Accordion title="Autonomy">
-    `get-autonomy`, `set-autonomy` — read and update the global autonomy score. Pinned to the Coordinator only.
+  <Accordion title="System and utility">
+    `delegate`, `activity-log`, `executive-profile-get`, `executive-profile-update`, `behavioral-preferences-update`, `config-store`, `image-generate`, `skill-registry`, `setup-status`, `setup-defer`, `date-resolve`, `secret-capture-request`, `system-secret-capture-request` — delegation, the audit recap, executive voice profile, persistent config, image generation, skill discovery, setup-wizard helpers, and secret capture.
   </Accordion>
 </AccordionGroup>
 

@@ -14,6 +14,15 @@ The Coordinator can handle many tasks on its own using its pinned skills. Create
 - The task has a **recurring schedule** of its own (e.g., generate a weekly summary every Monday)
 - You want **separate error budgets** — caps on LLM turns and spend that are independent of the Coordinator's limits
 
+## Choosing built-in skills
+
+Curia ships with more than 90 built-in skills. The [built-in skills reference](/skills/built-in-skills) is the catalog to shop from — each skill lists its `action_risk` level — and [how skills work](/skills/how-skills-work) explains the execution model. A few rules of thumb when deciding what to give an agent:
+
+- **Pin the narrowest set that does the job.** List only the skills the agent actually needs in `pinned_skills`. A calendar agent doesn't need `email-send`; an expense tracker doesn't need `calendar-delete-event`. Smaller skill sets keep the agent focused and shrink the blast radius if a prompt goes wrong.
+- **Mind `action_risk`.** Higher-risk skills (`medium`, `high`, `critical`) trigger the [approval workflow](/security/approval-workflow) whenever the current [autonomy score](/core-concepts/autonomy) is below their floor. Pinning a skill doesn't bypass that gate — it only makes the skill available.
+- **Pin explicitly, or allow discovery.** `pinned_skills` are always available. `allow_discovery: true` lets the agent search the registry for anything else at runtime; leave it off (the default) for agents that should only ever touch their declared skills.
+- **Use capability bundles instead of long lists.** Some skill families are pinned as a set by a single flag rather than named one by one. `enable_task_management: true` auto-pins the full `task-*` backlog family (`task-create`, `task-list`, `task-update`, `task-complete`) *and* the `doc-*` document-workspace family (`doc-list`, `doc-read`, `doc-search`, `doc-write`), giving the agent a task backlog and durable working memory in one line.
+
 ## Simple agent — YAML only
 
 Most agents need nothing more than a YAML file. Create a file in the `agents/` directory:
@@ -32,8 +41,9 @@ system_prompt: |
   Maintain running totals by category and flag anything unusual.
 
 pinned_skills:
-  - email-parser
-  - spreadsheet-writer
+  - email-list
+  - email-get
+  - file-parse
 
 allow_discovery: true
 
@@ -85,13 +95,24 @@ Restart Curia after adding the file — agents are loaded at startup.
 
     ```yaml
     pinned_skills:
-      - email-parser
-      - spreadsheet-writer
+      - email-list
+      - email-get
+      - file-parse
 
     allow_discovery: true
     ```
 
-    Set `allow_discovery: false` (the default) for agents that should only ever use their declared skills.
+    Set `allow_discovery: false` (the default) for agents that should only ever use their declared skills. See [choosing built-in skills](#choosing-built-in-skills) for how to pick the set.
+  </Accordion>
+
+  <Accordion title="enable_task_management — backlog and working memory">
+    Set `enable_task_management: true` to auto-pin two skill families as a bundle rather than naming their eight skills by hand: the `task-*` backlog skills (`task-create`, `task-list`, `task-update`, `task-complete`) and the `doc-*` document-workspace skills (`doc-list`, `doc-read`, `doc-search`, `doc-write`). It also marks the agent heartbeat-eligible so its scheduled wake-ups fire.
+
+    ```yaml
+    enable_task_management: true
+    ```
+
+    The Coordinator, `ceo-inbox`, and `contacts` agents enable it. See [choosing built-in skills](#choosing-built-in-skills).
   </Accordion>
 
   <Accordion title="memory — scopes">
