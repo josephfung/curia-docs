@@ -112,7 +112,7 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 
 ## Tasks
 
-Track deferred, multi-step, and waiting work in the unified [tasks backlog](/core-concepts/scheduling#tasks-and-the-backlog). These are usually auto-pinned onto an agent via the `enable_task_management` capability rather than listed individually.
+Track deferred, multi-step, and waiting work in the unified [tasks backlog](/core-concepts/scheduling#tasks-and-the-backlog). These are usually auto-pinned onto an agent via the `enable_task_management: true` flag rather than listed individually — the same flag also pins the [Documents](#documents-working-memory) working-memory skills below. See [choosing built-in skills](/agents/building-custom-agents#choosing-built-in-skills).
 
 | Skill | action_risk | Description |
 |---|---|---|
@@ -120,6 +120,17 @@ Track deferred, multi-step, and waiting work in the unified [tasks backlog](/cor
 | `task-list` | none | List tasks filtered by status, owner, or tag — the source for "what's open?", "what's waiting on me?" |
 | `task-update` | low | Update a task's status, priority, owner, or wake time; append a progress note |
 | `task-complete` | low | Mark a task done (cancels any pending wake-up) |
+
+## Documents (working memory)
+
+An `ls` / `grep` / `read` / `write` interface over the agent's OKF document workspace — durable, document-like working memory for notes, plans, and drafts that outlive a single turn. Auto-pinned as a set via the same `enable_task_management: true` flag as the [Tasks](#tasks) skills above; see [choosing built-in skills](/agents/building-custom-agents#choosing-built-in-skills).
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `doc-list` | none | List a directory in the document workspace, like `ls` on a path prefix. Returns the directory manifest of direct child documents with titles and types; use `doc-read` for content |
+| `doc-read` | none | Read a document by path. Optionally read just one heading's section to keep context cost down; returns a not-found flag rather than erroring when the path is missing |
+| `doc-search` | none | Case-sensitive substring search across the workspace, optionally scoped to a path prefix. Returns matching paths, line numbers, and line text; use `doc-read` to pull full context |
+| `doc-write` | low | Create, append, replace, or section-edit a document. Every write is logged, and version conflicts return the latest versions so the agent can re-read and retry. Project documents are durable; scratch documents are ephemeral |
 
 ## Communication
 
