@@ -25,7 +25,7 @@ The coordinator-specialist pattern solves two problems at once.
 
 *Coherence.* Having one agent own every outbound message means the persona stays consistent even when six different specialists contributed to the answer. The Coordinator synthesizes, re-voices, and delivers — the underlying specialization is invisible to the recipient.
 
-*Isolation.* Each specialist has its own memory scopes and permissions. The research analyst can't read the CEO inbox; the calendar specialist can't write to the contacts database. A compromised or misbehaving specialist can only affect the narrow scope it was given.
+*Isolation.* Each specialist is granted its own set of skills, enforced by the Execution Layer against every skill's manifest. The research analyst has no inbox skills; the calendar specialist has no contact-write skills. A compromised or misbehaving specialist can only invoke the skills it was granted. (Memory is not partitioned this way — all agents share one knowledge graph; the boundary is capabilities, not data.)
 
 ## Extensibility
 

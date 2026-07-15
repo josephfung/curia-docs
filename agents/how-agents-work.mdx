@@ -44,7 +44,7 @@ allow_discovery: true
 
 ## Specialist agents
 
-Specialist agents like `research-analyst` work entirely inside the system. They receive delegated tasks from the Coordinator via the Bullpen or a direct `agent.response` event, do their work using their own pinned skills and memory scopes, and return results. They never communicate with the outside world directly — their internal handles (such as `@research-analyst`) appear only in the audit log and Bullpen threads, never in outbound messages.
+Specialist agents like `research-analyst` work entirely inside the system. They receive delegated tasks from the Coordinator via the Bullpen or a direct `agent.response` event, do their work using their own pinned skills, and return results. They never communicate with the outside world directly — their internal handles (such as `@research-analyst`) appear only in the audit log and Bullpen threads, never in outbound messages.
 
 ```yaml
 # agents/research-analyst.yaml
@@ -64,8 +64,6 @@ pinned_skills:
   - scheduler-list
   - scheduler-cancel
 allow_discovery: false
-memory:
-  scopes: [research]
 ```
 
 ## Agent definition in YAML
@@ -90,9 +88,6 @@ pinned_skills:
 
 allow_discovery: true
 
-memory:
-  scopes: [expenses, vendors, budgets]
-
 schedule:
   - cron: "0 9 * * 1"
     task: "Generate weekly expense summary"
@@ -109,7 +104,6 @@ error_budget:
 | `model.tier` | Capability tier: `fast`, `standard`, or `powerful` — mapped to a concrete model by the operator in config |
 | `pinned_skills` | Skills always available to this agent in every task |
 | `allow_discovery` | When `true`, the agent can search the skill registry for capabilities not in its pinned list |
-| `memory.scopes` | Named memory scopes the agent can read from and write to |
 | `schedule` | Cron expressions for recurring tasks the agent runs automatically |
 | `error_budget.max_turns` | Maximum LLM round-trips per task execution — hard cap |
 | `error_budget.max_cost_usd` | Maximum dollar spend per task execution — hard cap |

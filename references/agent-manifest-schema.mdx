@@ -50,12 +50,6 @@ inject_specialists: boolean
 # Optional — custom handler for agent-specific logic
 # Path relative to the agent YAML file
 handler: ./custom-handler.ts
-
-# Optional — memory scope configuration
-# Scopes isolate this agent's working memory from other agents
-memory:
-  scopes:
-    - scope-name
 ```
 
 ## Field details
@@ -103,9 +97,9 @@ Array of skill names this agent can always invoke. Skills must be registered in 
 
 When `true`, the agent can use the `skill-registry` skill to search for and invoke skills not in its `pinned_skills` list. The coordinator typically has this enabled; specialists typically do not (they operate with a fixed, auditable skill set).
 
-### `memory.scopes`
+### Memory access
 
-Memory scopes isolate an agent's working memory. Each scope is an independent namespace — facts stored in one scope are not visible to agents using a different scope. The coordinator uses no explicit scope (it shares the default scope). Specialists like `research-analyst` use their own scopes to prevent cross-contamination.
+Agents do not declare memory scopes. Every agent reads and writes a single shared knowledge graph; there is no per-agent memory isolation. What an agent can touch is governed by which memory skills it is granted (capability gating), the sensitivity ceiling on knowledge-graph reads, and source attribution on writes — not by agent identity.
 
 <CardGroup cols={2}>
   <Card title="Built-in agents" icon="users" href="/agents/built-in-agents">

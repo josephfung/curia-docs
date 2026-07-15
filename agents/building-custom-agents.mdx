@@ -1,6 +1,6 @@
 ---
 title: "Create a custom agent: YAML config and handlers"
-description: "Define a specialist agent in YAML, configure its model, memory scopes, and error budgets, and optionally add a TypeScript handler for custom logic."
+description: "Define a specialist agent in YAML, configure its model, pinned skills, and error budgets, and optionally add a TypeScript handler for custom logic."
 ---
 
 Curia ships with a Coordinator agent that handles all incoming messages and a research analyst that can dig into topics on demand. When your workflow calls for domain-specific expertise — expense tracking, contract review, investor relations — you create a specialist agent that owns that domain and lets the Coordinator delegate to it.
@@ -9,7 +9,7 @@ Curia ships with a Coordinator agent that handles all incoming messages and a re
 
 The Coordinator can handle many tasks on its own using its pinned skills. Create a specialist agent when:
 
-- The task requires **dedicated memory scopes** (e.g., an expense tracker that remembers vendor patterns across weeks)
+- The task requires a **focused, auditable skill set** distinct from the Coordinator's (e.g., an expense tracker with its own parsing and spreadsheet skills)
 - You want a **focused system prompt** that won't bloat the Coordinator's context
 - The task has a **recurring schedule** of its own (e.g., generate a weekly summary every Monday)
 - You want **separate error budgets** — caps on LLM turns and spend that are independent of the Coordinator's limits
@@ -46,9 +46,6 @@ pinned_skills:
   - file-parse
 
 allow_discovery: true
-
-memory:
-  scopes: [expenses, vendors, budgets]
 
 schedule:
   - cron: "0 9 * * 1"
@@ -115,15 +112,8 @@ Restart Curia after adding the file — agents are loaded at startup.
     The Coordinator, `ceo-inbox`, and `contacts` agents enable it. See [choosing built-in skills](#choosing-built-in-skills).
   </Accordion>
 
-  <Accordion title="memory — scopes">
-    Memory scopes give the agent access to named segments of entity memory. An agent only reads and writes facts within its declared scopes:
-
-    ```yaml
-    memory:
-      scopes: [expenses, vendors, budgets]
-    ```
-
-    Scopes are free-form strings — you define them. Two agents sharing a scope can read each other's facts within it.
+  <Accordion title="memory — access">
+    Agents do not declare memory scopes. Every agent reads and writes a single shared knowledge graph, so a specialist can build on facts other agents recorded (contact preferences, prior research, entity relationships). Whether an agent can touch memory at all is decided by the memory skills you pin to it (e.g. `memory-query`, `memory-store`), not by a per-agent namespace.
   </Accordion>
 
   <Accordion title="schedule — cron jobs at startup">
@@ -200,9 +190,6 @@ pinned_skills:
   - contact-lookup
 
 allow_discovery: true
-
-memory:
-  scopes: [investors, board, fundraising]
 
 schedule:
   - cron: "0 8 * * 1"

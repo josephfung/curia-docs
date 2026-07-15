@@ -11,7 +11,7 @@ Curia is built around a central message bus that connects five layers. Four doma
 |---|---|---|
 | **Channel** | Translates platform messages (Signal, Email, CLI, HTTP) into normalized bus events | Signal adapter, Email adapter, CLI adapter |
 | **Dispatch** | Routes messages to agents, enforces policy (rate limits, trust scoring, injection detection), translates responses back to channels | Dispatcher, PII redactor |
-| **Agent** | LLM-powered agents with isolated memory scopes — receives tasks, reasons, invokes skills, produces responses | Coordinator, Research Analyst |
+| **Agent** | LLM-powered agents over a shared knowledge graph — receives tasks, reasons, invokes skills, produces responses | Coordinator, Research Analyst |
 | **Execution** | Runs skills (local TypeScript handlers or MCP tools), validates permissions, sanitizes outputs | Skill executor, MCP client |
 | **System** | Trusted infrastructure with full pub/sub access to all event types | Audit logger, Memory engine, Scheduler, Dream engine |
 
