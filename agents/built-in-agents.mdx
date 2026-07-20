@@ -176,7 +176,7 @@ A proactive specialist agent that scans the CEO's calendar for recently-ended ex
 - **Reminders** — nudges the CEO on the same thread if a prompt goes unanswered after a configurable delay (default: 2 hours)
 - **Preference learning** — when the CEO says *"don't debrief me on meetings with X"*, the rule is stored as a KG fact and respected on future scans
 
-**State is tracked as tasks.** Each pending debrief is a [task](/core-concepts/scheduling#tasks-and-the-backlog) (tagged `debrief-pending`), and the reminder is just that task's wake-up; follow-up actions become child tasks owned by Curia, you, or an external party. Pending debriefs therefore also surface in the daily digest, and you can ask "what debriefs are outstanding?" through the coordinator.
+**State is tracked as tasks.** Each pending debrief is a [task](/core-concepts/scheduling#tasks-and-the-backlog) (tagged `debrief-pending`), and the reminder is just that task's wake-up; follow-up actions become child tasks owned by Curia, you, or an external party. You can ask "what debriefs are outstanding?" through the coordinator at any time.
 
 **Bullpen-through-coordinator pattern.** The Meeting Debrief agent has no outbound communication skills pinned. All proactive prompts and follow-up sends route through the coordinator via Bullpen, which keeps the unified persona intact and lets reply correlation work the same way as any other coordinator-initiated outbound.
 

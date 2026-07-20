@@ -84,7 +84,7 @@ Say: **"Dismiss REF-C3D9"** or **"Ignore that calendar request."**
 
 Dismissal is a neutral close — it doesn't count as an approval or a rejection in automatic scoring. Use it when a request is no longer relevant (e.g., the meeting was cancelled before you got to it).
 
-## Expiry and the daily digest
+## Expiry
 
 Approval requests do not stay open indefinitely. Stale requests expire automatically — by default after 24 hours for standard requests, sooner for time-sensitive ones.
 
@@ -92,9 +92,9 @@ Approval requests do not stay open indefinitely. Stale requests expire automatic
 
 - The row is marked `expired` in the action log
 - High and critical tier expirations trigger a batched notification to the CEO
-- Standard expirations are collected into the daily digest
+- Standard expirations close quietly and are recorded in the action log
 
-**Daily digest:** Every morning at 8 AM, Curia sends a summary of all outstanding approval requests to your configured channel. This ensures nothing lingers in the queue without your awareness, even if you missed an individual notification.
+**Staying aware:** Ask Curia **"what's waiting for my approval?"** any time to see everything still open, or fold outstanding approvals into an [on-demand morning briefing](/examples/daily-morning-briefing) so nothing lingers unseen.
 
 <Note>
 Expiry thresholds are configurable in `config/local.yaml` under the approval lifecycle section.
