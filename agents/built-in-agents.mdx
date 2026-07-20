@@ -33,6 +33,7 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 - Multi-source web research → Research Analyst
 - CEO inbox queries, triage, and rule management → CEO Inbox
 - First-conversation onboarding and "help me set up X" requests → Setup Wizard
+- "What happened / why?" forensics about Curia's own behavior → Diagnostics (when enabled)
 
 **Key behaviors:**
 - Resolves possessive pronouns ("my calendar", "your schedule") to explicit entity identities before delegating to any specialist
@@ -176,11 +177,29 @@ A proactive specialist agent that scans the CEO's calendar for recently-ended ex
 - **Reminders** — nudges the CEO on the same thread if a prompt goes unanswered after a configurable delay (default: 2 hours)
 - **Preference learning** — when the CEO says *"don't debrief me on meetings with X"*, the rule is stored as a KG fact and respected on future scans
 
-**State is tracked as tasks.** Each pending debrief is a [task](/core-concepts/scheduling#tasks-and-the-backlog) (tagged `debrief-pending`), and the reminder is just that task's wake-up; follow-up actions become child tasks owned by Curia, you, or an external party. Pending debriefs therefore also surface in the daily digest, and you can ask "what debriefs are outstanding?" through the coordinator.
+**State is tracked as tasks.** Each pending debrief is a [task](/core-concepts/scheduling#tasks-and-the-backlog) (tagged `debrief-pending`), and the reminder is just that task's wake-up; follow-up actions become child tasks owned by Curia, you, or an external party. You can ask "what debriefs are outstanding?" through the coordinator at any time.
 
 **Bullpen-through-coordinator pattern.** The Meeting Debrief agent has no outbound communication skills pinned. All proactive prompts and follow-up sends route through the coordinator via Bullpen, which keeps the unified persona intact and lets reply correlation work the same way as any other coordinator-initiated outbound.
 
 Tunable via the `debrief` block in `config/default.yaml` — channel, reminder delay, scan window, and context-bridge TTL for replies.
+
+## Diagnostics
+
+An opt-in, read-only investigator for the principal. When something about Curia's own behavior looks off — a duplicate notification, an email that never got processed, a blocked message, a scheduler double-fire — you can ask it *what happened* and *why*. Given an ID, a time window, or a symptom, it reads the audit log and operational state, follows the causal chain, and returns an ordered event narrative, a grounded root-cause hypothesis (citing the audit events it relied on), and a suggested mitigation.
+
+| Field | Value |
+|---|---|
+| **Role** | specialist |
+| **Model** | Powerful tier (Claude Opus by default) |
+| **Skills** | audit-query, audit-trace, ops-lookup, date-resolve, request-clarification |
+| **Discovery** | Disabled |
+| **Enabled by default** | No — operator must enable it |
+
+**Read-only by construction.** Every skill it holds is read-only; it investigates but never acts. It has no ability to send, draft, write state, or contact anyone. `ops-lookup` reads operational tables (`scheduled_jobs`, `action_log`, `outbound_context`, `working_memory`, `messages`); `audit-query` and `audit-trace` read the audit log.
+
+**Principal-only.** Its findings are Curia's own internal state, so it reports only to the principal and declines diagnostics requested on behalf of — or for delivery to — anyone else. It grounds every claim in cited audit events rather than guessing, and treats expired ephemeral state (e.g. `outbound_context`, `working_memory`) as unavailable instead of confabulating.
+
+**Off by default.** The Diagnostics agent and its `audit-query` / `audit-trace` / `ops-lookup` skills are excluded from the default registry — a fresh install does not enable them. Turn the agent on (and its skills) from **Settings → Skills** when you want it. Once enabled, the Coordinator delegates to it like any other specialist and relays its findings.
 
 ## How delegation works
 

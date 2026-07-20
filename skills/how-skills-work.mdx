@@ -156,7 +156,7 @@ Curia ships with more than 90 built-in skills across several categories. The [bu
     `contact-create`, `contact-lookup`, `contact-list`, `contact-rename`, `contact-set-role`, `contact-set-tier`, `contact-link-identity`, `contact-unlink-identity`, `contact-grant-permission`, `contact-revoke-permission`, `contact-merge`, `contact-find-duplicates`, `contact-register`, `contact-set-identity-status`, `contact-update`, `contact-dedup-exclude`, `scan-grant-recommendations`, `approve-grant-recommendation`, `decline-grant-recommendation` — manage contacts, their channel identities, roles, capability tiers, and permission grants.
   </Accordion>
   <Accordion title="Email">
-    `email-send`, `email-reply`, `email-list`, `email-get`, `email-draft-save`, `send-draft`, `email-archive`, `context-for-email`, `email-label`, `email-mark-read`, `email-list-folders`, `email-create-folder`, `email-download-attachment`, `drive-download-file` — send, reply, browse, label, and draft emails via the Nylas API across multiple configured accounts.
+    `email-send`, `email-reply`, `email-list`, `email-get`, `email-draft-save`, `send-draft`, `email-archive`, `email-label`, `email-mark-read`, `email-list-folders`, `email-create-folder`, `email-download-attachment`, `drive-download-file` — send, reply, browse, label, and draft emails via the Nylas API across multiple configured accounts.
   </Accordion>
   <Accordion title="CEO Inbox">
     `ceo-inbox-list`, `ceo-inbox-read`, `ceo-inbox-search`, `ceo-inbox-draft-compose`, `ceo-inbox-draft-reply`, `ceo-inbox-draft-edit`, `ceo-inbox-download-attachment`, `ceo-inbox-archive`, `ceo-inbox-label`, `ceo-inbox-mark-read`, `ceo-inbox-mark-starred`, `ceo-inbox-update-folders` — triage and draft in the CEO's personal inbox. Pinned exclusively to the `ceo-inbox` agent.
@@ -168,7 +168,7 @@ Curia ships with more than 90 built-in skills across several categories. The [bu
     `entity-context`, `memory-store`, `memory-query`, `memory-confirm`, `decay-warnings-list`, `query-relationships`, `delete-relationship`, `extract-facts`, `extract-relationships` — query, write to, and manage the knowledge graph.
   </Accordion>
   <Accordion title="Scheduling">
-    `scheduler-create`, `scheduler-list`, `scheduler-cancel`, `scheduler-report` — create and manage recurring or one-shot scheduled jobs.
+    `scheduler-create`, `scheduler-list`, `scheduler-update`, `scheduler-cancel`, `scheduler-report` — create and manage recurring or one-shot scheduled jobs.
   </Accordion>
   <Accordion title="Tasks">
     `task-create`, `task-list`, `task-update`, `task-complete` — track deferred, multi-step, and waiting work in the unified backlog. Auto-pinned together with the Documents skills via `enable_task_management: true`.
@@ -184,9 +184,6 @@ Curia ships with more than 90 built-in skills across several categories. The [bu
   </Accordion>
   <Accordion title="File parsing">
     `file-parse` — extract structured data from CSV, PDF, HTML, and image files, inline or from the temp-file store.
-  </Accordion>
-  <Accordion title="Templates">
-    `template-doc-request` — retrieve email-composing guidelines for pre-meeting document requests. Scheduling email (meeting requests, reschedules, cancellations) is composed directly by the Calendar Specialist.
   </Accordion>
   <Accordion title="Autonomy and approvals">
     `get-autonomy`, `set-autonomy`, `list-pending-actions`, `approve-action`, `deny-action`, `dismiss-action`, `approval-expiry-sweep` — read and change the global autonomy score, and work the approval queue. `set-autonomy` and the approval decisions are elevated (CEO only).

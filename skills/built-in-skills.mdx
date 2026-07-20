@@ -44,7 +44,6 @@ Outbound email and console rendering share one sanitized converter: markdown in 
 | `email-draft-save` | low | Save a draft reply for CEO review |
 | `send-draft` | none | Send a previously saved draft |
 | `email-archive` | low | Archive a message |
-| `context-for-email` | none | Assemble context for composing an email |
 | `email-label` | low | Apply one or more labels to an email message (creates the label if it doesn't exist) |
 | `email-mark-read` | low | Mark an email message as read |
 | `email-list-folders` | none | List all folders and labels in an email account |
@@ -70,6 +69,15 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 | `ceo-inbox-mark-read` | low | Mark a message as read to prevent re-processing on the next triage run |
 | `ceo-inbox-mark-starred` | low | Star (or unstar) a message in the CEO's inbox. Triage auto-stars anything labelled 🚨 Urgent so it surfaces in the native client. |
 | `ceo-inbox-update-folders` | low | Add or remove folders/labels on a message (e.g. star, move between folders). Falls back to the computed folder list when Nylas omits `folders` from the response, guarding against accidental folder wipes. |
+
+**Passive learning.** A background *observe → reflect → remember* loop lets the CEO Inbox agent learn from what actually happens after it drafts — without ever sending or writing anything on its own. These skills run on their own crons (or inline during triage); everything they learn is surfaced to the CEO for approval or undo, never applied silently.
+
+| Skill | action_risk | Description |
+|---|---|---|
+| `ceo-inbox-sent-observe` | none | Daily pass that reads the CEO's Sent folder since a stored watermark, matches new sends to Curia's draft snapshots and open CEO tasks, and records evidence for the learning loop. Read-only against Nylas — never drafts, archives, or sends. |
+| `voice-learn` | medium | Weekly pass that reviews accumulated draft→sent edits, produces an updated free-form writing-voice guide, and queues it as a proposal. You approve or dismiss it; it never rewrites your profile directly and never invents a guide from no data. |
+| `task-completion-from-sent` | low | Consumes the sent-mail matches from `ceo-inbox-sent-observe`: auto-completes low-risk, high-confidence CEO tasks with a reversible undo note, and queues confirmations for high-risk or ambiguous matches. |
+| `ceo-inbox-shadow-draft` | none | During triage, quietly records what Curia *would* have sent for a message it punted, so a later pass can score that counterfactual toward the autonomy signal. Never creates approvals, notifications, or Gmail drafts. |
 
 ## Calendar
 
@@ -107,6 +115,7 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 |---|---|---|
 | `scheduler-create` | low | Create a recurring or one-shot scheduled task |
 | `scheduler-list` | none | List active scheduled jobs |
+| `scheduler-update` | low | Modify an existing job by ID: `resume` a paused or suspended job, `pause` an active one, or `edit` its cron expression, one-shot run time, or payload |
 | `scheduler-cancel` | low | Cancel a scheduled job |
 | `scheduler-report` | none | Generate a report on scheduled task activity (system skill) |
 
@@ -155,12 +164,6 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 | Skill | action_risk | Description |
 |---|---|---|
 | `file-parse` | medium | Extract structured data from CSV, PDF, HTML, and image files. Accepts either inline `content_base64` or a `temp_file_url` pointing at a file in the configured `CURIA_TEMPFILE_DIR` (paths are validated against the base directory). |
-
-## Templates
-
-| Skill | action_risk | Description |
-|---|---|---|
-| `template-doc-request` | none | Generate a document request |
 
 ## Autonomy
 
