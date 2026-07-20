@@ -80,6 +80,13 @@
               "get-started/health-monitoring",
               "get-started/playbooks"
             ]
+          },
+          {
+            "group": "Examples",
+            "pages": [
+              "examples/overview",
+              "examples/daily-morning-briefing"
+            ]
           }
         ]
       },
