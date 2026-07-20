@@ -1,0 +1,92 @@
+---
+title: "A personalized daily morning briefing"
+description: "Set up a curated start-of-day email — your calendar shape, the meetings worth flagging, and your open items — and tailor it by chatting with Curia."
+---
+
+A morning briefing is one short email that tells you what your day looks like before it starts: the shape of the day, only the events worth your attention, and the open items you shouldn't lose track of. It combines a **forward-looking calendar view** with an **open-items digest** (your tasks, pending approvals, and anything Curia has queued for your review) into a single, scannable message.
+
+You set it up on demand and then refine it by talking to Curia — no config files, no redeploys.
+
+## What you'll get
+
+- A one-line read on the day: how many real meetings, when they start and end, whether it's light or back-to-back.
+- Only the noteworthy events — with conflicts, travel, and unusual timing flagged — instead of a wall of every calendar block.
+- Your overdue and due-today items, open-task counts, and any approvals waiting on you.
+- Anything Curia has queued for a quick approve/dismiss (like a proposed update to how it writes on your behalf).
+
+## How it works
+
+The briefing runs as an **on-demand scheduled job** that Curia creates when you ask for it. That matters for one reason: it stays yours to edit. You can change the time or the wording later just by asking, and your changes stick.
+
+<Note>
+  This is deliberately **not** a job declared in agent YAML. Declarative schedules are reconciled back to their YAML definition on every restart (see [Recurring jobs in agent YAML](/core-concepts/scheduling#recurring-jobs-in-agent-yaml)), which would quietly revert any personalization. Creating the briefing on demand keeps it editable in plain-language chat.
+</Note>
+
+## Set it up
+
+Ask Curia in plain language, naming the time you want it to land:
+
+```
+> Set me up a daily morning briefing at 6:30am, America/Toronto.
+```
+
+Curia will create the recurring job for you. To shape what it contains, give it an instruction like the one below — adapt any part of it to your preferences:
+
+```
+Compile and send the principal's daily morning briefing for today. This one
+email combines the day-ahead calendar view with an open-items digest.
+
+1. Day-ahead calendar (use the Principal Contact Details block to resolve
+   identity; treat free-status events as available, not commitments):
+   - LEAD with the shape of the day in one line: how many real meetings, first
+     start, last end, and whether it's light / normal / back-to-back.
+   - List ONLY noteworthy events, in time order. For each: time, title, and the
+     one thing that matters (who, prep needed, dial-in vs in-person).
+   - FLAG explicitly: scheduling conflicts / double-bookings, travel or commute
+     legs, anything at an unusual time (very early, late, over lunch, weekend).
+   - SKIP the noise: don't list buffers, holds, focus blocks, or declined
+     events; don't restate routine recurring holds unless something changed.
+   - If there are no noteworthy events, say so in one sentence — don't pad.
+
+2. Open items digest:
+   - Call task-list three times: owner "ceo" with no date filter (all open CEO
+     tasks); owner "ceo" with due_before end of today (overdue or due today);
+     owner "external" with no date filter (waiting-on-others).
+   - Call list-pending-actions for open approval requests. If it errors, note
+     briefly that approvals couldn't be retrieved and continue.
+   - Lead this section with any overdue or due-today CEO tasks — flag them
+     prominently — then the open-task counts, then pending approvals.
+
+3. Learning digest:
+   - Call list-learning-digest for the proposed writing-voice guide update and
+     any sent-mail task-completion undo/confirm items. Include its
+     sections_markdown only when non-empty.
+   - When the CEO later replies approve / dismiss / undo / confirm for a
+     learning item, call resolve-learning-digest with the matching action.
+
+Skip sending entirely if all three task-list calls return empty,
+list-pending-actions returns no pending approvals, and list-learning-digest has
+no items. Keep it scannable and tight enough to read on a phone. Send via the
+principal's preferred channel from the Principal Contact Details block. If the
+calendar can't be read, say so plainly rather than inventing a schedule. Sign
+off as the CEO's executive assistant.
+```
+
+You don't have to get the wording perfect up front. Set it up with whatever's close, then tune it as you see the first few briefings land.
+
+## Adjust it later
+
+Because the job is yours, you change it the same way you made it — by asking. For example:
+
+```
+> Move my morning briefing to 7am.
+> In the briefing, stop mentioning events I've declined.
+> Add my overdue tasks to the top of the briefing.
+> Pause my morning briefing while I'm on vacation next week.
+```
+
+Curia finds the existing job and edits it in place, so you keep one briefing that evolves — not a pile of duplicates.
+
+<Note>
+  The morning briefing subsumes what used to be a separate fixed daily digest. If you want the open-items recap without the calendar view (or vice versa), just tell Curia which sections to keep when you set it up.
+</Note>
