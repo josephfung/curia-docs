@@ -100,14 +100,17 @@ Controls the headless browser the `web-browser` skill drives (Patchright, a stea
 ```yaml
 # config/local.yaml
 browser:
-  sessionTtlMs: 600000     # how long a session stays alive after its last action (10 min)
+  sessionTtlMs: 1800000    # how long a session stays alive after its last action (30 min)
   sweepIntervalMs: 120000  # how often expired sessions are swept (2 min)
   profileDir: ""           # persistent profile dir; empty → ${HOME}/.curia/browser-profile
   channel: ""              # "chrome" for real Chrome (must be in the image); empty → bundled Patchright Chromium
+  proxy: ""                # optional egress proxy: full URL or host:port; empty → direct egress
   locale: "en-US"          # context locale (BCP 47)
 ```
 
 Mount `profileDir` on a volume in production so browser logins survive container restarts.
+
+Set `proxy` to route browser traffic through an egress proxy — a full URL or bare `host:port`, with optional credentials (e.g. `http://user:pass@browser-proxy:8888`). Empty means direct egress. Routing the browser through a residential exit avoids the datacenter-IP signal that trips bot detection on some sites; a WebRTC-leak guard keeps the real IP from leaking around the proxy. The session TTL defaults to 30 minutes so a long multi-page form isn't evicted mid-flow between agent turns.
 
 ## Security rules
 

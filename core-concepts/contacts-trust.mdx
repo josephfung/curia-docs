@@ -229,6 +229,10 @@ Verified contact requests an action
   Authorization is deterministic. The coordinator cannot override the permission system, even if a request seems reasonable. If the system says "Denied," the action is denied — Curia declines politely and, if appropriate, lets the sender know they can reach out through a more secure channel.
 </Warning>
 
+### Trust also gates what Curia learns
+
+The same trust model governs writes to the [knowledge graph](/core-concepts/memory), not just outbound actions. When an inbound message would trigger a memory write — storing a fact, extracting facts or relationships from the content — that write is blocked if the initiating sender is at the `unknown` or `blocked` tier. This keeps an untrusted party from seeding the knowledge graph with self-serving or poisoned "facts" through crafted message content. Curia still reads and responds within the sender's tier; it just won't persist new knowledge learned from an untrusted source.
+
 ## Channel identity status
 
 Every channel identity (email address, phone number, etc.) linked to a contact carries a `status` field, separate from whether it has been verified:

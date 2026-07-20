@@ -44,7 +44,6 @@ Outbound email and console rendering share one sanitized converter: markdown in 
 | `email-draft-save` | low | Save a draft reply for CEO review |
 | `send-draft` | none | Send a previously saved draft |
 | `email-archive` | low | Archive a message |
-| `context-for-email` | none | Assemble context for composing an email |
 | `email-label` | low | Apply one or more labels to an email message (creates the label if it doesn't exist) |
 | `email-mark-read` | low | Mark an email message as read |
 | `email-list-folders` | none | List all folders and labels in an email account |
@@ -165,12 +164,6 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 | Skill | action_risk | Description |
 |---|---|---|
 | `file-parse` | medium | Extract structured data from CSV, PDF, HTML, and image files. Accepts either inline `content_base64` or a `temp_file_url` pointing at a file in the configured `CURIA_TEMPFILE_DIR` (paths are validated against the base directory). |
-
-## Templates
-
-| Skill | action_risk | Description |
-|---|---|---|
-| `template-doc-request` | none | Generate a document request |
 
 ## Autonomy
 
