@@ -142,7 +142,7 @@ The agent doesn't stay running between bursts. All state lives in Postgres — i
 
 Not every task is a single stretch of work. When a goal is genuinely multi-step — plan an offsite, run a diligence process, prepare a board packet — an agent can break it into a small set of child steps with dependencies, then work them in order as earlier steps unblock later ones. You don't set this up; the agent decides when a goal is big enough to warrant it.
 
-The upshot for you is visible progress. When you ask "what's open?" or read the daily digest, a project reports as **"3 of 5 steps done"** rather than one opaque line, so you can see how far along it is and what it's waiting on.
+The upshot for you is visible progress. When you ask "what's open?", a project reports as **"3 of 5 steps done"** rather than one opaque line, so you can see how far along it is and what it's waiting on.
 
 ## Tasks and the backlog
 
@@ -151,7 +151,7 @@ Scheduled jobs answer *when* something should happen. **Tasks** answer *what* wo
 Each task carries an **owner**, so the backlog cleanly separates three questions:
 
 - **Curia** — work Curia is doing itself.
-- **You** — things only you can do (the digest surfaces these under "For you to do").
+- **You** — things only you can do (ask "what's waiting on me?" to see them).
 - **External** — work blocked on someone else's reply.
 
 You interact with the backlog conversationally:
@@ -163,7 +163,7 @@ You interact with the backlog conversationally:
 > Mark the Acme follow-up done.
 ```
 
-Behind that, agents use the `task-create` / `task-list` / `task-update` / `task-complete` skills. A task can carry a **wake time** — when it's time to act, the scheduler fires and the owning agent resumes with the task's full context. The daily [pending-actions digest](/core-concepts/autonomy) also renders the backlog: what's for you to do, what's waiting on others, and what Curia is working on.
+Behind that, agents use the `task-create` / `task-list` / `task-update` / `task-complete` skills. A task can carry a **wake time** — when it's time to act, the scheduler fires and the owning agent resumes with the task's full context. You can review the backlog any time — what's for you to do, what's waiting on others, and what Curia is working on.
 
 ### How tasks differ from scheduled jobs
 
@@ -175,14 +175,14 @@ A deterministic **hourly heartbeat** is the backstop that keeps open work from l
 
 ### When a task gets stuck
 
-Long-running work doesn't always go smoothly, and Curia is explicit when something needs you. Rather than a bare "still working" line, a stuck task escalates into the daily digest with the *reason* and enough detail to act on. There are four shapes:
+Long-running work doesn't always go smoothly, and Curia is explicit when something needs you. Rather than a bare "still working" line, a stuck task escalates to you with the *reason* and enough detail to act on. There are four shapes:
 
 - **Stalled** — it stopped making progress, so Curia paused it instead of spinning.
 - **Hit a limit** — it reached a configured ceiling (time, cost, or number of attempts).
 - **Blocked on a person** — it's waiting on a reply or a decision from someone.
 - **Couldn't finish** — the agent tried and reported it can't complete the work as scoped.
 
-Each escalation carries where it got to (progress so far, and a rough ETA or cost where relevant) plus a suggested next action — so the digest tells you what to do about it, not just that it happened.
+Each escalation carries where it got to (progress so far, and a rough ETA or cost where relevant) plus a suggested next action — so the escalation tells you what to do about it, not just that it happened.
 
 ## Task-scope fence for scheduled runs
 
