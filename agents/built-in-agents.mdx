@@ -182,6 +182,24 @@ A proactive specialist agent that scans the CEO's calendar for recently-ended ex
 
 Tunable via the `debrief` block in `config/default.yaml` — channel, reminder delay, scan window, and context-bridge TTL for replies.
 
+## Diagnostics
+
+An opt-in, read-only investigator for the principal. When something about Curia's own behavior looks off — a duplicate notification, an email that never got processed, a blocked message, a scheduler double-fire — you can ask it *what happened* and *why*. Given an ID, a time window, or a symptom, it reads the audit log and operational state, follows the causal chain, and returns an ordered event narrative, a grounded root-cause hypothesis (citing the audit events it relied on), and a suggested mitigation.
+
+| Field | Value |
+|---|---|
+| **Role** | specialist |
+| **Model** | Powerful tier (Claude Opus by default) |
+| **Skills** | audit-query, audit-trace, ops-lookup, date-resolve, request-clarification |
+| **Discovery** | Disabled |
+| **Enabled by default** | No — operator must enable it |
+
+**Read-only by construction.** Every skill it holds is read-only; it investigates but never acts. It has no ability to send, draft, write state, or contact anyone. `ops-lookup` reads operational tables (`scheduled_jobs`, `action_log`, `outbound_context`, `working_memory`, `messages`); `audit-query` and `audit-trace` read the audit log.
+
+**Principal-only.** Its findings are Curia's own internal state, so it reports only to the principal and declines diagnostics requested on behalf of — or for delivery to — anyone else. It grounds every claim in cited audit events rather than guessing, and treats expired ephemeral state (e.g. `outbound_context`, `working_memory`) as unavailable instead of confabulating.
+
+**Off by default.** The Diagnostics agent and its `audit-query` / `audit-trace` / `ops-lookup` skills are excluded from the default registry — a fresh install does not enable them. Turn the agent on (and its skills) from **Settings → Skills** when you want it. Once enabled, the Coordinator delegates to it like any other specialist and relays its findings.
+
 ## How delegation works
 
 When the Coordinator receives a task that requires specialist expertise, it uses the `delegate` skill to hand the task to the appropriate agent. The specialist works independently, using only its pinned skills, and returns its findings to the Coordinator. The Coordinator synthesizes the specialist's response into its own voice — the user never sees that multiple agents were involved.
