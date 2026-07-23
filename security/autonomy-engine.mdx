@@ -1,15 +1,15 @@
 ---
 title: "Autonomy engine"
-description: "How Curia's autonomy score governs skill execution through action_risk levels, hard execution gates, approval requests, and automatic score adjustment."
+description: "How Curia's autonomy score governs tool execution through action_risk levels, hard execution gates, approval requests, and automatic score adjustment."
 ---
 
-This page covers the governance mechanics of Curia's autonomy engine — how the score controls what skills can execute, how blocked actions route to the approval workflow, and how the score adjusts automatically over time. For the conceptual overview and calibration guidance, see [Autonomy](/core-concepts/autonomy).
+This page covers the governance mechanics of Curia's autonomy engine — how the score controls what tools can execute, how blocked actions route to the approval workflow, and how the score adjusts automatically over time. For the conceptual overview and calibration guidance, see [Autonomy](/core-concepts/autonomy).
 
 ## How action_risk connects to autonomy
 
-Every skill declares an `action_risk` level in its manifest. This field establishes the minimum autonomy score at which that skill can be invoked.
+Every tool declares an `action_risk` level in its manifest. This field establishes the minimum autonomy score at which that tool can be invoked.
 
-| action_risk value | Minimum score | Skill examples |
+| action_risk value | Minimum score | Tool examples |
 |---|---|---|
 | `none` | 0 | Web search, reading email, summarizing content |
 | `low` | 60 | Writing to memory, updating contacts |
@@ -18,16 +18,16 @@ Every skill declares an `action_risk` level in its manifest. This field establis
 | `critical` | 90 | Financial actions, bulk deletions, irreversible operations |
 
 <Warning>
-The `action_risk` field is required on all skill manifests. Curia will not start if any skill omits it.
+The `action_risk` field is required on all tool manifests. Curia will not start if any tool omits it.
 </Warning>
 
 ## Hard execution gates
 
-The execution layer enforces `action_risk` thresholds at invocation time — not just through prompt guidance, but as a hard gate in the runtime. When the live autonomy score is below a skill's declared floor, the skill is blocked before it runs.
+The execution layer enforces `action_risk` thresholds at invocation time — not just through prompt guidance, but as a hard gate in the runtime. When the live autonomy score is below a tool's declared floor, the tool is blocked before it runs.
 
 A blocked invocation:
 
-1. Emits an `autonomy.skill_blocked` audit event (skill name, required score, actual score)
+1. Emits an `autonomy.tool_blocked` audit event (tool name, required score, actual score)
 2. Returns an advisory failure to the coordinator describing what score is needed
 3. Triggers an approval request so you can decide whether to allow the specific action
 
@@ -49,7 +49,7 @@ The bypass is logged at every invocation — you can see principal-originated ga
 
 ## Approval requests
 
-When a skill is blocked by a hard gate, Curia does not silently fail. Instead, it creates an approval request and notifies you so you can decide whether to allow the specific action.
+When a tool is blocked by a hard gate, Curia does not silently fail. Instead, it creates an approval request and notifies you so you can decide whether to allow the specific action.
 
 See [Approval workflow](/security/approval-workflow) for the full picture — how requests are created, how to approve or deny them, and how the lifecycle (expiry and notifications) works.
 
@@ -63,7 +63,7 @@ Every change to the autonomy score is written to an append-only history record i
 - An optional reason you provided
 - The timestamp
 
-You can view the full history in Settings → Autonomy or by asking Curia directly: *"Show me my autonomy score history."* The `get-autonomy` skill also surfaces the trend direction (improving / declining / stable), `lastSetBy`, and the count of scored actions.
+You can view the full history in Settings → Autonomy or by asking Curia directly: *"Show me my autonomy score history."* The `get-autonomy` tool also surfaces the trend direction (improving / declining / stable), `lastSetBy`, and the count of scored actions.
 
 ## Automatic score adjustment
 

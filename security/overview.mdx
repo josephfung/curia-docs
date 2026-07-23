@@ -20,16 +20,16 @@ Curia was built for executives who cannot afford to run AI agents on trust alone
 
 <CardGroup cols={2}>
   <Card title="Hard layer separation" icon="shield-halved">
-    Every component declares its layer at startup. The message bus enforces which event types each layer can publish or subscribe to — at registration time, not at runtime. A compromised email adapter can flood inbound messages, but it cannot invoke a skill, write to memory, or execute code. The boundary is architectural: attempting to publish an unauthorized event throws an error, not a warning.
+    Every component declares its layer at startup. The message bus enforces which event types each layer can publish or subscribe to — at registration time, not at runtime. A compromised email adapter can flood inbound messages, but it cannot invoke a tool, write to memory, or execute code. The boundary is architectural: attempting to publish an unauthorized event throws an error, not a warning.
   </Card>
   <Card title="Append-only audit trail" icon="scroll">
     Every event that flows through the bus is written to Postgres **before** it is delivered to any subscriber. No UPDATE, no DELETE — ever. If the process crashes mid-delivery, the event is still in the log. Every event carries a `parent_event_id` so you can trace the full causal chain from any action back to the message that triggered it.
   </Card>
   <Card title="Secrets never reach the LLM" icon="key">
-    Credentials live in an encrypted vault (AES-256-GCM in Postgres), not in plaintext `.env` files — only the master key and database credentials remain on disk. Agents never see passwords, API keys, or tokens. Skills access secrets through a scoped `ctx.secret()` interface, validated against each skill's declared manifest. The LLM sees "email-list connected to inbox" — never the Nylas credential. Every secret access is audit-logged: which secret, which skill, which agent, which task, and whether it resolved from the vault.
+    Credentials live in an encrypted vault (AES-256-GCM in Postgres), not in plaintext `.env` files — only the master key and database credentials remain on disk. Agents never see passwords, API keys, or tokens. Tools access secrets through a scoped `ctx.secret()` interface, validated against each tool's declared manifest. The LLM sees "email-list connected to inbox" — never the Nylas credential. Every secret access is audit-logged: which secret, which tool, which agent, which task, and whether it resolved from the vault.
   </Card>
   <Card title="Tool output sanitization" icon="filter">
-    All skill results are sanitized before being fed back into LLM context. XML and HTML tags are stripped, outputs are truncated to a configurable limit, secret-like patterns are redacted, and error messages are wrapped in structured tags to prevent prompt injection. Nothing from the outside world reaches the LLM unfiltered.
+    All tool results are sanitized before being fed back into LLM context. XML and HTML tags are stripped, outputs are truncated to a configurable limit, secret-like patterns are redacted, and error messages are wrapped in structured tags to prevent prompt injection. Nothing from the outside world reaches the LLM unfiltered.
   </Card>
   <Card title="Intent drift detection" icon="crosshairs">
     Long-running tasks store an intent anchor — the original task description — at creation time. On each execution burst, the system compares current progress against that anchor. If the agent has drifted from its goal, the task is **paused**, not merely flagged. In unattended mode, drift detection blocks execution; it does not advise.
@@ -41,13 +41,13 @@ Curia was built for executives who cannot afford to run AI agents on trust alone
     Inbound message content is treated as data, not instructions. The dispatch layer strips instruction-like patterns and tags high-risk messages with a `risk_score` before the LLM sees them. The coordinator's system prompt explicitly instructs it not to follow instructions embedded in user messages. Even if an injection succeeds at the coordinator level, architectural containment limits what a tricked agent can actually do.
   </Card>
   <Card title="Outbound safety" icon="paper-plane">
-    All outbound messages — regardless of which skill or agent produced them — pass through a single outbound gateway before being sent. A deterministic content filter checks for system prompt fragments, internal field names, secret patterns, and contact data leakage. A second-stage LLM-as-judge then reviews mixed-audience messages for principal-private or internal content leaking to external recipients, blocking the send and notifying you with a principal-safe reason. Display names in inbound emails are validated against the verified sender address to prevent spoofing.
+    All outbound messages — regardless of which tool or agent produced them — pass through a single outbound gateway before being sent. A deterministic content filter checks for system prompt fragments, internal field names, secret patterns, and contact data leakage. A second-stage LLM-as-judge then reviews mixed-audience messages for principal-private or internal content leaking to external recipients, blocking the send and notifying you with a principal-safe reason. Display names in inbound emails are validated against the verified sender address to prevent spoofing.
   </Card>
   <Card title="Bulk export controls" icon="file-export">
     Sending data out in bulk — email attachments, or exports to Google Drive and Sheets — passes through dedicated gates on top of the outbound filter. An export above a configurable item count escalates for your approval; exports to a destination that is not a known contact are allowed only for higher-sensitivity data; and the most sensitive tier is never bulk-exported at all. Each item's sensitivity is resolved from the knowledge graph, and an approval notification lists exactly what would leave.
   </Card>
-  <Card title="Skill caller restrictions" icon="user-lock">
-    Skills can declare which agents are allowed to invoke them via `allowed_callers` in the skill manifest. The execution layer enforces this before any other gate — a structurally forbidden caller is rejected immediately, not routed through autonomy or approval workflows. Agent names are validated at startup; unknown names prevent boot.
+  <Card title="Tool caller restrictions" icon="user-lock">
+    Tools can declare which agents are allowed to invoke them via `allowed_callers` in the tool manifest. The execution layer enforces this before any other gate — a structurally forbidden caller is rejected immediately, not routed through autonomy or approval workflows. Agent names are validated at startup; unknown names prevent boot.
   </Card>
   <Card title="Container and supply chain" icon="container-storage">
     The production Docker image runs as a non-root `curia` user, and its base images are pinned by SHA-256 digest. Automated security scanning runs on every pull request: Trivy (npm deps, Docker image, secrets), Semgrep (pattern-based SAST), CodeQL (semantic analysis), and Gitleaks (secret detection), plus a weekly OpenSSF Scorecard run published to the GitHub Security tab. Every GitHub Actions reference is pinned to a commit SHA, workflow `GITHUB_TOKEN` grants are scoped to least privilege per job, and Dependabot tracks npm, Actions, and Docker updates. Branch protection on `main` requires PR review and passing status checks before merge.
@@ -60,14 +60,14 @@ The message bus enforces these boundaries at registration time. No layer can esc
 
 | Layer | What it can do |
 |---|---|
-| **Channel** | Receive inbound messages from external channels; deliver outbound messages back to those channels. Cannot invoke skills or read memory. |
-| **Dispatch** | Route messages to agents; send replies back to channels. Cannot invoke skills directly. |
-| **Agent** | Call skills, produce responses, coordinate with other agents. Cannot directly access channels or external APIs. |
-| **Execution** | Receive skill invocations and return results. Cannot initiate messages or access channels. |
+| **Channel** | Receive inbound messages from external channels; deliver outbound messages back to those channels. Cannot invoke tools or read memory. |
+| **Dispatch** | Route messages to agents; send replies back to channels. Cannot invoke tools directly. |
+| **Agent** | Call tools, produce responses, coordinate with other agents. Cannot directly access channels or external APIs. |
+| **Execution** | Receive tool invocations and return results. Cannot initiate messages or access channels. |
 | **System** | Full access across all layers — reserved for the audit logger, scheduler, and memory engine only. |
 
 <Note>
-  No user-defined agent or skill ever runs at the system layer. That layer is reserved exclusively for Curia's trusted infrastructure components.
+  No user-defined agent or tool ever runs at the system layer. That layer is reserved exclusively for Curia's trusted infrastructure components.
 </Note>
 
 ## What this means in practice
@@ -78,8 +78,8 @@ If an attacker sends a malicious email crafted to trick Curia into exfiltrating 
   2. **Injection pattern detection** — the dispatch layer scans for instruction-like patterns in the message body and adjusts the trust score accordingly
 3. **Trust score gating** — an email from an unknown sender scores around 0.12, well below the 0.8 threshold required for data export actions
 4. **Coordinator's prompt injection defense** — explicit directives instruct the coordinator to treat message content as data, not instructions
-5. **Architectural containment** — even a tricked coordinator can only delegate to specialist agents and invoke skills; it cannot directly access the filesystem, database, or external APIs
-6. **Skill permission validation** — the execution layer validates that the invoked skill has declared the permissions needed for the requested action
+5. **Architectural containment** — even a tricked coordinator can only delegate to specialist agents and invoke tools; it cannot directly access the filesystem, database, or external APIs
+6. **Tool permission validation** — the execution layer validates that the invoked tool has declared the permissions needed for the requested action
 7. **Outbound content filter** — any outbound message is checked for leaked system context or internal data before being sent
 
 Each layer independently reduces the probability of a successful attack. No single layer is the last line of defense.

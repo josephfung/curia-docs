@@ -1,0 +1,302 @@
+---
+title: "Building a tool or skill"
+description: "Author a native tool with a manifest and TypeScript handler, bundle related tools into a skill, or connect an MCP server — every route lands in the same registry and works identically for agents."
+---
+
+Curia ships with a library of [built-in tools](/tools-and-skills/built-in-tools), but you'll often want to add your own — to connect internal systems, automate domain-specific workflows, or integrate a service Curia doesn't support out of the box. This page covers three of the [four ways to extend Curia](/tools-and-skills/overview): authoring a **native tool**, bundling tools into a **skill**, and connecting an **MCP server**. (The fourth — importing an unmodified Anthropic Agent Skill — has its own guide: [Importing a Claude skill](/tools-and-skills/importing-a-skill).)
+
+Agents don't know or care which route a capability came from — the interface is identical from their perspective.
+
+## Build a single tool
+
+A native tool is a directory with a `tool.json` manifest and a TypeScript handler.
+
+### Directory structure
+
+A standalone tool can live flat under `skills/` (Curia auto-wraps it as a one-tool skill so it's still pinnable and discoverable):
+
+```
+skills/
+  send-slack-message/
+    tool.json       # manifest — declares inputs, outputs, sensitivity, secrets
+    handler.ts      # TypeScript implementation
+    handler.test.ts # tests
+```
+
+If the tool belongs with others, put it inside a [skill bundle](#bundle-tools-into-a-skill) at `skills/<skill>/tools/<tool>/` instead. The manifest and handler are identical either way.
+
+### The tool manifest (tool.json)
+
+The manifest describes what the tool does, what it needs, and how risky it is. Curia validates it at startup — a missing or invalid field causes a startup error.
+
+```json
+{
+  "name": "send-slack-message",
+  "description": "Post a message to a Slack channel via the Slack API",
+  "version": "1.0.0",
+  "sensitivity": "normal",
+  "action_risk": "medium",
+  "inputs": {
+    "channel": "string",
+    "text": "string",
+    "thread_ts": "string?"
+  },
+  "outputs": {
+    "ts": "string",
+    "channel": "string"
+  },
+  "permissions": [],
+  "secrets": ["slack_bot_token"],
+  "timeout": 15000
+}
+```
+
+#### Manifest fields
+
+| Field | Required | Description |
+|---|---|---|
+| `name` | Yes | Unique tool name, used to invoke the tool |
+| `description` | Yes | Tells agents and the registry what this tool does |
+| `version` | Yes | Semantic version string |
+| `sensitivity` | Yes | `normal` (governed by `action_risk`) or `elevated` (requires a live CEO turn; for authority primitives only) |
+| `action_risk` | Yes | Risk level — determines the minimum autonomy score required |
+| `inputs` | Yes | Named input parameters with types. Append `?` for optional fields |
+| `outputs` | Yes | Named output fields returned on success |
+| `secrets` | Yes | Vault secret keys this tool will read via `ctx.secret()` (use `[]` if none) |
+| `permissions` | Yes | Declared capability requirements (use `[]` if none) |
+| `timeout` | No | Per-invocation timeout in milliseconds (default: 30000) |
+| `install.requires_secrets` | No | Vault keys that must exist before the tool can be installed or enabled |
+
+The [tool manifest schema](/references/tool-manifest-schema) reference covers every field, including the optional `capabilities`, `allowed_callers`, and `entity_enrichment` blocks.
+
+#### action_risk values
+
+The `action_risk` field controls which autonomy band allows this tool to run without additional gating:
+
+| Value | Minimum autonomy score | Examples |
+|---|---|---|
+| `none` | 0 | Reads, retrievals, summarization |
+| `low` | 60 | Internal state writes, memory, contacts |
+| `medium` | 70 | Outbound communications (email, Slack) |
+| `high` | 80 | Calendar writes, commitments on behalf of the CEO |
+| `critical` | 90 | Financial, destructive, or irreversible actions |
+
+### The handler
+
+Your handler exports a class implementing the `ToolHandler` interface. The execution layer instantiates it at load time and calls `execute()` per invocation, passing a `ToolContext` and expecting a `ToolResult`:
+
+```typescript
+// skills/send-slack-message/handler.ts
+import type { ToolHandler, ToolContext, ToolResult } from '../../src/skills/types.js';
+
+export class SendSlackMessageHandler implements ToolHandler {
+  async execute(ctx: ToolContext): Promise<ToolResult> {
+    const { channel, text, thread_ts } = ctx.input as {
+      channel: string;
+      text: string;
+      thread_ts?: string;
+    };
+
+    const token = ctx.secret('slack_bot_token');
+
+    try {
+      const response = await fetch('https://slack.com/api/chat.postMessage', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ channel, text, thread_ts }),
+      });
+
+      const data = await response.json() as { ok: boolean; ts?: string; error?: string };
+
+      if (!data.ok) {
+        return { success: false, error: `Slack API error: ${data.error}` };
+      }
+
+      return { success: true, data: { ts: data.ts, channel } };
+    } catch (err) {
+      return {
+        success: false,
+        error: `send-slack-message failed: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+}
+```
+
+### ToolContext reference
+
+The `ctx` object gives your handler access to inputs, secrets, logging, and caller identity:
+
+| Field | Type | Description |
+|---|---|---|
+| `ctx.input` | `Record<string, unknown>` | Validated inputs from the manifest schema |
+| `ctx.secret(name)` | `(name: string) => string` | Read a vault secret declared in `secrets`. Throws if undeclared. |
+| `ctx.log` | `Logger` | Scoped pino logger — use instead of `console.log` |
+| `ctx.agentPersona` | `AgentPersona \| undefined` | Display name, title, email signature of the calling agent |
+| `ctx.caller` | `CallerContext \| undefined` | Caller identity for audit and context — not the elevated-gate signal |
+| `ctx.contactService` | `ContactService \| undefined` | Read-only contact lookups |
+| `ctx.selfEmail` | `string \| undefined` | Email address of the active Curia account — use to filter Curia's own address from CC lists |
+
+Privileged services (the outbound gateway, calendar client, knowledge graph, scheduler, and more) are opt-in via the manifest's `capabilities` array — see the [tool manifest schema](/references/tool-manifest-schema#capabilities).
+
+### Secrets
+
+Declare secrets your tool needs in the `secrets` array in `tool.json`:
+
+```json
+"secrets": ["slack_bot_token"]
+```
+
+Then add the value to the [encrypted vault](/get-started/secrets-vault) under the key `slack_bot_token` — use the console (Settings → Channels) or `pnpm run setup` for initial seeding. Access it in your handler via `ctx.secret('slack_bot_token')`. The LLM never sees the value — only your handler does.
+
+If your tool should not be usable until its credential is configured, also declare the key in `install.requires_secrets`. The registry will then refuse to enable the tool until the secret is in the vault:
+
+```json
+"secrets": ["slack_bot_token"],
+"install": { "requires_secrets": ["slack_bot_token"] }
+```
+
+<Warning>
+  Tools must never throw. All error paths must return `{ success: false, error: '...' }` rather than throwing an exception. If an uncaught exception reaches the execution layer, it is caught and wrapped as a generic error — but this prevents proper error messaging to the LLM.
+</Warning>
+
+### ToolResult
+
+Every tool returns one of two shapes:
+
+```typescript
+// Success
+return { success: true, data: { ts: '1234567890.123456', channel: '#general' } };
+
+// Failure
+return { success: false, error: 'Could not reach Slack API: connection refused' };
+```
+
+The `data` field can be any JSON-serializable value. Keep it focused — the execution layer truncates results longer than 200,000 characters before feeding them to the LLM.
+
+## Bundle tools into a skill
+
+When several tools belong together — and especially when the agent needs *guidance* on how and when to use them — group them under a **skill**. A skill is a directory with a `SKILL.md` and a `tools/` subfolder:
+
+```
+skills/
+  slack/                    # skill (bundle)
+    SKILL.md                # name, description, member tools, optional instructions
+    tools/
+      send-slack-message/
+        tool.json
+        handler.ts
+        handler.test.ts
+      list-slack-channels/
+        tool.json
+        handler.ts
+        handler.test.ts
+```
+
+The `SKILL.md` frontmatter names the skill and lists its member tools; the Markdown body is free-form instructions injected into the agent's context when the skill activates (pinned skills are injected at bootstrap):
+
+```markdown
+---
+name: slack
+description: >
+  Post messages and list channels in the workspace Slack. Use send-slack-message
+  for updates and list-slack-channels to resolve a channel name to an ID first.
+version: "0.1.0"
+tools:
+  - send-slack-message
+  - list-slack-channels
+---
+
+## Slack
+
+Resolve a channel name to its ID with `list-slack-channels` before posting.
+Keep messages short; thread replies with `thread_ts` when continuing a discussion.
+```
+
+**Per-tool authorization is preserved.** A skill never flattens its members' risk: `list-slack-channels` can be `action_risk: none` while `send-slack-message` is `medium`, in the same bundle. The autonomy gate is always evaluated per tool.
+
+Some skills opt into runtime behaviors via frontmatter flags — for example `heartbeat: true` (the `tasks` skill) makes a pinning agent heartbeat-eligible, and `document_workspace: true` (the `documents` skill) wires up the OKF workspace. Use these only when you're extending those subsystems.
+
+## Connect an MCP server
+
+[Model Context Protocol](https://modelcontextprotocol.io) lets you connect Curia to external tool servers — hosted services or local processes — without writing a handler. Curia calls the server's `tools/list` at startup and **projects the whole server as one skill**, whose member tools are the server's live tool set. Agents pin the server name (e.g. `google-workspace`), not two dozen individual MCP tool names.
+
+### Configuring MCP servers
+
+Add MCP servers to `config/skills.yaml`:
+
+```yaml
+# config/skills.yaml
+mcp_servers:
+  - name: google-workspace
+    transport: http
+    url: https://mcp-server.example.com/mcp
+    headers:
+      Authorization: "Bearer <your-token>"
+    action_risk: low
+    permissions:
+      - workspace:read
+      - workspace:write
+    fixed_inputs:
+      user_google_email: "env:CURIA_GOOGLE_EMAIL"   # resolved at startup, invisible to agents
+
+  - name: github
+    transport: http
+    url: https://api.github.com/mcp
+    headers:
+      Authorization: "Bearer ghp_..."
+    action_risk: low
+```
+
+Supported transports are `http` (StreamableHTTP, recommended for hosted servers) and `stdio` (local subprocess).
+
+#### `fixed_inputs` — binding constants to MCP tools
+
+The optional `fixed_inputs` map lets you bind parameter values that should always be the same for a given MCP server — for example, which account identity to pass on every call. These values are:
+
+- **Resolved at startup** from env vars (`"env:VAR_NAME"`) or used as literals
+- **Stripped from the tool schema** so agents never see the parameter and can't override it
+- **Merged into every `callTool` invocation** automatically by the MCP loader
+
+If an env var referenced in `fixed_inputs` is missing at startup, Curia raises a `McpConfigError` and refuses to start — fail-closed, not silent degradation.
+
+#### MCP credentials
+
+When a server needs credentials, declare a `secrets:` block; Curia registers the required keys in the console under **Settings → MCP Skills** and writes each value to the encrypted vault. The server is only enabled once all declared secrets are present — the same install gate local tools get from `install.requires_secrets`. At spawn time the vault values are injected into the subprocess environment, so the server reads them without any credential sitting in the config file.
+
+### Recommended MCP servers
+
+| Server | Purpose |
+|---|---|
+| [google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp) | Drive, Docs, Sheets — read, write, search |
+| [modelcontextprotocol/filesystem](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) | Scoped local file access |
+| [modelcontextprotocol/github](https://github.com/modelcontextprotocol/servers/tree/main/src/github) | Repo management, issues, PRs |
+| [modelcontextprotocol/brave-search](https://github.com/modelcontextprotocol/servers/tree/main/src/brave-search) | Web search for research agents |
+
+## Making it available to agents
+
+Once your tool, skill, or MCP server is on disk (or configured), Curia loads it at startup. To let an agent use it, add it to the agent's `pinned_skills`, or leave it discoverable.
+
+`pinned_skills` is **polymorphic** — each entry may name a skill, a single tool, or an MCP-projected skill:
+
+```yaml
+# In any agent's YAML
+pinned_skills:
+  - slack                 # a skill bundle — the agent gets all its member tools + instructions
+  - send-slack-message    # a single tool — the agent gets exactly this tool, no siblings
+  - google-workspace      # an MCP server — the agent gets its whole projected tool set
+```
+
+Pinning a **skill** gives the agent every member tool plus the `SKILL.md` instructions. Pinning a **tool** by name resolves to exactly that tool (never its bundle siblings). Alternatively, set `allow_discovery: true` on the agent and it can find and activate skills on demand via `tool-registry` + `skill-activate` — no pin required. See [How tools work → Discovery and activation](/tools-and-skills/how-tools-work#discovery-and-activation).
+
+<CardGroup cols={2}>
+  <Card title="Importing a Claude skill" icon="download" href="/tools-and-skills/importing-a-skill">
+    Load an unmodified Anthropic Agent Skill folder — no manifest to author.
+  </Card>
+  <Card title="Tool manifest schema" icon="book" href="/references/tool-manifest-schema">
+    Complete reference for the tool.json manifest format.
+  </Card>
+</CardGroup>

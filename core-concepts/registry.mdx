@@ -20,9 +20,9 @@ An item present on disk is not automatically active. A new skill you add, for ex
 
 ## Required-secret gates
 
-A skill or channel can declare credentials it cannot run without. The registry refuses to install or enable it until those secrets are present in the [vault](/get-started/secrets-vault):
+A tool or channel can declare credentials it cannot run without. The registry refuses to install or enable it until those secrets are present in the [vault](/get-started/secrets-vault):
 
-- **Skills** declare `install.requires_secrets` in their manifest. The bundled `web-search` skill declares `tavily_api_key`, so it stays disabled until you provision a Tavily key.
+- **Tools** declare `install.requires_secrets` in their manifest. The bundled `web-search` tool declares `tavily_api_key`, so it stays disabled until you provision a Tavily key.
 - **Channels** declare required credential fields in the catalog. Email and Signal cannot be enabled until their vault keys (`channel.email.*`, `channel.signal.*`) resolve.
 
 This means a half-configured capability fails closed — it cannot be switched on until it would actually work.
@@ -44,7 +44,7 @@ The same operations are available over the HTTP API under `/api/registry/*` for 
   <Card title="Secrets vault" icon="key" href="/get-started/secrets-vault">
     Where credentials are stored and how to seed them.
   </Card>
-  <Card title="How skills work" icon="puzzle-piece" href="/skills/how-skills-work">
-    The skill manifest, the lifecycle, and required-secret gates.
+  <Card title="How tools work" icon="puzzle-piece" href="/tools-and-skills/how-tools-work">
+    The tool manifest, the lifecycle, and required-secret gates.
   </Card>
 </CardGroup>

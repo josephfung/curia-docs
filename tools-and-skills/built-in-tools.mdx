@@ -1,15 +1,15 @@
 ---
-title: "Built-in skills"
-description: "Catalog of the skills Curia ships with — organized by category, with action_risk levels and descriptions."
+title: "Built-in tools"
+description: "Catalog of the tools Curia ships with — grouped into skills by category, with action_risk levels and descriptions."
 ---
 
-Curia ships with 90+ skills organized into functional categories. Every skill declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it. Skills with `action_risk: none` can always run; higher-risk skills trigger the [approval workflow](/security/approval-workflow) when the score is below their floor.
+Curia ships with 90+ tools, grouped into [skills (bundles)](/tools-and-skills/overview) by functional area. Every tool declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it. Tools with `action_risk: none` can always run; higher-risk tools trigger the [approval workflow](/security/approval-workflow) when the score is below their floor. The category headings below map to the built-in skills an agent pins (`email`, `calendar`, `contacts`, `tasks`, `web`, and so on).
 
-Some skills are also **`elevated`**: they exercise CEO authority directly, so they run only during a *live CEO turn* (a fresh inbound from you, or a synchronous delegation within it) and never autonomously or from a scheduled/woken task. These are the autonomy and approval controls (`set-autonomy`, `approve-action`, `deny-action`, `dismiss-action`), the grant-recommendation decisions (`approve-grant-recommendation`, `decline-grant-recommendation`), the authorization-altering contact skills (`contact-set-tier`, `contact-set-role`, `contact-grant-permission`, `contact-revoke-permission`), and `system-secret-capture-request`. See [Sensitivity](/skills/how-skills-work#sensitivity-normal-and-elevated).
+Some tools are also **`elevated`**: they exercise CEO authority directly, so they run only during a *live CEO turn* (a fresh inbound from you, or a synchronous delegation within it) and never autonomously or from a scheduled/woken task. These are the autonomy and approval controls (`set-autonomy`, `approve-action`, `deny-action`, `dismiss-action`), the grant-recommendation decisions (`approve-grant-recommendation`, `decline-grant-recommendation`), the authorization-altering contact tools (`contact-set-tier`, `contact-set-role`, `contact-grant-permission`, `contact-revoke-permission`), and `system-secret-capture-request`. See [Sensitivity](/tools-and-skills/how-tools-work#sensitivity-normal-and-elevated).
 
 ## Contact management
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `contact-create` | low | Create a new contact record |
 | `contact-lookup` | none | Look up a contact by name (supports partial matching) |
@@ -35,7 +35,7 @@ Some skills are also **`elevated`**: they exercise CEO authority directly, so th
 
 Outbound email and console rendering share one sanitized converter: markdown in a draft or reply body becomes HTML with clickable links, bare-URL autolinks, and tables.
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `email-send` | medium | Send a new email to specified recipients. Accepts an optional list of `attachments` (`file://` URLs, 20 MB / 10 files) and an optional `context_bridge` JSON for delegation-aware reply routing. |
 | `email-reply` | medium | Reply to an existing email thread. Appends the quoted original message body to the reply (matching standard email-client behaviour). Accepts optional `attachments` and a `context_bridge` JSON. |
@@ -53,9 +53,9 @@ Outbound email and console rendering share one sanitized converter: markdown in 
 
 ## CEO Inbox
 
-Skills for the CEO Inbox agent to manage the CEO's personal email account. These skills are pinned exclusively to the `ceo-inbox` agent — they access the CEO's personal email and should not be called from other agents.
+Tools for the CEO Inbox agent to manage the CEO's personal email account. These tools are pinned exclusively to the `ceo-inbox` agent — they access the CEO's personal email and should not be called from other agents.
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `ceo-inbox-list` | none | List recent unread messages from the CEO's personal inbox |
 | `ceo-inbox-read` | none | Read a specific message, returning plain text and HTML body |
@@ -70,9 +70,9 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 | `ceo-inbox-mark-starred` | low | Star (or unstar) a message in the CEO's inbox. Triage auto-stars anything labelled 🚨 Urgent so it surfaces in the native client. |
 | `ceo-inbox-update-folders` | low | Add or remove folders/labels on a message (e.g. star, move between folders). Falls back to the computed folder list when Nylas omits `folders` from the response, guarding against accidental folder wipes. |
 
-**Passive learning.** A background *observe → reflect → remember* loop lets the CEO Inbox agent learn from what actually happens after it drafts — without ever sending or writing anything on its own. These skills run on their own crons (or inline during triage); everything they learn is surfaced to the CEO for approval or undo, never applied silently.
+**Passive learning.** A background *observe → reflect → remember* loop lets the CEO Inbox agent learn from what actually happens after it drafts — without ever sending or writing anything on its own. These tools run on their own crons (or inline during triage); everything they learn is surfaced to the CEO for approval or undo, never applied silently.
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `ceo-inbox-sent-observe` | none | Daily pass that reads the CEO's Sent folder since a stored watermark, matches new sends to Curia's draft snapshots and open CEO tasks, and records evidence for the learning loop. Read-only against Nylas — never drafts, archives, or sends. |
 | `voice-learn` | medium | Weekly pass that reviews accumulated draft→sent edits, produces an updated free-form writing-voice guide, and queues it as a proposal. You approve or dismiss it; it never rewrites your profile directly and never invents a guide from no data. |
@@ -81,7 +81,7 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 
 ## Calendar
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `calendar-list-calendars` | none | List all registered calendars |
 | `calendar-register` | high | Register a new calendar |
@@ -97,7 +97,7 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 
 ## Memory and knowledge graph
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `memory-store` | low | Store a fact in the knowledge graph; auto-creates the entity if it doesn't exist |
 | `memory-query` | none | Query the knowledge graph |
@@ -106,35 +106,37 @@ Skills for the CEO Inbox agent to manage the CEO's personal email account. These
 | `query-relationships` | none | Look up stored relationships for an entity |
 | `delete-relationship` | low | Remove a relationship from the knowledge graph |
 | `entity-context` | none | Assemble entity context (facts, relationships, history) for a contact |
-| `extract-facts` | low | Extract structured facts from text (system skill) |
-| `extract-relationships` | low | Extract relationships from text (system skill) |
+| `extract-facts` | low | Extract structured facts from text (system tool) |
+| `extract-relationships` | low | Extract relationships from text (system tool) |
 
 ## Scheduling
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `scheduler-create` | low | Create a recurring or one-shot scheduled task |
 | `scheduler-list` | none | List active scheduled jobs |
 | `scheduler-update` | low | Modify an existing job by ID: `resume` a paused or suspended job, `pause` an active one, or `edit` its cron expression, one-shot run time, or payload |
 | `scheduler-cancel` | low | Cancel a scheduled job |
-| `scheduler-report` | none | Generate a report on scheduled task activity (system skill) |
+| `scheduler-report` | none | Generate a report on scheduled task activity (system tool) |
 
 ## Tasks
 
-Track deferred, multi-step, and waiting work in the unified [tasks backlog](/core-concepts/scheduling#tasks-and-the-backlog). These are usually auto-pinned onto an agent via the `enable_task_management: true` flag rather than listed individually — the same flag also pins the [Documents](#documents-working-memory) working-memory skills below. See [choosing built-in skills](/agents/building-custom-agents#choosing-built-in-skills).
+Track deferred, multi-step, and waiting work in the unified [tasks backlog](/core-concepts/scheduling#tasks-and-the-backlog). These tools ship together in the **`tasks`** skill — pin that skill (`pinned_skills: [tasks]`) to give an agent the whole set and make it heartbeat-eligible, rather than pinning the tools individually. See [choosing built-in skills](/agents/building-custom-agents#choosing-built-in-skills).
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `task-create` | low | Create a task with an owner (you / the CEO / external), priority, optional due date, and an optional `wake_at` that schedules a future nudge |
 | `task-list` | none | List tasks filtered by status, owner, or tag — the source for "what's open?", "what's waiting on me?" |
 | `task-update` | low | Update a task's status, priority, owner, or wake time; append a progress note |
 | `task-complete` | low | Mark a task done (cancels any pending wake-up) |
+| `plan` | low | Draft or revise a task's decomposition into subtasks before committing them |
+| `checkpoint` | low | Record durable progress on a long-running task so a later wake resumes where it left off |
 
 ## Documents (working memory)
 
-An `ls` / `grep` / `read` / `write` interface over the agent's OKF document workspace — durable, document-like working memory for notes, plans, and drafts that outlive a single turn. Auto-pinned as a set via the same `enable_task_management: true` flag as the [Tasks](#tasks) skills above; see [choosing built-in skills](/agents/building-custom-agents#choosing-built-in-skills).
+An `ls` / `grep` / `read` / `write` interface over the agent's OKF document workspace — durable, document-like working memory for notes, plans, and drafts that outlive a single turn. These ship as the **`documents`** skill; pin it alongside `tasks` (`pinned_skills: [tasks, documents]`) for resumable project work. See [choosing built-in skills](/agents/building-custom-agents#choosing-built-in-skills).
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `doc-list` | none | List a directory in the document workspace, like `ls` on a path prefix. Returns the directory manifest of direct child documents with titles and types; use `doc-read` for content |
 | `doc-read` | none | Read a document by path. Optionally read just one heading's section to keep context cost down; returns a not-found flag rather than erroring when the path is missing |
@@ -143,7 +145,7 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 
 ## Communication
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `signal-send` | medium | Send a Signal message. Accepts an optional `context_bridge` JSON for delegation-aware reply routing. |
 | `bullpen` | low | Open or contribute to an inter-agent discussion thread |
@@ -153,21 +155,21 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 
 ## Web research
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
-| `web-search` | none | Search the web via Tavily. Requires `tavily_api_key` in the vault — declared in `install.requires_secrets`, so the registry will not enable the skill until the key is provisioned. |
+| `web-search` | none | Search the web via Tavily. Requires `tavily_api_key` in the vault — declared in `install.requires_secrets`, so the registry will not enable the tool until the key is provisioned. |
 | `web-fetch` | none | Fetch and extract content from a URL |
 | `web-browser` | medium | Interact with JavaScript-rendered pages via a Patchright-driven browser with a human-behavior layer (curved mouse paths, paced typing, post-load dwell) to reduce bot-detection blocking |
 
 ## File parsing
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `file-parse` | medium | Extract structured data from CSV, PDF, HTML, and image files. Accepts either inline `content_base64` or a `temp_file_url` pointing at a file in the configured `CURIA_TEMPFILE_DIR` (paths are validated against the base directory). |
 
 ## Autonomy
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `get-autonomy` | none | Read the current autonomy score, trend, and history |
 | `set-autonomy` | high | Change the autonomy score (CEO only) |
@@ -179,7 +181,7 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 
 ## System and utility
 
-| Skill | action_risk | Description |
+| Tool | action_risk | Description |
 |---|---|---|
 | `delegate` | none | Delegate a task to a specialist agent |
 | `activity-log` | none | Read-only end-of-day recap of recently completed actions (queries the audit log); surfaces autonomous RSVPs and other consequential work for the daily debrief |
@@ -188,18 +190,19 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 | `behavioral-preferences-update` | low | Append or replace entries in `OfficeIdentity.behavioralPreferences` (used by the [setup-wizard](/agents/built-in-agents#setup-wizard) and any "remember that I…" turn) |
 | `config-store` | low | Read or write namespaced persistent configuration (company info, meeting links, travel preferences, loyalty programs, writing config, and more) |
 | `image-generate` | low | Generate an image |
-| `skill-registry` | none | Search all registered skills by keyword |
+| `tool-registry` | none | Search all registered tools and skills by keyword (given to discovery-enabled agents) |
+| `skill-activate` | none | Pull a discovered skill into the working toolkit mid-turn — expands its member tools and injects its `SKILL.md` instructions (given to discovery-enabled agents) |
 | `setup-status` | none | Return the setup catalog with each task's live-derived status (`done` / `pending` / `deferred`); used by the setup-wizard agent to surface what still needs to be configured |
 | `setup-defer` | low | Persist or clear a deferral for a named setup task; deferred tasks are skipped by the setup-wizard until explicitly resumed |
 | `date-resolve` | none | Verify or resolve dates deterministically (day-of-week for a date, relative expressions like "next Monday"). LLMs are unreliable at date arithmetic, so agents call this instead of computing dates themselves |
-| `secret-capture-request` | low | Mint a one-time, 30-minute link for the user to enter a new personal secret (e.g. a website password) straight into the vault under a `user.<slug>` key; the skill returns only the link and never sees the value |
+| `secret-capture-request` | low | Mint a one-time, 30-minute link for the user to enter a new personal secret (e.g. a website password) straight into the vault under a `user.<slug>` key; the tool returns only the link and never sees the value |
 | `system-secret-capture-request` | none | Mint a one-time, 30-minute link for the user to enter a system secret (an API key or channel credential) during setup; value goes straight to the vault, never seen by the agent. Setup-wizard only |
 
 <CardGroup cols={2}>
-  <Card title="Building custom skills" icon="plus" href="/skills/building-custom-skills">
-    How to create, test, and register a new skill.
+  <Card title="Building a tool or skill" icon="plus" href="/tools-and-skills/building">
+    How to create, test, and register a new tool or bundle one into a skill.
   </Card>
-  <Card title="Skill manifest schema" icon="book" href="/references/skill-manifest-schema">
-    Complete reference for the skill.json manifest format.
+  <Card title="Tool manifest schema" icon="book" href="/references/tool-manifest-schema">
+    Complete reference for the tool.json manifest format.
   </Card>
 </CardGroup>

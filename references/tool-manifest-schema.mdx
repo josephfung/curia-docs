@@ -1,9 +1,13 @@
 ---
-title: "Skill manifest schema"
-description: "Complete JSON schema reference for Curia skill definitions — all fields, action_risk levels, capabilities, and entity enrichment."
+title: "Tool manifest schema"
+description: "Complete JSON schema reference for Curia tool definitions — all fields, action_risk levels, capabilities, and entity enrichment."
 ---
 
-Skill definitions live in `skills/<name>/skill.json`. Each manifest declares what the skill does, what it needs, and its security classification.
+Tool manifests live in `skills/<name>/tool.json` (a standalone tool) or `skills/<skill>/tools/<tool>/tool.json` (a tool inside a [skill bundle](/tools-and-skills/overview)). Each manifest declares what the tool does, what it needs, and its security classification.
+
+<Note>
+A **tool** is Curia's invocation atom; a **skill** is a bundle of tools plus a `SKILL.md`. This page documents the per-tool `tool.json`. For the bundle-level `SKILL.md` frontmatter (`name`, `description`, `tools`, and flags like `heartbeat`), see [Building a tool or skill → Bundle tools into a skill](/tools-and-skills/building#bundle-tools-into-a-skill).
+</Note>
 
 ## Schema reference
 
@@ -40,11 +44,11 @@ Skill definitions live in `skills/<name>/skill.json`. Each manifest declares wha
 
 ### `name`
 
-Unique identifier for the skill. Must match the directory name under `skills/`. Convention: lowercase kebab-case.
+Unique identifier for the tool. Must match the directory name. Convention: lowercase kebab-case.
 
 ### `action_risk`
 
-**Required.** The minimum [autonomy score](/core-concepts/autonomy) required to invoke this skill without explicit CEO approval. Curia will not start if any skill omits this field.
+**Required.** The minimum [autonomy score](/core-concepts/autonomy) required to invoke this tool without explicit CEO approval. Curia will not start if any tool omits this field.
 
 | Label | Minimum score | Use for |
 |---|---|---|
@@ -54,7 +58,7 @@ Unique identifier for the skill. Must match the directory name under `skills/`. 
 | `high` | 80 | Calendar writes, commitments on behalf of the CEO |
 | `critical` | 90 | Financial, destructive, or irreversible operations |
 
-A raw number (0–100) can be used for precision (e.g., `75` for a skill that should unlock just above "approval required" but below "spot-check"). Numbers outside [0, 100] produce a validation error at load time.
+A raw number (0–100) can be used for precision (e.g., `75` for a tool that should unlock just above "approval required" but below "spot-check"). Numbers outside [0, 100] produce a validation error at load time.
 
 ### `sensitivity`
 
@@ -63,11 +67,11 @@ A raw number (0–100) can be used for precision (e.g., `75` for a skill that sh
 | `normal` | Governed by the autonomy engine via `action_risk` (and `allowed_callers` where set) |
 | `elevated` | Requires a live principal (CEO) turn on every invocation; never runs autonomously or from a woken/scheduled task. Reserved for CEO-authority primitives |
 
-`elevated` is the live-principal gate: the skill runs only when the current turn originated from a fresh CEO inbound (or a synchronous delegation within one). It is not a one-time "approve once" prompt. See [Sensitivity](/skills/how-skills-work#sensitivity-normal-and-elevated) for the full model.
+`elevated` is the live-principal gate: the tool runs only when the current turn originated from a fresh CEO inbound (or a synchronous delegation within one). It is not a one-time "approve once" prompt. See [Sensitivity](/tools-and-skills/how-tools-work#sensitivity-normal-and-elevated) for the full model.
 
 ### `inputs` and `outputs`
 
-Shorthand type declarations for skill parameters and return values. Field names map to type strings:
+Shorthand type declarations for tool parameters and return values. Field names map to type strings:
 
 | Type string | Meaning |
 |---|---|
@@ -77,17 +81,17 @@ Shorthand type declarations for skill parameters and return values. Field names 
 | `"boolean"` | Required boolean |
 | `"object"` | Required object (any shape) |
 
-For MCP-sourced skills, the full JSON Schema from the MCP server's `tools/list` response is used directly instead of this shorthand.
+For MCP-sourced tools, the full JSON Schema from the MCP server's `tools/list` response is used directly instead of this shorthand.
 
 ### `permissions`
 
-Array of permission names this skill requires. Validated at load time.
+Array of permission names this tool requires. Validated at load time.
 
 ### `secrets`
 
-Array of vault secret keys this skill needs access to via `ctx.secret()`. Secrets are resolved from the [encrypted vault](/get-started/secrets-vault) (with an env-var fallback applied at bootstrap). Only secrets declared here are accessible — the skill cannot read arbitrary secrets or environment variables. Keys are lowercase snake_case (e.g. `tavily_api_key`, `nylas_api_key`).
+Array of vault secret keys this tool needs access to via `ctx.secret()`. Secrets are resolved from the [encrypted vault](/get-started/secrets-vault) (with an env-var fallback applied at bootstrap). Only secrets declared here are accessible — the tool cannot read arbitrary secrets or environment variables. Keys are lowercase snake_case (e.g. `tavily_api_key`, `nylas_api_key`).
 
-This is the *runtime* allowlist — what the handler may read while executing. To require that a secret be **present before the skill can be installed or enabled**, declare it in [`install.requires_secrets`](#install) instead (a skill commonly declares the same key in both).
+This is the *runtime* allowlist — what the handler may read while executing. To require that a secret be **present before the tool can be installed or enabled**, declare it in [`install.requires_secrets`](#install) instead (a tool commonly declares the same key in both).
 
 ### `timeout`
 
@@ -95,7 +99,7 @@ Per-invocation timeout in milliseconds. Default: `30000` (30 seconds).
 
 ### `capabilities`
 
-Declares which privileged services this skill needs from the execution layer. Only known capability names are accepted — the loader validates against a fixed allowlist at startup and rejects unknown names.
+Declares which privileged services this tool needs from the execution layer. Only known capability names are accepted — the loader validates against a fixed allowlist at startup and rejects unknown names.
 
 | Capability | Service provided |
 |---|---|
@@ -110,22 +114,22 @@ Declares which privileged services this skill needs from the execution layer. On
 | `officeIdentityService` | Office identity — assistant name/title, tone, decision posture, and behavioral preferences. Used by `behavioral-preferences-update`. |
 | `browserService` | Patchright browser for web interaction |
 | `bullpenService` | Inter-agent discussion threads |
-| `skillSearch` | Search the skill registry |
+| `toolSearch` | Search the tool and skill registry |
 | `actionLogRepo` | Autonomy action log for approval lifecycle management |
-| `executionLayer` | Re-invoke skills with `humanApproved` bypass (CEO-only, `approve-action` skill) |
+| `executionLayer` | Re-invoke tools with `humanApproved` bypass (CEO-only, `approve-action` tool) |
 | `confidencePipeline` | Contact confidence scoring — fire signals when modifying trust-related data |
 | `tempFileStore` | Write binary buffers to tmpfs; returns `file://` URLs for MCP tool handoff |
 | `infraLlm` | Constrained LLM access — `classify()` and `extract()` only, no raw `chat()` |
 | `outboundContext` | Register/release outbound-context entries for delegation-aware reply correlation. Pre-scoped to the current conversation. |
-| `taskRepo` | Task backlog read/write — used by the `task-*` skills and the dedup scanner |
-| `secretCapture` | Mint-only minter for agent-initiated secret-capture links; returns a one-time link, never the secret value. Restricted to the capture-request skills. |
+| `taskRepo` | Task backlog read/write — used by the `task-*` tools and the dedup scanner |
+| `secretCapture` | Mint-only minter for agent-initiated secret-capture links; returns a one-time link, never the secret value. Restricted to the capture-request tools. |
 | `secretResolver` | By-reference resolver for reading resolved vault secrets at run time. Hard allowlist — only `web-browser` may declare it. |
 
-Services not listed here (`contactService`, `entityContextAssembler`, `agentPersona`) are universal — available to every skill without declaration.
+Services not listed here (`contactService`, `entityContextAssembler`, `agentPersona`) are universal — available to every tool without declaration.
 
 ### `allowed_callers`
 
-Optional. Restricts which agents may invoke this skill. When set, only the named agents can call the skill — all others are rejected with a structured failure before any other gate (autonomy, elevation) is evaluated.
+Optional. Restricts which agents may invoke this tool. When set, only the named agents can call the tool — all others are rejected with a structured failure before any other gate (autonomy, elevation) is evaluated.
 
 ```json
 "allowed_callers": ["contacts", "coordinator"]
@@ -138,7 +142,7 @@ Optional. Restricts which agents may invoke this skill. When set, only the named
 
 ### `context_bridge` (input field)
 
-Optional input on send skills (`email-send`, `email-reply`, `signal-send`). A JSON-encoded object that lets the caller attach delegation metadata to the outbound-context entry that's auto-registered when the message ships.
+Optional input on send tools (`email-send`, `email-reply`, `signal-send`). A JSON-encoded object that lets the caller attach delegation metadata to the outbound-context entry that's auto-registered when the message ships.
 
 ```json
 "context_bridge": "{\"agent_id\": \"research-analyst\", \"expected_reply\": \"clarifying answer\", \"delegation_hint\": \"resume the multi-turn research conversation\", \"expires_in_hours\": 48}"
@@ -154,11 +158,11 @@ Recognized fields inside the JSON:
 | `metadata` | Optional JSON object — structured delegation context (e.g. `resume_token` for multi-turn clarification) |
 | `expires_in_hours` | Overrides the global `contextBridge.explicitExpiryHours` for this entry |
 
-Send skills auto-register a minimal outbound-context entry on every successful send regardless of whether `context_bridge` is passed. The optional field is for callers (specialists, the coordinator) that want richer delegation context.
+Send tools auto-register a minimal outbound-context entry on every successful send regardless of whether `context_bridge` is passed. The optional field is for callers (specialists, the coordinator) that want richer delegation context.
 
 ### `entity_enrichment`
 
-Optional. When declared, the execution layer automatically assembles entity context before invoking the skill handler, injecting it into `ctx.entityContext`.
+Optional. When declared, the execution layer automatically assembles entity context before invoking the tool handler, injecting it into `ctx.entityContext`.
 
 | Field | Description |
 |---|---|
@@ -167,11 +171,11 @@ Optional. When declared, the execution layer automatically assembles entity cont
 
 ### `install`
 
-Optional. Declares install-time requirements that the registry enforces before a skill can be installed or enabled. Skills live in a [DB-backed registry](/core-concepts/registry) and only enabled skills are loaded at startup.
+Optional. Declares install-time requirements that the registry enforces before a tool can be installed or enabled. Tools live in a [DB-backed registry](/core-concepts/registry) and only enabled tools are loaded at startup.
 
 | Field | Description |
 |---|---|
-| `requires_secrets` | Array of vault secret keys that must already exist in the [vault](/get-started/secrets-vault) before the skill can be installed or enabled. The registry rejects the install/enable until every listed key is present. |
+| `requires_secrets` | Array of vault secret keys that must already exist in the [vault](/get-started/secrets-vault) before the tool can be installed or enabled. The registry rejects the install/enable until every listed key is present. |
 
 ```json
 "install": {
@@ -179,7 +183,7 @@ Optional. Declares install-time requirements that the registry enforces before a
 }
 ```
 
-This is distinct from the runtime [`secrets`](#secrets) allowlist: `secrets` controls what the handler may read while executing; `install.requires_secrets` is a precondition gate checked at install/enable time. The `web-search` skill is the canonical example — it declares `tavily_api_key` here so it cannot be enabled until you have provisioned a Tavily key.
+This is distinct from the runtime [`secrets`](#secrets) allowlist: `secrets` controls what the handler may read while executing; `install.requires_secrets` is a precondition gate checked at install/enable time. The `web-search` tool is the canonical example — it declares `tavily_api_key` here so it cannot be enabled until you have provisioned a Tavily key.
 
 ## Example
 
@@ -209,8 +213,8 @@ This is distinct from the runtime [`secrets`](#secrets) allowlist: `secrets` con
 ```
 
 <CardGroup cols={2}>
-  <Card title="Built-in skills" icon="puzzle-piece" href="/skills/built-in-skills">
-    Catalog of all skills Curia ships with.
+  <Card title="Built-in tools" icon="puzzle-piece" href="/tools-and-skills/built-in-tools">
+    Catalog of all tools Curia ships with.
   </Card>
   <Card title="Autonomy engine" icon="gears" href="/security/autonomy-engine">
     How action_risk connects to the autonomy score.

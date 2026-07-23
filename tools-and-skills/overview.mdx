@@ -1,0 +1,80 @@
+---
+title: "Extending Curia: four ways to add a capability"
+description: "Curia's capabilities are built from tools and skills. Add a single tool, bundle tools into a skill, connect an MCP server, or import an Anthropic Agent Skill — all first-class ways to teach Curia something new."
+---
+
+Everything an agent can *do* in the world — send an email, search the web, write a calendar event, look up a contact — is a **tool**. Tools are grouped into **skills**: a skill is a bundle of related tools plus optional instructions. When you want to teach Curia a new capability, you have four ways in, and they compose cleanly.
+
+## The two levels
+
+<CardGroup cols={2}>
+  <Card title="Tool — the atom" icon="wrench">
+    One invocation, one authorization unit. A tool declares its inputs, outputs, `action_risk`, and required secrets. `calendar-create-event` is a tool.
+  </Card>
+  <Card title="Skill — the bundle" icon="layer-group">
+    A collection of tools plus optional `SKILL.md` instructions. Agents pin, discover, and activate *skills*. `calendar` is a skill that bundles the calendar tools.
+  </Card>
+</CardGroup>
+
+The tool is the **invocation + authorization** unit — the execution layer gates every tool call against the [autonomy score](/core-concepts/autonomy) and the caller allowlist. The skill is the **install / pin / discover / activate** unit — it's what an agent gets access to, and what its `SKILL.md` instructions steer the agent to use. Per-tool authorization is always preserved: a skill never flattens its tools' risk levels — `calendar-list-events` stays `none`, `calendar-create-event` stays `high`, even though both live in the `calendar` skill.
+
+<Note>
+Curia's atom used to be called a "skill." As of [ADR-031](https://github.com/josephfung/curia/blob/main/docs/adr/031-tools-vs-skills-vocabulary.md), the atom is a **tool** and a **skill** is the bundle — matching the [Messages API](https://docs.anthropic.com/en/docs/build-with-claude/tool-use) and [MCP](https://modelcontextprotocol.io) (`tool` = the invocation unit) and [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) (`skill` = a collection). Old `/skills/*` doc links redirect here.
+</Note>
+
+## Four ways to add a capability
+
+| You want to… | Add a… | On disk | Agents get it by |
+|---|---|---|---|
+| Give agents one new action | **Tool** | `skills/<tool>/tool.json` + `handler.ts` | pinning the tool name, or discovery |
+| Group related tools with shared instructions | **Skill (bundle)** | `skills/<skill>/SKILL.md` + `tools/<tool>/` | pinning the skill name |
+| Wire in an existing tool server | **MCP server** | `config/skills.yaml` entry | pinning the projected skill name |
+| Reuse an Anthropic Agent Skill you authored elsewhere | **Imported skill** | drop the `SKILL.md` folder into `skills/` | discovery or a pin |
+
+All four land in the same runtime catalog and behave identically to an agent — it invokes a tool without knowing or caring whether the tool is native, MCP-backed, or part of an imported bundle.
+
+### 1. A single tool
+
+The smallest unit. Write a `tool.json` manifest (schema, `action_risk`, secrets) and a `handler.ts`, drop it in `skills/<name>/`, and pin it. Reach for this when you need exactly one new action and no shared instructions. A tool that lives on its own is auto-wrapped as a one-tool skill so it can still be pinned and discovered.
+
+→ [Building a tool or skill](/tools-and-skills/building#build-a-single-tool)
+
+### 2. A skill that bundles tools
+
+When several tools belong together — and especially when the agent needs *guidance* on how to use them — group them under one `SKILL.md`. The `SKILL.md` frontmatter lists the member tools; its body is instructions injected when the skill activates. Pin the skill and the agent gets the whole toolset plus the guidance in one move. This is how the built-in `email`, `calendar`, `contacts`, and `tasks` capabilities are shipped.
+
+→ [Building a tool or skill](/tools-and-skills/building#bundle-tools-into-a-skill)
+
+### 3. An MCP server
+
+If the capability already exists as a [Model Context Protocol](https://modelcontextprotocol.io) server (Google Workspace, GitHub, a filesystem bridge), connect it in `config/skills.yaml`. Curia calls `tools/list` at startup and projects the server's live tool set as a single skill — so the coordinator pins `google-workspace`, not two dozen individual MCP tool names.
+
+→ [Building a tool or skill](/tools-and-skills/building#connect-an-mcp-server)
+
+### 4. An imported Anthropic Agent Skill
+
+If you (or someone else) already authored an [Anthropic Agent Skill](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) — a folder with `SKILL.md` plus optional `references/` — drop it in **unmodified**. No Curia manifest, no rewrite. Curia loads the instructions and reference material; a relevant agent can discover and activate it. Imported skills add *instructions*, not authority: an imported skill can only steer the agent toward tools it already holds.
+
+→ [Importing a Claude skill](/tools-and-skills/importing-a-skill)
+
+## Which one should I use?
+
+- **One action, no guidance needed** → a tool.
+- **A set of related actions, or the agent needs instructions on how/when to use them** → a skill bundle.
+- **The capability already runs as an MCP server** → connect it as an MCP skill; don't re-implement it.
+- **You have a portable Anthropic Agent Skill (instructions + references, no code)** → import it as-is.
+
+<CardGroup cols={2}>
+  <Card title="How tools work" icon="gear" href="/tools-and-skills/how-tools-work">
+    The manifest, action risk, sensitivity, secrets, and lifecycle behind every tool.
+  </Card>
+  <Card title="Built-in tools" icon="puzzle-piece" href="/tools-and-skills/built-in-tools">
+    The full catalog of tools Curia ships with, grouped by skill.
+  </Card>
+  <Card title="Building a tool or skill" icon="hammer" href="/tools-and-skills/building">
+    Author a tool, bundle a skill, or connect an MCP server.
+  </Card>
+  <Card title="Importing a Claude skill" icon="download" href="/tools-and-skills/importing-a-skill">
+    Load an unmodified Anthropic Agent Skill folder.
+  </Card>
+</CardGroup>

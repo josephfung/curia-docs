@@ -36,7 +36,7 @@ Each channel declares its credential fields in the catalog. Every field is store
 | `email` | `channel.email.nylas_api_key`, `channel.email.nylas_grant_id`, `channel.email.nylas_self_email` |
 | `signal` | `channel.signal.socket_path`, `channel.signal.phone_number` |
 
-A field marked required must resolve before the channel can be enabled — the registry blocks enabling a channel whose required credentials are missing, the same way [`install.requires_secrets`](/references/skill-manifest-schema#install) gates skills.
+A field marked required must resolve before the channel can be enabled — the registry blocks enabling a channel whose required credentials are missing, the same way [`install.requires_secrets`](/references/tool-manifest-schema#install) gates tools.
 
 ## Email accounts
 
@@ -56,7 +56,7 @@ channel_accounts:
 
 #### `account-name`
 
-The logical name for this account (e.g., `curia`, `personal`, `work`). Used as the `account` parameter in email skills (`email-list`, `email-get`, `email-draft-save`, `email-archive`).
+The logical name for this account (e.g., `curia`, `personal`, `work`). Used as the `account` parameter in email tools (`email-list`, `email-get`, `email-draft-save`, `email-archive`).
 
 #### `nylas_grant_id`
 

@@ -32,13 +32,13 @@ model:
 system_prompt: |
   Multi-line system prompt text...
 
-# Required — skills this agent can always invoke
-# Skills not in this list are only available if allow_discovery is true
+# Required — tools and skills this agent can always invoke
+# Items not in this list are only available if allow_discovery is true
 pinned_skills:
   - skill-name-1
   - skill-name-2
 
-# Optional — whether the agent can discover and invoke skills not in pinned_skills
+# Optional — whether the agent can discover and invoke tools and skills not in pinned_skills
 # Default: false
 allow_discovery: boolean
 
@@ -91,15 +91,15 @@ Both `${agent_contact_id}` and `${principal_contact_id}` are opt-in — only age
 
 ### `pinned_skills`
 
-Array of skill names this agent can always invoke. Skills must be registered in the skill registry. If a skill in this list doesn't exist at startup, a warning is logged but the agent still starts.
+Array of tool and skill names this agent can always invoke. Each entry must be registered in the registry. If a name in this list doesn't exist at startup, a warning is logged but the agent still starts.
 
 ### `allow_discovery`
 
-When `true`, the agent can use the `skill-registry` skill to search for and invoke skills not in its `pinned_skills` list. The coordinator typically has this enabled; specialists typically do not (they operate with a fixed, auditable skill set).
+When `true`, the agent can use the `tool-registry` tool to search for and invoke tools and skills not in its `pinned_skills` list. The coordinator typically has this enabled; specialists typically do not (they operate with a fixed, auditable skill set).
 
 ### Memory access
 
-Agents do not declare memory scopes. Every agent reads and writes a single shared knowledge graph; there is no per-agent memory isolation. What an agent can touch is governed by which memory skills it is granted (capability gating), the sensitivity ceiling on knowledge-graph reads, and source attribution on writes — not by agent identity.
+Agents do not declare memory scopes. Every agent reads and writes a single shared knowledge graph; there is no per-agent memory isolation. What an agent can touch is governed by which memory tools it is granted (capability gating), the sensitivity ceiling on knowledge-graph reads, and source attribution on writes — not by agent identity.
 
 <CardGroup cols={2}>
   <Card title="Built-in agents" icon="users" href="/agents/built-in-agents">

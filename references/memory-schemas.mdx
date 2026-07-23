@@ -67,7 +67,7 @@ Every node has a sensitivity classification assigned at creation time:
 | `confidential` | Sensitive business information | Requires elevated authorization |
 | `restricted` | Highest sensitivity | Bulk export blocked |
 
-Sensitivity is **immutable after creation** — changing it requires a manual data migration. Skills can provide an explicit sensitivity override when storing facts, or let the system auto-classify using keyword analysis.
+Sensitivity is **immutable after creation** — changing it requires a manual data migration. Tools can provide an explicit sensitivity override when storing facts, or let the system auto-classify using keyword analysis.
 
 ## Node schema
 
@@ -98,7 +98,7 @@ interface KgEdge {
 
 ## Storing facts
 
-When storing a new fact via the `memory-store` skill:
+When storing a new fact via the `memory-store` tool:
 
 ```typescript
 interface StoreFactOptions {

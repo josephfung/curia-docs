@@ -39,7 +39,7 @@ You just ran `pnpm run setup`, logged in with your bootstrap secret, and the for
 
     - **Email** — add credentials via the Curia console (Settings → Channels → Email) and recreate the container. See [installation §Email](/get-started/installation#email-nylas).
     - **Signal** — register a phone with `signal-cli`, add `channel.signal.phone_number` via Settings → Channels → Signal, and recreate. See [installation §Signal messaging](/get-started/installation#signal-messaging).
-    - **Web search** — add `tavily_api_key` via Settings → Channels and enable the `web-search` skill from the registry.
+    - **Web search** — add `tavily_api_key` via Settings → Channels and enable the `web-search` tool from the registry.
 
     You can also ask the setup-wizard for help any time: "Help me set up Nylas" or "What can you do?" both route back to it.
   </Step>
@@ -55,7 +55,7 @@ Curia ships with the autonomy engine seeded at **score 75 (approval-required ban
 
 <Steps>
   <Step title="Decide what you want to delegate">
-    Read the [autonomy engine overview](/security/autonomy-engine) for the band model. Each band has a `min_score` floor that skills declare via `action_risk` in their manifests: `low` ≥ 60, `medium` ≥ 70, `high` ≥ 80, `critical` ≥ 90. Raising the score widens what runs without approval; lowering it tightens what slips through.
+    Read the [autonomy engine overview](/security/autonomy-engine) for the band model. Each band has a `min_score` floor that tools declare via `action_risk` in their manifests: `low` ≥ 60, `medium` ≥ 70, `high` ≥ 80, `critical` ≥ 90. Raising the score widens what runs without approval; lowering it tightens what slips through.
   </Step>
 
   <Step title="Adjust from the console">

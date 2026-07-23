@@ -113,9 +113,9 @@ Context memos are short and structured. They are not the full response — only 
 
 ## Channel security
 
-Channel adapters operate within a hard architectural constraint: they can pass inbound messages into the system and receive outbound messages for delivery — and nothing else. They cannot invoke skills, read memory, or trigger agent tasks directly. This is enforced at the framework level, not by policy.
+Channel adapters operate within a hard architectural constraint: they can pass inbound messages into the system and receive outbound messages for delivery — and nothing else. They cannot invoke tools, read memory, or trigger agent tasks directly. This is enforced at the framework level, not by policy.
 
-A compromised email adapter could flood inbound messages, but it cannot execute skills, access your data, or impersonate another layer. The boundary is structural.
+A compromised email adapter could flood inbound messages, but it cannot execute tools, access your data, or impersonate another layer. The boundary is structural.
 
 <CardGroup cols={2}>
   <Card title="Email setup" icon="envelope" href="/channels/email-setup">

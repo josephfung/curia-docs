@@ -13,9 +13,9 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 |---|---|
 | **Role** | coordinator |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Skills** | 60+ pinned skills (email, memory, scheduling, tasks, web research, autonomy, Google Workspace, and more) |
+| **Pinned skills** | 60+ tools across the email, memory, scheduling, tasks, web, autonomy, and Google Workspace skills, and more |
 | **Discovery** | Enabled — can find and invoke skills not in its pinned list |
-| **Task management** | Enabled (`enable_task_management`) — owns and advances the task backlog |
+| **Task management** | Enabled (pins the `tasks` skill) — owns and advances the task backlog |
 
 **What it handles directly:**
 - Conversational messages and questions
@@ -51,7 +51,7 @@ A specialist agent that owns the full calendar domain.
 |---|---|
 | **Role** | specialist |
 | **Model** | Standard tier (Claude Sonnet by default) — scheduling and RSVP judgment |
-| **Skills** | calendar-* (incl. holds and invite RSVPs), contact-lookup, entity-context, date-resolve, memory-query, memory-store, bullpen |
+| **Tools** | calendar-* (incl. holds and invite RSVPs), contact-lookup, entity-context, date-resolve, memory-query, memory-store, bullpen |
 | **Discovery** | Disabled |
 
 **What it handles:**
@@ -73,7 +73,7 @@ A specialist agent that owns the full contact domain.
 |---|---|
 | **Role** | specialist |
 | **Model** | Fast tier (Claude Haiku by default) |
-| **Skills** | contact-*, scan-grant-recommendations, approve-grant-recommendation, decline-grant-recommendation, query-relationships, delete-relationship, calendar-list-events (read-only), scheduler-report, context-bridge-release, context-bridge-clear, entity-context, memory-query, memory-store |
+| **Tools** | contact-*, scan-grant-recommendations, approve-grant-recommendation, decline-grant-recommendation, query-relationships, delete-relationship, calendar-list-events (read-only), scheduler-report, context-bridge-release, context-bridge-clear, entity-context, memory-query, memory-store |
 | **Discovery** | Disabled |
 
 **What it handles:**
@@ -92,7 +92,7 @@ A specialist agent for conducting web research and providing analysis.
 |---|---|
 | **Role** | specialist |
 | **Model** | Fast tier (Claude Haiku by default) |
-| **Skills** | web-search, web-fetch, request-clarification, scheduler-create, scheduler-list, scheduler-cancel, memory-query, memory-store, contact-update |
+| **Tools** | web-search, web-fetch, request-clarification, scheduler-create, scheduler-list, scheduler-cancel, memory-query, memory-store, contact-update |
 | **Discovery** | Disabled |
 
 **Research workflow:**
@@ -112,9 +112,9 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 |---|---|
 | **Role** | specialist |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Skills** | ceo-inbox-* (incl. `ceo-inbox-draft-compose`), task-* (via task management), contact-register, contact-update, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve, scheduler-report, context-bridge-release, context-bridge-clear |
+| **Tools** | ceo-inbox-* (incl. `ceo-inbox-draft-compose`), task-* (via task management), contact-register, contact-update, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve, scheduler-report, context-bridge-release, context-bridge-clear |
 | **Discovery** | Disabled |
-| **Task management** | Enabled (`enable_task_management`) |
+| **Task management** | Enabled (pins the `tasks` skill) |
 | **Schedule** | Every 15 minutes |
 
 **What it handles:**
@@ -141,7 +141,7 @@ A specialist agent that owns the first-conversation experience after a new insta
 |---|---|
 | **Role** | specialist |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Skills** | setup-status, setup-defer, behavioral-preferences-update, scheduler-create, scheduler-list, scheduler-cancel, skill-registry, memory-store, executive-profile-update, system-secret-capture-request |
+| **Tools** | setup-status, setup-defer, behavioral-preferences-update, scheduler-create, scheduler-list, scheduler-cancel, tool-registry, memory-store, executive-profile-update, system-secret-capture-request |
 | **Discovery** | Disabled |
 | **inject_specialists** | False |
 
@@ -166,7 +166,7 @@ A proactive specialist agent that scans the CEO's calendar for recently-ended ex
 |---|---|
 | **Role** | specialist |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Skills** | calendar-list-events, calendar-create-event, calendar-check-conflicts, contact-lookup, email-draft-save, task-*, bullpen, memory-query, memory-store, config-store, entity-context, date-resolve, context-bridge-clear |
+| **Tools** | calendar-list-events, calendar-create-event, calendar-check-conflicts, contact-lookup, email-draft-save, task-*, bullpen, memory-query, memory-store, config-store, entity-context, date-resolve, context-bridge-clear |
 | **Discovery** | Disabled |
 | **Schedule** | Every 5 minutes |
 
@@ -191,19 +191,19 @@ An opt-in, read-only investigator for the principal. When something about Curia'
 |---|---|
 | **Role** | specialist |
 | **Model** | Powerful tier (Claude Opus by default) |
-| **Skills** | audit-query, audit-trace, ops-lookup, date-resolve, request-clarification |
+| **Tools** | audit-query, audit-trace, ops-lookup, date-resolve, request-clarification |
 | **Discovery** | Disabled |
 | **Enabled by default** | No — operator must enable it |
 
-**Read-only by construction.** Every skill it holds is read-only; it investigates but never acts. It has no ability to send, draft, write state, or contact anyone. `ops-lookup` reads operational tables (`scheduled_jobs`, `action_log`, `outbound_context`, `working_memory`, `messages`); `audit-query` and `audit-trace` read the audit log.
+**Read-only by construction.** Every tool it holds is read-only; it investigates but never acts. It has no ability to send, draft, write state, or contact anyone. `ops-lookup` reads operational tables (`scheduled_jobs`, `action_log`, `outbound_context`, `working_memory`, `messages`); `audit-query` and `audit-trace` read the audit log.
 
 **Principal-only.** Its findings are Curia's own internal state, so it reports only to the principal and declines diagnostics requested on behalf of — or for delivery to — anyone else. It grounds every claim in cited audit events rather than guessing, and treats expired ephemeral state (e.g. `outbound_context`, `working_memory`) as unavailable instead of confabulating.
 
-**Off by default.** The Diagnostics agent and its `audit-query` / `audit-trace` / `ops-lookup` skills are excluded from the default registry — a fresh install does not enable them. Turn the agent on (and its skills) from **Settings → Skills** when you want it. Once enabled, the Coordinator delegates to it like any other specialist and relays its findings.
+**Off by default.** The Diagnostics agent and its `audit-query` / `audit-trace` / `ops-lookup` tools are excluded from the default registry — a fresh install does not enable them. Turn the agent on (and its tools) from **Settings → Skills** when you want it. Once enabled, the Coordinator delegates to it like any other specialist and relays its findings.
 
 ## How delegation works
 
-When the Coordinator receives a task that requires specialist expertise, it uses the `delegate` skill to hand the task to the appropriate agent. The specialist works independently, using only its pinned skills, and returns its findings to the Coordinator. The Coordinator synthesizes the specialist's response into its own voice — the user never sees that multiple agents were involved.
+When the Coordinator receives a task that requires specialist expertise, it uses the `delegate` tool to hand the task to the appropriate agent. The specialist works independently, using only its pinned skills, and returns its findings to the Coordinator. The Coordinator synthesizes the specialist's response into its own voice — the user never sees that multiple agents were involved.
 
 On synchronous channels (CLI, Signal, HTTP), the Coordinator sends a brief acknowledgment before delegating ("This will take a few minutes — I'll reply when it's ready"). On asynchronous channels (email), delegation happens silently.
 

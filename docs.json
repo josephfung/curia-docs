@@ -105,14 +105,16 @@
         ]
       },
       {
-        "tab": "Skills",
+        "tab": "Tools & Skills",
         "groups": [
           {
-            "group": "Skills",
+            "group": "Tools & Skills",
             "pages": [
-              "skills/how-skills-work",
-              "skills/built-in-skills",
-              "skills/building-custom-skills"
+              "tools-and-skills/overview",
+              "tools-and-skills/how-tools-work",
+              "tools-and-skills/built-in-tools",
+              "tools-and-skills/building",
+              "tools-and-skills/importing-a-skill"
             ]
           }
         ]
@@ -168,7 +170,7 @@
             "pages": [
               "references/configuration",
               "references/agent-manifest-schema",
-              "references/skill-manifest-schema",
+              "references/tool-manifest-schema",
               "references/channel-config-schema",
               "references/http-api",
               "references/http-api-messages",
@@ -181,5 +183,31 @@
         ]
       }
     ]
-  }
+  },
+  "redirects": [
+    {
+      "source": "/skills/how-skills-work",
+      "destination": "/tools-and-skills/how-tools-work"
+    },
+    {
+      "source": "/skills/built-in-skills",
+      "destination": "/tools-and-skills/built-in-tools"
+    },
+    {
+      "source": "/skills/building-custom-skills",
+      "destination": "/tools-and-skills/building"
+    },
+    {
+      "source": "/skills",
+      "destination": "/tools-and-skills/overview"
+    },
+    {
+      "source": "/skills/:slug*",
+      "destination": "/tools-and-skills/overview"
+    },
+    {
+      "source": "/references/skill-manifest-schema",
+      "destination": "/references/tool-manifest-schema"
+    }
+  ]
 }

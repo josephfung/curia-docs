@@ -1,0 +1,145 @@
+---
+title: "How tools work"
+description: "Tools connect Curia to the outside world. Each one declares its inputs, outputs, action risk level, and required secrets before an agent can invoke it."
+---
+
+**Tools** are the mechanism through which agents interact with external services and take action in the world. When Curia sends an email, searches the web, creates a calendar event, or looks up a contact, it is invoking a tool. Agents don't call APIs directly — they invoke tools, which handle authentication, validation, and output sanitization on their behalf. The LLM never sees raw credentials.
+
+A tool is the **invocation + authorization** atom: one action, one risk level, one set of declared secrets. Tools are grouped into [**skills** (bundles)](/tools-and-skills/overview) — the unit an agent pins, discovers, and activates — but the gate that governs *"may this call run right now?"* always lives on the individual tool. See [Extending Curia](/tools-and-skills/overview) for the four ways to add one.
+
+## Native and MCP-backed tools
+
+Every tool is either **native** (a folder with a `tool.json` manifest and a TypeScript handler in the `skills/` directory) or **MCP-backed** (discovered from an external [Model Context Protocol](https://modelcontextprotocol.io) server at startup). Agents work with both through the same interface — they cannot tell the difference at runtime. This page describes the native tool; see [Building a tool or skill](/tools-and-skills/building#connect-an-mcp-server) for wiring up MCP servers.
+
+```
+skills/
+  email/                 # skill (bundle)
+    SKILL.md             # name, description, member tools, optional instructions
+    tools/
+      email-send/
+        tool.json        # manifest: name, inputs, outputs, sensitivity, action_risk, secrets
+        handler.ts       # implementation
+        handler.test.ts  # tests
+```
+
+A single tool with no bundle can also live flat at `skills/<tool>/tool.json` — Curia auto-wraps it as a one-tool skill so it can still be pinned and discovered.
+
+## The tool manifest
+
+Every native tool includes a `tool.json` manifest that the execution layer validates at startup. Here is a real example from the `email-send` tool:
+
+```json
+{
+  "name": "email-send",
+  "description": "Send a new email via the configured email account",
+  "version": "1.0.0",
+  "sensitivity": "normal",
+  "action_risk": "medium",
+  "inputs": {
+    "to": "string",
+    "cc": "string?",
+    "subject": "string",
+    "body": "string"
+  },
+  "outputs": {
+    "message_id": "string",
+    "to": "string",
+    "subject": "string"
+  },
+  "permissions": [],
+  "secrets": [],
+  "timeout": 30000
+}
+```
+
+### Manifest fields
+
+| Field | Description |
+|---|---|
+| `name` | Unique identifier used by agents and the registry |
+| `description` | Human-readable description — shown to the LLM and in the registry |
+| `sensitivity` | `normal` or `elevated` — `elevated` requires a live CEO turn (see below) |
+| `action_risk` | Risk level used by the autonomy engine — see below |
+| `inputs` | Input schema — validated before the handler is called |
+| `outputs` | Output schema — documents what the tool returns |
+| `permissions` | Declared capabilities, validated at load time |
+| `secrets` | Vault secret keys this tool may request via `ctx.secret()` |
+| `timeout` | Per-invocation timeout in milliseconds (default: 30,000) |
+| `install.requires_secrets` | Optional. Vault keys that must exist before the tool can be installed or enabled (see [Tool lifecycle](#tool-lifecycle-install-and-enable)) |
+
+The [tool manifest schema](/references/tool-manifest-schema) reference documents every field, including the optional `capabilities`, `allowed_callers`, and `entity_enrichment` blocks.
+
+## Action risk levels
+
+Every tool declares an `action_risk` value that indicates its potential impact on the world. This field is required — Curia will not start if any manifest omits it.
+
+| Level | Min autonomy score | Capability class |
+|---|---|---|
+| `none` | 0 | Read-only, no external effects (web search, summarization) |
+| `low` | 60 | Internal state writes — memory, contacts |
+| `medium` | 70 | Outbound communications — sending email or Signal messages |
+| `high` | 80 | Calendar writes, commitments made on behalf of the CEO |
+| `critical` | 90 | Financial, destructive, or irreversible actions |
+
+The autonomy engine uses these values to determine whether a given tool can run at the current autonomy score. Bundling tools into a skill never changes this: each tool keeps its own `action_risk`, so a low-risk read and a high-risk write can live side by side in the same skill. See [Autonomy engine](/core-concepts/autonomy) for the full picture.
+
+## Sensitivity: normal and elevated
+
+The `sensitivity` field controls the elevated gate in the execution layer:
+
+- **`normal`** — no elevated gate. The tool is governed by the autonomy engine via its `action_risk` (and, where set, the list of callers allowed to invoke it).
+- **`elevated`** — the tool exercises CEO authority itself, so it only runs during a **live principal turn**: a turn that originated from a fresh inbound from you (the CEO), or a synchronous delegation made inside one. A scheduled job, a woken task, or any task that merely carries your *lineage* can never invoke it.
+
+Elevated is reserved for authority primitives — approving, denying, or dismissing a queued action, changing the autonomy level, and altering a contact's trust tier, role, or permissions. This is what closes the self-approval loophole: Curia acting on its own (woken by a schedule or a reply) can never approve its own pending action or grant itself new permissions. Only you, acting in the moment, can.
+
+This gate is checked on **every** invocation — it is not a one-time "approve once and never ask again." (Consequential but non-authority actions, like sending email or booking calendar events, are `normal` tools governed by `action_risk` and the approval workflow instead.)
+
+## Secrets: credentials the LLM never sees
+
+Tools that need API keys, passwords, or tokens declare them in their `secrets` array. At runtime, the execution layer provides a scoped `ctx.secret()` accessor that resolves the value from the [encrypted vault](/get-started/secrets-vault):
+
+```typescript
+// Inside a tool handler
+const apiKey = ctx.secret("nylas_api_key");
+```
+
+The execution layer validates that the calling tool's manifest declared the requested secret. If a tool tries to access a secret it did not declare, the call fails. Agents and LLMs never see secret values — only the tool handler does, and only through this scoped accessor. Every secret access is audit-logged (which tool, which task, when, and whether the value came from the vault or an env fallback) — but values are never written to the log.
+
+## Tool lifecycle: install and enable
+
+Tools and skills live in a [DB-backed registry](/core-concepts/registry). A tool present on disk is not automatically active — it must be **installed** and **enabled** before agents can call it, and only enabled tools are loaded at startup. This gives you a single place to turn capabilities on and off, and a gate for required credentials.
+
+When a tool declares `install.requires_secrets`, the registry refuses to install or enable it until every listed vault key is present. The bundled `web-search` tool declares `tavily_api_key`, so it stays disabled until you provision a Tavily key. Enable and disable capabilities from the Settings registry in the console; changes take effect on restart.
+
+## Discovery and activation
+
+Agents don't have to know every tool up front. An agent with `allow_discovery: true` gets two admin tools:
+
+- **`tool-registry`** — search the registry by keyword. It returns matching skills (with member tools promoted to their owning skill) so the agent finds `tasks`, not a bare `task-create` with no instructions.
+- **`skill-activate`** — pull a discovered skill into the working toolkit mid-turn. Activation expands the skill's member tools into scope and injects its `SKILL.md` instructions. Activation never widens authority: a member tool the agent isn't allowed to call is skipped, not granted.
+
+Tools an agent *always* needs are pinned instead (via `pinned_skills` in the agent YAML), so they're loaded eagerly at bootstrap without a discovery step. See [Building custom agents](/agents/building-custom-agents) for pinning.
+
+## Output sanitization
+
+Every tool result is sanitized before the LLM sees it. This prevents tool outputs from being used as injection vectors:
+
+- XML and HTML tags are stripped — they cannot be interpreted as system instructions
+- Outputs longer than 200,000 characters are truncated with a `[truncated]` marker
+- Patterns matching known secret formats (API keys, tokens, passwords) are redacted
+- Error strings are wrapped in a structured format that prevents them from being read as instructions
+
+Nothing from the outside world reaches the LLM unfiltered.
+
+## Built-in tools
+
+Curia ships with more than 90 built-in tools, grouped into skills by capability area (contacts, email, calendar, memory, scheduling, tasks, web, and more). The [built-in tools reference](/tools-and-skills/built-in-tools) is the authoritative catalog — every tool with its `action_risk` level and a full description.
+
+<CardGroup cols={2}>
+  <Card title="Building a tool or skill" icon="hammer" href="/tools-and-skills/building">
+    Author a tool from scratch, bundle tools into a skill, or connect an MCP server.
+  </Card>
+  <Card title="Autonomy" icon="gauge" href="/core-concepts/autonomy">
+    See how action_risk values gate tool execution by autonomy score.
+  </Card>
+</CardGroup>

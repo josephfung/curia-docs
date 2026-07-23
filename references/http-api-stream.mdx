@@ -43,10 +43,10 @@ Each event is a JSON object sent as an SSE `data` field. Three event types flow 
 | Event type | When it fires |
 |---|---|
 | `outbound.message` | The agent has produced a complete reply |
-| `skill.invoke` | The agent is calling a tool (e.g. fetching calendar, sending email) |
-| `skill.result` | A tool call has completed and returned a result |
+| `tool.invoke` | The agent is calling a tool (e.g. fetching calendar, sending email) |
+| `tool.result` | A tool call has completed and returned a result |
 
-Watching `skill.invoke` and `skill.result` events lets you show the user what the agent is doing while it works — useful for tasks that chain multiple tools together.
+Watching `tool.invoke` and `tool.result` events lets you show the user what the agent is doing while it works — useful for tasks that chain multiple tools together.
 
 ## Connection keepalive
 
@@ -162,9 +162,9 @@ The typical pattern is to open the SSE stream first, then POST your message. Eve
 Events arrive as SSE messages with a `data` field containing a JSON string.
 
 ```
-data: {"type":"skill.invoke","skillName":"get-calendar-events","conversationId":"my-conv-id"}
+data: {"type":"tool.invoke","tool":"get-calendar-events","conversationId":"my-conv-id"}
 
-data: {"type":"skill.result","skillName":"get-calendar-events","conversationId":"my-conv-id","success":true}
+data: {"type":"tool.result","tool":"get-calendar-events","conversationId":"my-conv-id","success":true}
 
 data: {"type":"outbound.message","content":"You have two meetings tomorrow...","conversationId":"my-conv-id"}
 ```
