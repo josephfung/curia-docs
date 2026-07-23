@@ -128,6 +128,7 @@
               "channels/how-channels-work",
               "channels/email-setup",
               "channels/signal-setup",
+              "channels/slack-setup",
               "channels/cli",
               "channels/http",
               "channels/building-custom-channels"
