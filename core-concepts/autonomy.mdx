@@ -1,9 +1,9 @@
 ---
 title: "Autonomy"
-description: "One number from 0 to 100 controls how independently Curia acts, across all channels and skills."
+description: "One number from 0 to 100 controls how independently Curia acts, across all channels and tools."
 ---
 
-Curia's autonomy engine gives you a single dial to control how independently your AI team operates. A score from 0 to 100 determines whether Curia acts on its own, asks before acting, drafts without sending, or sticks to pure advice. The score applies across all agents, channels, and skills — one setting, consistent behavior everywhere. You can read it or change it at any time with a plain-English instruction.
+Curia's autonomy engine gives you a single dial to control how independently your AI team operates. A score from 0 to 100 determines whether Curia acts on its own, asks before acting, drafts without sending, or sticks to pure advice. The score applies across all agents, channels, and tools — one setting, consistent behavior everywhere. You can read it or change it at any time with a plain-English instruction.
 
 ## The five autonomy bands
 
@@ -55,7 +55,7 @@ You can add an optional reason: "Set your autonomy score to 85 — I want you to
 Score changes take effect immediately on the next task — no restart required. The Coordinator loads the current score from Postgres at the start of every task, so a change you make mid-session applies on the very next action.
 
 <Warning>
-Only the CEO can change the autonomy score, and only in the moment. `set-autonomy` is an **elevated** skill: it runs solely during a live CEO turn, so a scheduled job or a woken task that merely carries the CEO's lineage cannot raise (or lower) the score on its own. Requests from external email senders or unverified contacts are rejected.
+Only the CEO can change the autonomy score, and only in the moment. `set-autonomy` is an **elevated** tool: it runs solely during a live CEO turn, so a scheduled job or a woken task that merely carries the CEO's lineage cannot raise (or lower) the score on its own. Requests from external email senders or unverified contacts are rejected.
 </Warning>
 
 ## How to calibrate your score
@@ -79,9 +79,9 @@ A practical approach for new deployments:
 
 ## Hard execution gates
 
-The autonomy score isn't only guidance injected into prompts — it's enforced as a hard gate at runtime. When Curia attempts to invoke a skill, the execution layer checks the live score against the skill's declared `action_risk` floor. If the score is too low, the skill is blocked before it runs.
+The autonomy score isn't only guidance injected into prompts — it's enforced as a hard gate at runtime. When Curia attempts to invoke a tool, the execution layer checks the live score against the tool's declared `action_risk` floor. If the score is too low, the tool is blocked before it runs.
 
-This means the bands are binding. At **Draft Only** (60–69), outbound sends are blocked regardless of what the coordinator decides. At **Restricted** (< 60), all non-read skills are blocked. The coordinator cannot reason its way around the gate.
+This means the bands are binding. At **Draft Only** (60–69), outbound sends are blocked regardless of what the coordinator decides. At **Restricted** (< 60), all non-read tools are blocked. The coordinator cannot reason its way around the gate.
 
 ## What happens when Curia can't act
 

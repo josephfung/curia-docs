@@ -38,21 +38,21 @@ Most agent frameworks treat security as a configuration option and audit trails 
 
 ### Hard layer separation
 
-Five architectural layers communicate through a central message bus. Each layer declares its role at startup, and the bus enforces strict publish and subscribe rules at registration time. A channel adapter that tries to invoke a skill or write to memory gets an error — not a warning. The boundary is architectural, not policy.
+Five architectural layers communicate through a central message bus. Each layer declares its role at startup, and the bus enforces strict publish and subscribe rules at registration time. A channel adapter that tries to invoke a tool or write to memory gets an error — not a warning. The boundary is architectural, not policy.
 
 This means a compromised email adapter can only do what email adapters are allowed to do: pass inbound messages. It cannot invoke tools, access secrets, or modify agent state.
 
 ### Append-only audit trail
 
-Every event that flows through the bus — every message received, every tool invoked, every inter-agent discussion — is written to an append-only log in Postgres before it is delivered to subscribers. Nothing is updated or deleted. Every event carries a `parent_event_id`, so you can trace the full causal chain: "This expense was categorized because this email was received, which triggered this agent, which invoked this skill."
+Every event that flows through the bus — every message received, every tool invoked, every inter-agent discussion — is written to an append-only log in Postgres before it is delivered to subscribers. Nothing is updated or deleted. Every event carries a `parent_event_id`, so you can trace the full causal chain: "This expense was categorized because this email was received, which triggered this agent, which invoked this tool."
 
 ### Secrets never reach the LLM
 
-Agents access credentials through a scoped interface that validates each request against the skill's declared manifest. The LLM sees "email-list connected to inbox" — never the actual password or API key. Every credential access is audit-logged.
+Agents access credentials through a scoped interface that validates each request against the tool's declared manifest. The LLM sees "email-list connected to inbox" — never the actual password or API key. Every credential access is audit-logged.
 
 ### Tool output sanitization
 
-All skill results are sanitized before being fed back to the LLM: XML and HTML tags stripped, outputs truncated to a configurable limit, secret-like patterns redacted. Error messages are wrapped in structured tags to prevent prompt injection. Nothing from the outside world reaches the LLM unfiltered.
+All tool results are sanitized before being fed back to the LLM: XML and HTML tags stripped, outputs truncated to a configurable limit, secret-like patterns redacted. Error messages are wrapped in structured tags to prevent prompt injection. Nothing from the outside world reaches the LLM unfiltered.
 
 ## Persistent memory
 
@@ -73,7 +73,7 @@ All skill results are sanitized before being fed back to the LLM: XML and HTML t
 
 ## Autonomy engine
 
-Curia operates at a configurable autonomy level — a single score from 0 to 100 that determines how independently it acts across all channels and skills. The current band is injected into every agent's system prompt, so behaviour adjusts the moment you change the score — no restart required.
+Curia operates at a configurable autonomy level — a single score from 0 to 100 that determines how independently it acts across all channels and tools. The current band is injected into every agent's system prompt, so behaviour adjusts the moment you change the score — no restart required.
 
 | Band | Score | What it means |
 |---|---|---|

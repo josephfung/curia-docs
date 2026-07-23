@@ -31,7 +31,7 @@ There is no `send()` method on the interface. Inside `start()`, the channel publ
       my-channel-adapter.ts
     ```
 
-    Register on the bus at the `channel` layer — the hard security boundary limits a channel to publishing `inbound.message` and subscribing to `outbound.message`. It cannot invoke skills, read memory, or trigger agent tasks.
+    Register on the bus at the `channel` layer — the hard security boundary limits a channel to publishing `inbound.message` and subscribing to `outbound.message`. It cannot invoke tools, read memory, or trigger agent tasks.
   </Step>
   <Step title="Add a catalog descriptor">
     Add a `ChannelDescriptor` to `src/channels/catalog.ts` so the registry knows about your channel and what credentials it needs:

@@ -102,8 +102,8 @@ error_budget:
 | Field | Description |
 |---|---|
 | `model.tier` | Capability tier: `fast`, `standard`, or `powerful` — mapped to a concrete model by the operator in config |
-| `pinned_skills` | Skills always available to this agent in every task |
-| `allow_discovery` | When `true`, the agent can search the skill registry for capabilities not in its pinned list |
+| `pinned_skills` | Tools and skills always available to this agent in every task |
+| `allow_discovery` | When `true`, the agent can search the tool registry for capabilities not in its pinned list |
 | `schedule` | Cron expressions for recurring tasks the agent runs automatically |
 | `error_budget.max_turns` | Maximum LLM round-trips per task execution — hard cap |
 | `error_budget.max_cost_usd` | Maximum dollar spend per task execution — hard cap |
@@ -136,16 +136,16 @@ These budgets are tracked cumulatively across bursts for long-running persistent
 
 ### Skill discovery
 
-When `allow_discovery: true` is set, the agent receives the built-in `skill-registry` tool in addition to its pinned skills. If the LLM determines it needs a capability not in its pinned list, it queries the registry:
+When `allow_discovery: true` is set, the agent receives the built-in `tool-registry` tool in addition to its pinned skills. If the LLM determines it needs a capability not in its pinned list, it queries the registry:
 
 ```text
-skill-registry({ query: "send SMS" })
+tool-registry({ query: "send SMS" })
 ```
 
 The registry returns matching skill names and descriptions. Curia then appends the full tool schemas to the agent's working tool list for that task, so discovered skills are immediately callable.
 
 <Note>
-Skills tagged `sensitivity: elevated` — such as payment processing or bulk deletion — require human approval the first time an agent attempts to use them. Normal-sensitivity skills discovered via the registry are auto-approved.
+Tools tagged `sensitivity: elevated` — such as payment processing or bulk deletion — require human approval the first time an agent attempts to use them. Normal-sensitivity tools discovered via the registry are auto-approved.
 </Note>
 
 ## TypeScript handlers
@@ -162,11 +162,11 @@ The handler exports lifecycle hooks:
 
 ```typescript
 export const onTask = async (task, ctx) => { /* before the agent starts */ };
-export const onSkillResult = async (skill, result, ctx) => { /* after each skill call */ };
+export const onToolResult = async (tool, result, ctx) => { /* after each tool call */ };
 export const beforeRespond = async (response, ctx) => { /* before the final reply */ };
 ```
 
-Use handlers for things like custom memory loading, domain-specific validation of skill results, or pre-processing inputs before they reach the LLM.
+Use handlers for things like custom memory loading, domain-specific validation of tool results, or pre-processing inputs before they reach the LLM.
 
 ## The Bullpen
 
@@ -192,10 +192,10 @@ When a message arrives, here is what happens inside Curia:
     The Coordinator loads its system prompt, relevant entity memory and knowledge graph context, and any pending Bullpen threads. Conversation history for this `conversation_id` is loaded from working memory.
   </Step>
   <Step title="LLM called">
-    The Coordinator calls its configured LLM. If the LLM decides to invoke a skill or delegate to a specialist, those requests are dispatched via the bus.
+    The Coordinator calls its configured LLM. If the LLM decides to invoke a tool or delegate to a specialist, those requests are dispatched via the bus.
   </Step>
-  <Step title="Skills and delegation">
-    Skill results flow back through the execution layer (sanitized and validated). Specialist agents complete their work and return results to the Coordinator.
+  <Step title="Tools and delegation">
+    Tool results flow back through the execution layer (sanitized and validated). Specialist agents complete their work and return results to the Coordinator.
   </Step>
   <Step title="Response published">
     The Coordinator formulates a reply and publishes an `agent.response` event. The dispatch layer injects the persona's display name and email signature, then routes the outbound message back to the originating channel.
@@ -203,8 +203,8 @@ When a message arrives, here is what happens inside Curia:
 </Steps>
 
 <CardGroup cols={2}>
-  <Card title="Skills" icon="puzzle-piece" href="/skills/how-skills-work">
-    Learn how agents interact with the outside world through local and MCP skills.
+  <Card title="How tools work" icon="puzzle-piece" href="/tools-and-skills/how-tools-work">
+    Learn how agents interact with the outside world through local and MCP tools.
   </Card>
   <Card title="Memory" icon="database" href="/core-concepts/memory">
     Understand how Curia remembers people, decisions, and facts across restarts.

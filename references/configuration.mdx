@@ -83,9 +83,9 @@ dispatch:
 
 Lower it to extract memory sooner after a conversation goes quiet; raise it to batch more turns into a single extraction pass. Must be a positive integer; a non-numeric or non-positive value is a hard startup failure.
 
-## Skill output length
+## Tool output length
 
-All skill results are sanitized and truncated before being fed to the LLM. Raise this limit if you routinely hit it on large-payload skills (search results, page crawls, long calendar lists). Lower it to reduce LLM context pressure on installations with many concurrent agents.
+All tool results are sanitized and truncated before being fed to the LLM. Raise this limit if you routinely hit it on large-payload tools (search results, page crawls, long calendar lists). Lower it to reduce LLM context pressure on installations with many concurrent agents.
 
 ```yaml
 # config/local.yaml
@@ -95,7 +95,7 @@ skillOutput:
 
 ## Web browser
 
-Controls the headless browser the `web-browser` skill drives (Patchright, a stealth-hardened Playwright fork). Sessions are pooled and swept on a timer so logins can persist across calls without leaking idle browser processes.
+Controls the headless browser the `web-browser` tool drives (Patchright, a stealth-hardened Playwright fork). Sessions are pooled and swept on a timer so logins can persist across calls without leaking idle browser processes.
 
 ```yaml
 # config/local.yaml
@@ -426,7 +426,7 @@ tasks:
   staleWaitThresholdHours: 48    # a waiting/blocked task with no pending wake is "stale" after this long
 ```
 
-Whether an agent participates in the task system (auto-pinned `task-*` skills, the executor-discipline prompt block, and heartbeat eligibility) is set per agent with `enable_task_management: true` in `agents/<name>.yaml` — not in this file. The coordinator and ceo-inbox ship with it enabled.
+Whether an agent participates in the task system (the `task-*` tools, the executor-discipline prompt block, and heartbeat eligibility) is set per agent by pinning the `tasks` skill in `agents/<name>.yaml`'s `pinned_skills` — not in this file. The coordinator and ceo-inbox ship with it pinned.
 
 ## Autonomy engine
 

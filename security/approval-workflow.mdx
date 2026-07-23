@@ -7,18 +7,18 @@ When Curia wants to take an action but its autonomy score is below the required 
 
 ## When approval requests are created
 
-An approval request is created any time the [execution layer](/security/autonomy-engine) blocks a skill invocation because the live score is below the skill's `action_risk` floor. Common situations:
+An approval request is created any time the [execution layer](/security/autonomy-engine) blocks a tool invocation because the live score is below the tool's `action_risk` floor. Common situations:
 
 - **Score is in Draft Only (60–69):** Curia wants to send an email but the outbound gate blocks it. Instead of giving up, it saves a draft and creates an approval request asking you to authorize the send.
-- **Score is in Approval Required (70–79):** A skill with `action_risk: high` (e.g., creating a calendar event on your behalf) is invoked. The gate allows medium-risk skills but blocks high-risk ones — an approval request is raised.
-- **Any score, blocked skill:** A skill with `action_risk: critical` is invoked at any score below 90. The request captures the full context so you can evaluate it.
+- **Score is in Approval Required (70–79):** A tool with `action_risk: high` (e.g., creating a calendar event on your behalf) is invoked. The gate allows medium-risk tools but blocks high-risk ones — an approval request is raised.
+- **Any score, blocked tool:** A tool with `action_risk: critical` is invoked at any score below 90. The request captures the full context so you can evaluate it.
 
 ## What a request contains
 
 Each approval request includes:
 
 - A short reference code (e.g. `REF-A7B2`) for quick identification
-- The skill name and what it was trying to do
+- The tool name and what it was trying to do
 - The context that triggered the request (task, channel, sender)
 - The required autonomy score vs. the current score
 - A timestamp and expiry window
@@ -34,7 +34,7 @@ You interact with approval requests conversationally from any trusted channel.
 <Tip>
 Ask Curia: **"What's waiting for my approval?"** or **"List pending actions."**
 
-You can also use the `list-pending-actions` skill directly.
+You can also use the `list-pending-actions` tool directly.
 </Tip>
 
 Example response:
@@ -64,7 +64,7 @@ Curia will re-execute the blocked action immediately with your explicit authoriz
 When you approve a request, Curia:
 
 1. Marks the `autonomy_action_log` row as `approved`
-2. Re-executes the skill with `humanApproved: true`, which bypasses the gate for this invocation only
+2. Re-executes the tool with `humanApproved: true`, which bypasses the gate for this invocation only
 3. Records the outcome in the action log (used later by automatic score adjustment)
 4. Notifies you of the result
 
@@ -120,7 +120,7 @@ See [Autonomy engine](/security/autonomy-engine) for the scoring mechanics.
   <Card title="Autonomy engine" icon="gears" href="/security/autonomy-engine">
     How action_risk thresholds, hard gates, and automatic score adjustment work.
   </Card>
-  <Card title="Built-in skills" icon="puzzle-piece" href="/skills/built-in-skills">
-    The approve-action, deny-action, dismiss-action, and list-pending-actions skills.
+  <Card title="Built-in tools" icon="puzzle-piece" href="/tools-and-skills/built-in-tools">
+    The approve-action, deny-action, dismiss-action, and list-pending-actions tools.
   </Card>
 </CardGroup>

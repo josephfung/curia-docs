@@ -44,14 +44,14 @@ Email accounts are managed from **Settings → Channels → Email → Email acco
 </Steps>
 
 <Note>
-  You can connect as many email accounts as you need. All accounts share the same app-level Nylas API key (`nylas_api_key` in the vault). The `account` parameter on email skills lets agents target a specific account by name; omit it to use Curia's own account.
+  You can connect as many email accounts as you need. All accounts share the same app-level Nylas API key (`nylas_api_key` in the vault). The `account` parameter on email tools lets agents target a specific account by name; omit it to use Curia's own account.
 </Note>
 
-## Email skills
+## Email tools
 
-Once the email channel is active, the following skills become available to Curia and any agents you configure:
+Once the email channel is active, the following tools become available to Curia and any agents you configure:
 
-| Skill | What it does |
+| Tool | What it does |
 |---|---|
 | `email-list` | List recent messages in any connected account |
 | `email-get` | Fetch the full body of a specific message by ID |
@@ -61,11 +61,11 @@ Once the email channel is active, the following skills become available to Curia
 | `send-draft` | Send a previously saved draft (CEO-authorized) |
 | `email-archive` | Archive a message by ID |
 
-All email skills accept an `account` parameter to target a specific named account. Omit it to use Curia's own account.
+All email tools accept an `account` parameter to target a specific named account. Omit it to use Curia's own account.
 
 ## File attachments
 
-Outbound email skills (`email-send`, `email-reply`, and their CEO-inbox counterparts) accept an optional list of attachments. Files are referenced by `file://` URLs backed by Curia's temp-file store rather than passed inline, with a cap of **20 MB total across at most 10 attachments** per message. Anything an agent has written to the temp-file store can be attached; the [`drive-download-file`](/skills/built-in-skills#email) skill bridges Google Drive by downloading a file (including Google-native exports) into that store and returning a `file://` URL ready to attach. No extra configuration is needed beyond a working Nylas grant — attachments ride the same Send API as the message body.
+Outbound email tools (`email-send`, `email-reply`, and their CEO-inbox counterparts) accept an optional list of attachments. Files are referenced by `file://` URLs backed by Curia's temp-file store rather than passed inline, with a cap of **20 MB total across at most 10 attachments** per message. Anything an agent has written to the temp-file store can be attached; the [`drive-download-file`](/tools-and-skills/built-in-tools#email) tool bridges Google Drive by downloading a file (including Google-native exports) into that store and returning a `file://` URL ready to attach. No extra configuration is needed beyond a working Nylas grant — attachments ride the same Send API as the message body.
 
 ## Troubleshooting
 

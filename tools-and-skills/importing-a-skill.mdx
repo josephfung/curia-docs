@@ -1,0 +1,94 @@
+---
+title: "Importing a Claude skill"
+description: "Load an unmodified Anthropic Agent Skill — a SKILL.md folder with references — into Curia. No manifest to author, no code to write."
+---
+
+Curia can load an **unmodified** [Anthropic Agent Skill](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) — a folder with `SKILL.md` plus optional `references/` or `assets/` — as a Curia [skill (bundle)](/tools-and-skills/overview). No `tool.json`, no Curia-specific manifest, and no code. This is the fourth way to [extend Curia](/tools-and-skills/overview): reuse a skill you (or someone else) already authored, exactly as written.
+
+An imported skill contributes **instructions and reference material** — not new authority. It steers the agent toward tools it already holds; it can't grant access to anything new.
+
+## What you get
+
+| Payload | Behavior |
+|---|---|
+| `SKILL.md` (name + description + body) | Discovered and activatable. The body is injected on activation (or at bootstrap if pinned). |
+| `references/*.md`, `assets/*` | Listed at activation. **Text files** load on demand via `skill-activate({ skill, reference })`; **binary assets** stay listed but are never injected into context. |
+| `scripts/` | **Warned at import, never run.** The instructions and assets still load; the scripts do not execute. |
+
+<Note>
+**Authority containment.** An imported skill cannot expand the activating agent's tool authority. Its instructions only steer toward tools the agent already holds — `allowed_callers` and `action_risk` still apply to every call. Imported skills typically declare no tools at all.
+</Note>
+
+## Operator flow
+
+Importing a skill uses the same install channel as any custom capability: drop files on disk, enable in the registry, restart.
+
+<Steps>
+  <Step title="Drop the skill folder onto disk">
+    Place the folder so it sits alongside Curia's other skills (the container `skills/` directory, or a deploy overlay's `custom/skills/`):
+
+    ```text
+    skills/
+      not-a-lawyer/           # e.g. https://github.com/maxtremaine/ai-playbook/tree/main/skills/not-a-lawyer
+        SKILL.md
+        references/
+          common-clauses.md
+          drafting-comments.md
+    ```
+  </Step>
+  <Step title="Restart once so discovery sees the folder">
+    It appears in the registry as **uninstalled** — imported skills are never auto-enabled (that would be self-enable, a deliberate non-goal).
+  </Step>
+  <Step title="Install + enable it">
+    From the console (**Settings → Skills**) or the registry API:
+
+    ```bash
+    curl -X POST -H "Cookie: …" \
+      https://your-host/api/registry/skills/not-a-lawyer/install-enable
+    ```
+  </Step>
+  <Step title="Restart again so the enabled skill loads into the registry">
+  </Step>
+  <Step title="Give a relevant agent access">
+    - **Discoverable (typical):** set `allow_discovery: true` on the agent (e.g. the coordinator). It receives `tool-registry` + `skill-activate` and can find the skill when a task calls for it.
+    - **Pinned (optional):** add the skill name to the agent's `pinned_skills` for always-on instructions.
+  </Step>
+</Steps>
+
+### Example activation
+
+```text
+tool-registry({ query: "contract review" })
+# → { name: "not-a-lawyer", kind: "skill", … }
+
+skill-activate({ skill: "not-a-lawyer" })
+# → SKILL.md body + list of references/
+
+skill-activate({ skill: "not-a-lawyer", reference: "common-clauses.md" })
+# → loads references/common-clauses.md into the turn
+```
+
+Discovery, activation, and wake-persistence follow the same [tiered lookup](/tools-and-skills/how-tools-work#discovery-and-activation) (pinned → task-active → discovery) as every other skill — imported skills are ordinary consumers of that path.
+
+## The scripts warning
+
+If the folder contains a `scripts/` directory, startup logs a warning like:
+
+```text
+Imported skill ships a scripts/ directory — scripts are NOT executed. …
+```
+
+The skill still loads; its instructions and assets are available. But `scripts/*.py` (or any other executable) will **not** run — an execution sandbox for imported scripts is planned but not yet shipped. Import skills expecting only their instructions and reference material to take effect.
+
+## Trust model
+
+Anyone who can place files in the container and restart it already has full trust — the same bar as any custom tool or skill. There is no signing gate, no console upload UI, and no runtime self-install: install is operator-side, on purpose.
+
+<CardGroup cols={2}>
+  <Card title="Building a tool or skill" icon="hammer" href="/tools-and-skills/building">
+    Author native Curia tools and bundles, or connect an MCP server.
+  </Card>
+  <Card title="How tools work" icon="gear" href="/tools-and-skills/how-tools-work">
+    Discovery, activation, and the per-tool authorization model.
+  </Card>
+</CardGroup>

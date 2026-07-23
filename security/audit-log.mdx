@@ -1,9 +1,9 @@
 ---
 title: "Curia's append-only audit trail and governance log"
-description: "Every Curia event is logged to Postgres before delivery — with full causal tracing across every message, skill call, and agent response for compliance review."
+description: "Every Curia event is logged to Postgres before delivery — with full causal tracing across every message, tool call, and agent response for compliance review."
 ---
 
-The audit log is Curia's primary governance instrument. Every event that flows through the message bus — every inbound message, every skill invoked, every inter-agent exchange, every outbound reply — is written to Postgres before it is delivered to any subscriber. If you ever need to answer "what happened and why," the audit log is where you look.
+The audit log is Curia's primary governance instrument. Every event that flows through the message bus — every inbound message, every tool invoked, every inter-agent exchange, every outbound reply — is written to Postgres before it is delivered to any subscriber. If you ever need to answer "what happened and why," the audit log is where you look.
 
 <Note>
   The audit log is a governance record, not a debugging tool. It answers questions like "who authorized this action?" and "what email triggered this expense entry?" — not "why did the LLM produce this output?" For operational debugging, use the structured logs written by pino.
@@ -23,15 +23,15 @@ Every event type that flows through the bus produces an audit log entry:
 |---|---|
 | `inbound.message` | Every message received across any channel — email, Signal, CLI, HTTP |
 | `agent.task` | Every time a message is dispatched to an agent for processing |
-| `skill.invoke` | Every skill call made by an agent, including which agent invoked it |
-| `skill.result` | The output of each skill call, after sanitization |
+| `tool.invoke` | Every tool call made by an agent, including which agent invoked it |
+| `tool.result` | The output of each tool call, after sanitization |
 | `agent.discuss` | Every inter-agent exchange in the Bullpen |
 | `agent.response` | Every response the coordinator produces |
 | `outbound.message` | Every message sent to an external recipient (response-path sends, originated by `agent.response` and translated by the dispatch layer) |
-| `outbound.delivered` | Every successful wire-level delivery emitted by the outbound gateway — covers both response-path and skill-invoked sends (`signal-send`, `email-send`, `email-reply`, etc.). This is the canonical "did something actually leave the building?" audit signal; use it (not `outbound.message`) when counting outbound traffic for security review |
+| `outbound.delivered` | Every successful wire-level delivery emitted by the outbound gateway — covers both response-path and tool-invoked sends (`signal-send`, `email-send`, `email-reply`, etc.). This is the canonical "did something actually leave the building?" audit signal; use it (not `outbound.message`) when counting outbound traffic for security review |
 | `outbound.blocked` | A message the outbound safety filter refused to send — records the recipient, a human-readable reason, and the specific findings (so you can review what would have leaked) |
 | `outbound.suppressed_duplicate` | A duplicate response-path send that was suppressed because a human-facing reply had already gone out for that task |
-| `secret.accessed` | Every `ctx.secret()` call — the secret name (never the value), the requesting skill and task, and whether the value resolved from the vault or an env fallback (`source: vault \| env`) |
+| `secret.accessed` | Every `ctx.secret()` call — the secret name (never the value), the requesting tool and task, and whether the value resolved from the vault or an env fallback (`source: vault \| env`) |
 | `channel.poll` | One per email poll cycle — messages fetched, processed, skipped (by reason), the new high-water mark, and duration |
 | `channel.stalled` | Watchdog alert raised when no poll cycle has completed within several intervals — surfaces a silently stuck channel |
 | `memory.store` | Every write to the knowledge graph |
@@ -52,9 +52,9 @@ A typical chain looks like this:
 ```
 inbound.message  (email from vendor@example.com)
   └─ agent.task  (routed to coordinator)
-       └─ skill.invoke  (file-parse)
-            └─ skill.result  (receipt extracted: $142.50, Acme Supplies)
-                 └─ skill.invoke  (memory.store — expense node created)
+       └─ tool.invoke  (file-parse)
+            └─ tool.result  (receipt extracted: $142.50, Acme Supplies)
+                 └─ tool.invoke  (memory.store — expense node created)
                       └─ agent.response  (coordinator confirms to CEO)
                            └─ outbound.message  (reply sent)
 ```
@@ -69,14 +69,14 @@ Beyond convention, Curia maintains a cryptographic hash chain: each entry's hash
 
 ## Secret access logging
 
-When a skill calls `ctx.secret()` to access a credential from the [vault](/get-started/secrets-vault), the access is audit-logged as a `secret.accessed` event before the secret value is returned. The log entry records:
+When a tool calls `ctx.secret()` to access a credential from the [vault](/get-started/secrets-vault), the access is audit-logged as a `secret.accessed` event before the secret value is returned. The log entry records:
 
 - Which secret was accessed (by name, not value)
-- Which skill requested it
-- Which agent and task triggered the skill
+- Which tool requested it
+- Which agent and task triggered the tool
 - Whether the value resolved from the vault or an env fallback (`source: vault | env`)
 
-Secret values are never written to the audit log. The log tells you that the email-get skill accessed the Nylas credential — not what that credential is.
+Secret values are never written to the audit log. The log tells you that the email-get tool accessed the Nylas credential — not what that credential is.
 
 ## PII handling
 
@@ -131,9 +131,9 @@ The audit log is stored in your Postgres database and can be queried directly fo
 **Useful queries for governance review:**
 
 - **Trace all activity from a specific sender** — filter by the sender's email address or channel identifier in the payload
-- **Review all tool calls in a conversation** — filter by conversation ID and event types `skill.invoke` and `skill.result`
+- **Review all tool calls in a conversation** — filter by conversation ID and event types `tool.invoke` and `tool.result` (rows written before the tools/skills rename carry the legacy `skill.invoke` / `skill.result` names; audit readers match both)
 - **Audit outbound communications** — filter for `outbound.message` events within a time window
-- **Track secret accesses** — filter for `secret.accessed` events to see which credentials were used, by which skill, in which task
+- **Track secret accesses** — filter for `secret.accessed` events to see which credentials were used, by which tool, in which task
 
 Every query starts from `timestamp` and `event_type` — add payload filters as needed for your specific review. Because every event includes a `parent_event_id`, you can reconstruct full causal chains by joining recursively or using a recursive CTE.
 

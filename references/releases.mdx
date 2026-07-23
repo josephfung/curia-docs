@@ -35,15 +35,15 @@ Curia follows [Semantic Versioning](https://semver.org):
 
 | Change type | Bump | Examples |
 |---|---|---|
-| New skill, agent, or channel | Minor (`0.X.0`) | Adding web-search, adding Signal channel |
+| New tool, skill, agent, or channel | Minor (`0.X.0`) | Adding web-search, adding Signal channel |
 | New capability shipped for the first time | Minor (`0.X.0`) | Autonomy engine, entity context enrichment |
 | Completing a partially-shipped feature | Patch (`0.x.Y`) | Context summarization, audit log hardening |
-| Bug fix, small improvement | Patch (`0.x.Y`) | Fixing a skill error path |
-| Breaking change to public API surface | Minor + changelog note | Renaming a SkillContext field |
+| Bug fix, small improvement | Patch (`0.x.Y`) | Fixing a tool error path |
+| Breaking change to public API surface | Minor + changelog note | Renaming a ToolContext field |
 
 **Public API surfaces** (changes called out explicitly even pre-1.0):
-- `skill.json` manifest schema
-- `SkillHandler` / `SkillContext` / `SkillResult` TypeScript interfaces
+- `tool.json` manifest schema
+- `ToolHandler` / `ToolContext` / `ToolResult` TypeScript interfaces
 - Agent YAML schema (`agents/*.yaml` fields)
 - Bus event type definitions (`src/bus/events.ts`)
 - Channel adapter interface

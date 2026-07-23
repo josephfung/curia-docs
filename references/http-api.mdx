@@ -77,13 +77,14 @@ The following endpoints are used by the built-in web dashboard. They authenticat
 | `GET /api/autonomy` | Current autonomy score, band, trend direction, `lastSetBy`, and scored action count |
 | `PUT /api/autonomy` | Set the autonomy score (body: `{ "score": 85, "reason": "..." }`) |
 | `GET /api/autonomy/history` | Paginated autonomy score change history (query: `limit`, `offset`) |
-| `GET /api/registry/skills` | List registered skills with installed/enabled state |
+| `GET /api/registry/tools` | List registered tools with installed/enabled state |
+| `GET /api/registry/skills` | List registered skills (bundles) with installed/enabled state |
 | `GET /api/registry/agents` | List registered agents with installed/enabled state |
-| `POST /api/registry/:kind/:name/install` | Install a skill or agent (`kind` is `skills` or `agents`) |
-| `POST /api/registry/:kind/:name/enable` | Enable an installed skill or agent |
+| `POST /api/registry/:kind/:name/install` | Install a tool, skill, or agent (`kind` is `tools`, `skills`, or `agents`) |
+| `POST /api/registry/:kind/:name/enable` | Enable an installed tool, skill, or agent |
 | `POST /api/registry/:kind/:name/install-enable` | Install and enable in one call |
-| `POST /api/registry/:kind/:name/disable` | Disable a skill or agent |
-| `DELETE /api/registry/:kind/:name` | Uninstall a skill or agent |
+| `POST /api/registry/:kind/:name/disable` | Disable a tool, skill, or agent |
+| `DELETE /api/registry/:kind/:name` | Uninstall a tool, skill, or agent |
 | `GET /api/vault/*` | Manage vault secrets and channel credentials (names only; values are never returned) |
 
 See [Managing skills, agents, and channels](/core-concepts/registry) for how the registry and required-secret gates work.

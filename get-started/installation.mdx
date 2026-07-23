@@ -160,7 +160,7 @@ docker compose up -d --force-recreate curia
 
 ### Web research (Tavily)
 
-Tavily powers the `web-search` skill, which lets agents research topics and look up current information during tasks.
+Tavily powers the `web-search` tool, which lets agents research topics and look up current information during tasks.
 
 <Steps>
   <Step title="Get a Tavily API key">
@@ -171,8 +171,8 @@ Tavily powers the `web-search` skill, which lets agents research topics and look
     In the Curia console, go to **Settings → Channels → Web search** and enter the key (stored as `tavily_api_key`).
   </Step>
 
-  <Step title="Enable the web-search skill">
-    `web-search` declares `tavily_api_key` in its `install.requires_secrets`, so it stays disabled until the key is in the vault. Once added, enable the skill from the Settings registry in the console, then recreate the container:
+  <Step title="Enable the web-search tool">
+    `web-search` declares `tavily_api_key` in its `install.requires_secrets`, so it stays disabled until the key is in the vault. Once added, enable the tool from the Settings registry in the console, then recreate the container:
 
     ```bash
     docker compose up -d --force-recreate curia

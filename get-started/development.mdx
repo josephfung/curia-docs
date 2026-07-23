@@ -3,7 +3,7 @@ title: "Build from source"
 description: "Clone the repository and run Curia from source with hot reload — the path for contributors and anyone who wants to customize their instance."
 ---
 
-If you just want to run Curia, the [image-based install](/get-started/installation) is faster and needs no toolchain. This page is for developers who want to **change** Curia: contribute upstream, add a custom agent or skill, or hack on their own instance. It clones the repository and builds from source, so your edits hot-reload into the running stack.
+If you just want to run Curia, the [image-based install](/get-started/installation) is faster and needs no toolchain. This page is for developers who want to **change** Curia: contribute upstream, add a custom agent, tool, or skill, or hack on their own instance. It clones the repository and builds from source, so your edits hot-reload into the running stack.
 
 The flow is the same in spirit as the image install — one command, an Anthropic key, a bootstrap secret — but it runs against a local checkout using the development compose overlay instead of the published image.
 
@@ -122,8 +122,8 @@ If you're contributing changes upstream rather than just running your own instan
   <Card title="Building custom agents" icon="robot" href="/agents/building-custom-agents">
     Create, register, and test a new agent in your instance.
   </Card>
-  <Card title="Building custom skills" icon="wrench" href="/skills/building-custom-skills">
-    Add a new capability as a skill with its own manifest and handler.
+  <Card title="Building a tool or skill" icon="wrench" href="/tools-and-skills/building">
+    Add a new capability as a tool with its own manifest and handler.
   </Card>
   <Card title="Configuration reference" icon="book" href="/references/configuration">
     Every configurable setting: rate limits, security rules, and more.

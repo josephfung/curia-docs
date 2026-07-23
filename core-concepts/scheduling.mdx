@@ -19,7 +19,7 @@ schedule:
     task: "Check inbox for new receipts"
 ```
 
-Cron expressions run in Curia's configured timezone (set via `TIMEZONE` in `.env`). If you need a specific job to run in a different timezone, the scheduler-create skill accepts an optional `timezone` parameter.
+Cron expressions run in Curia's configured timezone (set via `TIMEZONE` in `.env`). If you need a specific job to run in a different timezone, the scheduler-create tool accepts an optional `timezone` parameter.
 
 Declarative schedules are **idempotent** — on each startup, Curia reconciles the YAML definitions against existing jobs and automatically cleans up stale entries. If you change a cron expression or remove a schedule entry entirely, the old job is cancelled on the next restart. No orphaned jobs accumulate.
 
@@ -91,18 +91,18 @@ One-shot jobs fire once and are marked complete. They don't carry an intent anch
   </Tab>
 </Tabs>
 
-## Scheduler skills
+## Scheduler tools
 
-Agents can manage jobs programmatically using these built-in skills:
+Agents can manage jobs programmatically using these built-in tools:
 
-| Skill | What it does |
+| Tool | What it does |
 |---|---|
 | `scheduler-create` | Create a cron or one-shot job with optional `intent_anchor` |
 | `scheduler-list` | List jobs filtered by status or agent |
 | `scheduler-cancel` | Cancel a job by ID |
 | `scheduler-report` | Write a summary of a completed run for use by the next execution |
 
-The `scheduler-create` skill accepts these inputs:
+The `scheduler-create` tool accepts these inputs:
 
 ```typescript
 {
@@ -163,7 +163,7 @@ You interact with the backlog conversationally:
 > Mark the Acme follow-up done.
 ```
 
-Behind that, agents use the `task-create` / `task-list` / `task-update` / `task-complete` skills. A task can carry a **wake time** — when it's time to act, the scheduler fires and the owning agent resumes with the task's full context. You can review the backlog any time — what's for you to do, what's waiting on others, and what Curia is working on.
+Behind that, agents use the `task-create` / `task-list` / `task-update` / `task-complete` tools. A task can carry a **wake time** — when it's time to act, the scheduler fires and the owning agent resumes with the task's full context. You can review the backlog any time — what's for you to do, what's waiting on others, and what Curia is working on.
 
 ### How tasks differ from scheduled jobs
 
@@ -171,7 +171,7 @@ A scheduled job is a trigger; a task is a unit of work. A task that needs to wak
 
 ### Keeping the backlog moving: the heartbeat
 
-A deterministic **hourly heartbeat** is the backstop that keeps open work from lingering. It does no AI reasoning — it simply notices tasks that have gone quiet (an idle task Curia owns, or a "waiting" task whose expected reply never came) and wakes the owning agent to advance or re-evaluate them. Most work actually advances faster than that, driven by incoming replies and per-task wake timers; the heartbeat only catches the stragglers. Task management is enabled per agent via the `enable_task_management` capability and tuned under the `tasks` block in `config/default.yaml`.
+A deterministic **hourly heartbeat** is the backstop that keeps open work from lingering. It does no AI reasoning — it simply notices tasks that have gone quiet (an idle task Curia owns, or a "waiting" task whose expected reply never came) and wakes the owning agent to advance or re-evaluate them. Most work actually advances faster than that, driven by incoming replies and per-task wake timers; the heartbeat only catches the stragglers. Task management is enabled per agent by pinning the `tasks` skill (`pinned_skills: [tasks]`), which also makes the agent heartbeat-eligible, and tuned under the `tasks` block in `config/default.yaml`.
 
 ### When a task gets stuck
 
@@ -192,7 +192,7 @@ When an agent runs from a scheduler tick, Curia applies a **task-scope fence** �
 
 This protects against a specific drift pattern: an agent sees ambient context in its prompt (for example, recent outbound messages the platform has injected for reply-correlation purposes) and decides to act on it instead of doing the task it was actually scheduled for. The fence is unconditional for scheduler-originated runs and applies to every agent, including the coordinator.
 
-The fence is a prompt-level guard, not a code-level one. It catches the dominant drift pattern without restricting legitimate work — but for security-critical operations (outbound sends, calendar writes), defense-in-depth at the skill layer remains the right counter to adversarial or buggy behavior.
+The fence is a prompt-level guard, not a code-level one. It catches the dominant drift pattern without restricting legitimate work — but for security-critical operations (outbound sends, calendar writes), defense-in-depth at the tool layer remains the right counter to adversarial or buggy behavior.
 
 ## Intent drift detection
 

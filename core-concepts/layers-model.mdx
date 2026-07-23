@@ -1,6 +1,6 @@
 ---
 title: "The layers model"
-description: "How Curia's governance layers compose — from channel trust to dispatch policy, coordinator autonomy checks, and skill-level action risk."
+description: "How Curia's governance layers compose — from channel trust to dispatch policy, coordinator autonomy checks, and tool-level action risk."
 ---
 
 Every message that enters Curia passes through multiple governance layers before any action is taken. Each layer adds a different kind of protection, and they compose — a message must satisfy every layer to result in an action. No single layer is the "security layer"; security is the cumulative effect of all five working together.
@@ -50,11 +50,11 @@ The Coordinator agent receives the task with the current [autonomy score](/core-
 | Draft Only | 60–69 | Prepares drafts but does not send without explicit go-ahead |
 | Restricted | < 60 | Advisory only, takes no independent action |
 
-This is a behavioral governance layer — the agent self-governs based on the band description. The autonomy score applies uniformly across all agents, channels, and skills.
+This is a behavioral governance layer — the agent self-governs based on the band description. The autonomy score applies uniformly across all agents, channels, and tools.
 
-### Layer 4: Skill action risk
+### Layer 4: Tool action risk
 
-Every skill declares an `action_risk` level in its manifest, establishing the minimum autonomy score required to execute it:
+Every tool declares an `action_risk` level in its manifest, establishing the minimum autonomy score required to execute it:
 
 | action_risk | Minimum score | Examples |
 |---|---|---|
@@ -64,7 +64,7 @@ Every skill declares an `action_risk` level in its manifest, establishing the mi
 | `high` | 80 | Creating calendar events, making commitments |
 | `critical` | 90 | Financial actions, irreversible operations |
 
-If the current autonomy score is below the skill's declared floor, the execution layer blocks the invocation. This is a hard gate — unlike the autonomy band (which guides agent behavior through the prompt), skill gating is enforced architecturally.
+If the current autonomy score is below the tool's declared floor, the execution layer blocks the invocation. This is a hard gate — unlike the autonomy band (which guides agent behavior through the prompt), tool gating is enforced architecturally.
 
 ### Layer 5: Outbound safety
 
@@ -85,7 +85,7 @@ Now consider the same message arriving via Signal from a confirmed contact:
 1. **Channel trust**: Signal = high trust (1.0)
 2. **Dispatch policy**: Confirmed contact = high confidence. Trust score passes. Rate limits pass. No injection detected. Message proceeds.
 3. **Agent autonomy**: Score 75 = Approval Required. Agent will present a plan before any consequential action.
-4. **Skill action risk**: Agent wants to send an email reply (action_risk: medium, min score 70). Score 75 >= 70 → skill executes.
+4. **Tool action risk**: Agent wants to send an email reply (action_risk: medium, min score 70). Score 75 >= 70 → tool executes.
 5. **Outbound safety**: Email reply passes through PII redaction per email channel policy before sending.
 
 The system is designed so that each layer can be reasoned about independently, but their composition provides defense in depth. Removing any single layer would leave a category of risk unaddressed.
