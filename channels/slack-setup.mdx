@@ -1,0 +1,186 @@
+---
+title: "Connect Slack so your team can DM and mention Curia"
+description: "Add Slack as a first-party Curia channel via a workspace-owned Slack app (Socket Mode) — DMs, @mentions, in-thread replies, and reactions, all riding Curia's unified contact and trust model."
+---
+
+Slack lets your team reach your Curia agent the same way they'd reach a colleague: DM it, @mention it in a channel, or keep talking in a thread after the first mention. Some principals prefer it to Signal as their everyday channel.
+
+Slack does not allow software to join as a normal human user. Instead you create a **workspace-owned Slack app** (a bot user), install it, and store its tokens in Curia's vault. Day-to-day the experience is ordinary Slack — invite the bot to channels, DM it, @mention it.
+
+<Info>
+  Trust rides the **sender**, not the channel. Slack is a `medium`-trust channel *floor*, but once your Slack user id is linked to your principal contact, your Slack messages carry principal-tier trust — the same unified contact ledger as email and Signal. For high-autonomy approvals when your Slack identity isn't linked yet, prefer Signal or the CLI.
+</Info>
+
+## Prerequisites
+
+- A Slack workspace where you (or an admin) can create apps
+- Your Curia **office identity** name (e.g. "Nathan Curia") — you'll use this as the Slack bot's display name and @handle. Curia never assumes `@curia`; the handle comes from your Slack app settings.
+
+## Step 1 — Create the Slack app from Curia's manifest
+
+<Steps>
+  <Step title="Create the app from a manifest">
+    Open [api.slack.com/apps](https://api.slack.com/apps) → **Create New App** → **From a manifest**, choose your workspace, and paste the manifest below.
+
+    ```yaml
+    display_information:
+      name: YOUR_OFFICE_IDENTITY_NAME
+      description: Curia agent for this workspace — DMs, @mentions, and in-thread replies.
+      background_color: "#1A6B5E"
+
+    features:
+      bot_user:
+        display_name: YOUR_OFFICE_IDENTITY_NAME
+        always_online: true
+      app_home:
+        home_tab_enabled: false
+        messages_tab_enabled: true
+        messages_tab_read_only_enabled: false
+
+    oauth_config:
+      scopes:
+        bot:
+          - app_mentions:read
+          - chat:write
+          - im:history
+          - im:read
+          - im:write
+          - channels:history
+          - groups:history
+          - users:read
+          - reactions:read
+
+    settings:
+      event_subscriptions:
+        bot_events:
+          - app_mention
+          - message.im
+          - message.channels
+          - message.groups
+          - reaction_added
+      interactivity:
+        is_enabled: false
+      org_deploy_enabled: false
+      socket_mode_enabled: true
+      token_rotation_enabled: false
+    ```
+  </Step>
+
+  <Step title="Name the bot after your office identity">
+    Replace `YOUR_OFFICE_IDENTITY_NAME` (in both `display_information.name` and `bot_user.display_name`) with your office identity, e.g. `Nathan Curia`. If Slack prompts for a bot username, pick something like `nathancuria` or `nathan`.
+  </Step>
+
+  <Step title="Create the app">
+    Review the summary and create the app.
+  </Step>
+</Steps>
+
+## Step 2 — Enable Socket Mode and get the tokens
+
+Curia connects over Socket Mode, so there's no public webhook URL to host.
+
+<Steps>
+  <Step title="Enable Socket Mode">
+    In the app settings, open **Socket Mode** and toggle it on.
+  </Step>
+
+  <Step title="Create an App-Level Token">
+    Create an **App-Level Token** with the `connections:write` scope. Copy the `xapp-…` token — this is your **App-Level Token**.
+  </Step>
+
+  <Step title="Install and copy the Bot Token">
+    Open **OAuth & Permissions** → **Install to Workspace** (or reinstall after any manifest scope/event change). Copy the **Bot User OAuth Token** (`xoxb-…`).
+  </Step>
+</Steps>
+
+## Step 3 — Store the tokens in the vault
+
+In the Curia console, go to **Settings → Channels → Slack** and enter both tokens. They're stored in the [vault](/get-started/secrets-vault):
+
+| Field | Vault key |
+|---|---|
+| Bot User OAuth Token (`xoxb-…`) | `channel.slack.bot_token` |
+| App-Level Token (`xapp-…`) | `channel.slack.app_token` |
+
+Then install and enable the Slack channel in the registry and restart Curia so the adapter starts:
+
+```bash
+docker compose up -d --force-recreate curia
+```
+
+## Step 4 — Send your first message
+
+<Steps>
+  <Step title="Invite the bot or open a DM">
+    Invite the bot to a channel, or open a direct message with it.
+  </Step>
+
+  <Step title="DM or @mention">
+    Send a DM, or @mention the bot in a channel. Curia replies in-thread for channel mentions.
+  </Step>
+
+  <Step title="Continue in the thread">
+    After the first @mention you can keep talking in that thread without re-mentioning — Curia stays active in the thread until the process restarts.
+  </Step>
+
+  <Step title="Link your Slack identity to the principal">
+    Ask Curia to link your Slack user id to your principal contact so your Principal Contact Details include Slack and principal-tier trust applies on Slack turns:
+
+    ```
+    > My Slack user id is U0123456789 — that's me (the principal).
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  Unknown workspace members who message the bot are auto-created as `tier=unknown` contacts — the same low-trust constraints as an unknown emailer — until you elevate them or link their Slack identity onto an existing contact.
+</Note>
+
+### Optional: restrict to specific channels
+
+To limit @mentions and in-thread channel replies to specific Slack channels, set an allowlist in `config/local.yaml`:
+
+```yaml
+channels:
+  slack:
+    allowed_channel_ids:
+      - C0123456789
+```
+
+DMs are never filtered by this list. An empty or absent list means all channels the bot is a member of.
+
+## Reactions
+
+Curia normalizes Slack reactions into a channel-agnostic reaction signal (a reactor's 👍 on a message). Emoji-to-intent mapping — for example reading 👍 on an approval request as approval — is a follow-up; today reactions are captured but not yet acted on.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Adapter not starting">
+    Confirm that:
+
+    1. Both tokens are in the vault (**Settings → Channels → Slack**)
+    2. Slack is installed **and** enabled in **Settings → Channels**
+    3. Curia was restarted after enabling (`docker compose up -d --force-recreate curia`)
+  </Accordion>
+
+  <Accordion title="No replies in a channel">
+    Check that the bot is invited to the channel, that the first turn is an @mention (or that you're continuing an already-active thread), and — if you configured an allowlist — that the channel id is on it.
+  </Accordion>
+
+  <Accordion title="Thread replies ignored after a restart">
+    Active-thread state is process-local and is lost on restart. @mention the bot once to re-activate the thread.
+  </Accordion>
+
+  <Accordion title="Socket Mode keeps disconnecting">
+    Make sure the App-Level Token has the `connections:write` scope and that the bot token is from the **same** app. Check `docker compose logs curia` for details.
+  </Accordion>
+
+  <Accordion title="Curia treats me as an unknown sender">
+    Link your Slack user id to your principal contact (Step 4). Elevate colleagues' tiers as needed.
+  </Accordion>
+
+  <Accordion title="Missing reactions or channel messages">
+    Re-install the app after updating the manifest — the newer events and scopes (`reaction_added`, `message.channels`, `message.groups`, `reactions:read`) only take effect on reinstall.
+  </Accordion>
+</AccordionGroup>
