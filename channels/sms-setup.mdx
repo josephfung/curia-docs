@@ -1,0 +1,134 @@
+---
+title: "Connect SMS so the office can text on a dedicated number"
+description: "Add two-way SMS as a first-party Curia channel on a dedicated Telnyx office DID — inbound via signed webhook, outbound via the gateway, all on Curia's unified contact and trust model."
+---
+
+SMS lets your Curia agent text people the way an assistant with an office line would: send a message to the principal or a third party, and field replies back on the same number. It rides a **dedicated Telnyx number** (a DID) that belongs to the office, not a ported personal or consumer-app number.
+
+Inbound texts arrive as a signed webhook from Telnyx; outbound sends go through Curia's outbound gateway to the Telnyx Messages API. Conversations are 1:1 text only in v1 (no MMS or group messaging).
+
+<Info>
+  Trust rides the **sender**, not the channel. SMS is a `medium`-trust channel *floor* — carrier From headers are spoofable and SMS is not end-to-end encrypted, so it must not match Signal's `high`. Once your mobile number is linked to your principal contact as a verified `sms` identity, your texts carry principal-tier trust. For high-autonomy approvals when your SMS identity isn't linked yet, prefer Signal or the CLI.
+</Info>
+
+## Prerequisites
+
+- A **public HTTPS URL** for your Curia host — Telnyx must be able to reach the webhook (unlike Signal's local socket).
+- A [Telnyx Mission Control](https://telnyx.com) account with a funded balance.
+- For a **US** long code: a brand plus a **Low-Volume Mixed** 10DLC campaign (Sole Proprietor registration is fine if you have no EIN). A **Canadian** office DID is a viable alternative that sits outside 10DLC — different regulatory and cost trade-offs, no campaign registration.
+
+<Note>
+  This is Curia's SMS **transport** — a new office number. Do not port a personal or consumer-app number (TextNow and the like): there's no suitable server API for cold inbound plus authenticated send, and it muddies the office identity.
+</Note>
+
+## Step 1 — Buy a number and point its webhook at Curia
+
+<Steps>
+  <Step title="Complete 10DLC (US long code only)">
+    In Telnyx Mission Control, register your brand and a **Low-Volume Mixed** 10DLC campaign. Skip this step for a Canadian DID.
+  </Step>
+
+  <Step title="Buy a voice+SMS number">
+    Purchase a **voice+SMS** capable number. Prefer voice+SMS so the same DID can be reused if you later add a phone/voice stack.
+  </Step>
+
+  <Step title="Attach a Messaging Profile and set the webhook">
+    Create or attach a Messaging Profile and set its webhook URL (API v2) to:
+
+    ```
+    https://<your-host>/api/webhooks/telnyx/sms
+    ```
+
+    Curia verifies every webhook's Ed25519 signature and rejects unsigned or invalid requests, so this endpoint is safe to expose publicly.
+  </Step>
+
+  <Step title="Copy the three credentials">
+    From Mission Control, copy your **API key**, your **office DID** in E.164 (e.g. `+14155550123`), and your account **Public Key** (Keys & Credentials) used to verify webhook signatures.
+  </Step>
+</Steps>
+
+## Step 2 — Store the credentials in the vault
+
+In the Curia console, go to **Settings → Channels → SMS** and enter the three values. They're stored in the [vault](/get-started/secrets-vault):
+
+| Field | Vault key |
+|---|---|
+| Telnyx API key | `channel.sms.api_key` |
+| Office DID (E.164) | `channel.sms.from_number` |
+| Telnyx webhook public key | `channel.sms.webhook_public_key` |
+
+<Note>
+  SMS credentials are **vault-only** — there is no environment-variable fallback. Set all three in the console before enabling the channel.
+</Note>
+
+Then install and enable the SMS channel in the registry and restart Curia so the adapter starts and installs the webhook handler:
+
+```bash
+docker compose restart curia
+```
+
+<Note>
+  `restart` re-runs Curia's startup so it re-reads the vault and registry — it leaves the container and its volumes untouched. Until the adapter is started, the webhook endpoint returns `503` so Telnyx retries after you enable and restart.
+</Note>
+
+## Step 3 — Link your mobile to the principal
+
+<Steps>
+  <Step title="Add your mobile as a verified sms identity">
+    On **Contacts → your principal**, add your **personal mobile** (E.164) as an `sms` channel identity and mark it **verified**. This is what principal detection and the Gate C carve-out use to recognize the office texting you.
+
+    This `sms` transport identity is distinct from a CRM `phone` field — the CRM number is profile/reach-CEO data, the `sms` identity is the messaging transport. Never use the **office DID** as the principal's personal identity.
+  </Step>
+
+  <Step title="Send a first text">
+    Text the office DID from your mobile, or ask Curia to text you. Replies thread back on the same number via context bridging (SMS is non-threaded).
+  </Step>
+</Steps>
+
+<Note>
+  Unknown senders who text the office number are auto-created as `tier=unknown` contacts, and their `sms` identity is **not** auto-verified (carrier From is spoofable) — the same low-trust constraints as an unknown emailer until you elevate or link them.
+</Note>
+
+## Opt-out (STOP)
+
+Telnyx enforces carrier opt-out at the platform level: once someone texts `STOP` (or `CANCEL`, `END`, `QUIT`, `UNSUBSCRIBE`), sends to that number are rejected with error **40300**. Curia does **not** keep a parallel suppression list.
+
+Inbound `STOP` — or a natural-language "please stop texting me" — reaches the agent as an ordinary message. Curia handles it conversationally and records the preference as a fact on the contact, and it treats a 40300 bounce as authoritative rather than retrying. There are no app-level keyword auto-replies.
+
+## Cost
+
+US steady-state runs roughly **~$3–5/mo** after a one-time ~$20 10DLC registration (number rent + Low-Volume Mixed campaign + usage). International sending is billed on top. Canadian DIDs skip 10DLC but carry their own pricing and regulatory trade-offs.
+
+## Non-goals (v1)
+
+- Porting a consumer number (TextNow, etc.) as the office DID
+- MMS and group messaging
+- In-app Telnyx OAuth or automated number purchase
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Adapter not starting">
+    Confirm that:
+
+    1. All three credentials are in the vault (**Settings → Channels → SMS**)
+    2. SMS is installed **and** enabled in **Settings → Channels**
+    3. Curia was restarted after enabling (`docker compose restart curia`)
+  </Accordion>
+
+  <Accordion title="Webhook returns 503">
+    The route is mounted but the adapter hasn't started — the channel isn't enabled yet, or Curia hasn't been restarted since you enabled it. Telnyx retries, so a text sent during setup lands once the adapter is up.
+  </Accordion>
+
+  <Accordion title="Inbound texts rejected (401)">
+    The webhook signature failed to verify. Check that `channel.sms.webhook_public_key` is the account **Public Key** from Mission Control (Keys & Credentials), copied exactly, and that the Messaging Profile webhook points at `/api/webhooks/telnyx/sms`.
+  </Accordion>
+
+  <Accordion title="Outbound send blocked as opted out">
+    A 40300 from Telnyx means that number texted `STOP` and is suppressed at the carrier. This is authoritative — the recipient must text `START` to resume before Curia can message them again.
+  </Accordion>
+
+  <Accordion title="Curia treats me as an unknown sender">
+    Link your mobile number to your principal contact as a verified `sms` identity (Step 3). The CRM `phone` field alone does not grant principal-tier trust on SMS.
+  </Accordion>
+</AccordionGroup>
