@@ -1,15 +1,15 @@
 ---
-title: "Channels: email, Signal, Slack, CLI, and HTTP API support"
-description: "Email, Signal, Slack, CLI, and HTTP are thin adapters with trust levels. Curia normalizes all messages into a common format and gates actions by channel trust."
+title: "Channels: email, Signal, Slack, SMS, CLI, and HTTP API support"
+description: "Email, Signal, Slack, SMS, CLI, and HTTP are thin adapters with trust levels. Curia normalizes all messages into a common format and gates actions by channel trust."
 ---
 
-Channels are how messages get in and out of Curia. Whether you send a Signal message from your phone, DM it in Slack, email it from a colleague, or type a command in the terminal, every message travels through a channel adapter that normalizes it into the same internal format. Curia's agents work with that normalized format — they never deal with email headers, Signal protocol specifics, or HTTP request objects directly. Adding a new channel means building one adapter; nothing in the core changes.
+Channels are how messages get in and out of Curia. Whether you send a Signal message from your phone, DM it in Slack, text the office number, email it from a colleague, or type a command in the terminal, every message travels through a channel adapter that normalizes it into the same internal format. Curia's agents work with that normalized format — they never deal with email headers, Signal protocol specifics, or HTTP request objects directly. Adding a new channel means building one adapter; nothing in the core changes.
 
 <Note>
-  Channels are tracked in the [channel registry](/core-concepts/registry): each one is installed and enabled (or not), and its credentials live in the [vault](/get-started/secrets-vault). Email, Signal, and Slack are toggleable — enable them once their credentials are configured. **HTTP and CLI are always on and cannot be disabled**, so you can never accidentally lock yourself out of your own instance.
+  Channels are tracked in the [channel registry](/core-concepts/registry): each one is installed and enabled (or not), and its credentials live in the [vault](/get-started/secrets-vault). Email, Signal, Slack, and SMS are toggleable — enable them once their credentials are configured. **HTTP and CLI are always on and cannot be disabled**, so you can never accidentally lock yourself out of your own instance.
 </Note>
 
-## The five channels
+## The channels
 
 <Tabs>
   <Tab title="Email">
@@ -45,6 +45,15 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
 
     **Trust level:** Medium — bot/OAuth tokens authenticate the workspace, but tokens can leak. Trust rides the **sender**: once a Slack user id is linked to a contact, that person's messages carry their contact tier (including principal), the same as on email or Signal.
   </Tab>
+  <Tab title="SMS">
+    SMS gives the office a dedicated text number (a Telnyx DID) for reaching the principal and third parties and fielding their replies. Inbound texts arrive as a signature-verified Telnyx webhook; outbound sends route through the outbound gateway to the Telnyx Messages API. 1:1 text only in v1 — no MMS or group messaging.
+
+    SMS is non-threaded, so it uses context bridging. Carrier opt-out is enforced by Telnyx (a `STOP` suppresses the number), so Curia keeps no parallel opt-out list. See the [SMS setup guide](/channels/sms-setup) to connect it.
+
+    **Required secrets (vault):** `channel.sms.api_key`, `channel.sms.from_number`, `channel.sms.webhook_public_key`
+
+    **Trust level:** Medium — the Telnyx office DID is not end-to-end encrypted and carrier From headers are spoofable. Trust rides the **sender**: a mobile number linked to a contact carries that person's tier.
+  </Tab>
   <Tab title="CLI">
     The CLI channel is an interactive terminal for local access. It reads from stdin and writes to stdout, making it ideal for setup, testing, and direct executive use when you are on the server.
 
@@ -74,6 +83,7 @@ Every inbound message is tagged with the trust level of the channel it arrived o
 | CLI | High | Requires SSH or physical access to the host |
 | Signal | High | Strong identity via phone number + Signal protocol |
 | Slack | Medium | Workspace bot/OAuth tokens authenticate, but tokens can leak |
+| SMS | Medium | Telnyx office DID — carrier From is spoofable and not end-to-end encrypted |
 | HTTP API | Medium | Token-authenticated, but tokens can be shared or leaked |
 | Email | Low | From headers are spoofable; even SPF/DKIM is not identity verification |
 
@@ -96,7 +106,7 @@ Curia no longer queues unknown-sender messages for review (the old `hold_and_not
 
 ## Context bridging on non-threaded channels
 
-Email and Slack have native threading — each reply links to the original conversation, so Curia always knows what it last said. Signal, CLI, and HTTP have no equivalent concept: each inbound message arrives without a reference to Curia's prior response.
+Email and Slack have native threading — each reply links to the original conversation, so Curia always knows what it last said. Signal, SMS, CLI, and HTTP have no equivalent concept: each inbound message arrives without a reference to Curia's prior response.
 
 Without bridging, a Signal follow-up like "can you make it 4pm instead?" gives the coordinator no way to know what it's modifying.
 
@@ -110,6 +120,8 @@ channels:
     threaded: false   # enables context bridging (default for Signal)
   http:
     threaded: false   # enables context bridging (default for HTTP)
+  sms:
+    threaded: false   # enables context bridging (default for SMS)
   email:
     threaded: true    # email is natively threaded; no bridging needed
   slack:
@@ -134,5 +146,11 @@ A compromised email adapter could flood inbound messages, but it cannot execute 
   </Card>
   <Card title="Signal setup" icon="shield" href="/channels/signal-setup">
     Set up Signal messaging via signal-cli.
+  </Card>
+  <Card title="Slack setup" icon="slack" href="/channels/slack-setup">
+    Add a workspace Slack app over Socket Mode.
+  </Card>
+  <Card title="SMS setup" icon="comment-sms" href="/channels/sms-setup">
+    Connect a dedicated Telnyx office number.
   </Card>
 </CardGroup>
