@@ -56,11 +56,15 @@ In the Curia console, go to **Settings → Channels → Signal** and enter the E
 
 ## Step 3 — Apply the change
 
-Recreate the Curia container so it picks up the new secret:
+Restart Curia so it picks up the new secret:
 
 ```bash
-docker compose up -d --force-recreate curia
+docker compose restart curia
 ```
+
+<Note>
+  `restart` re-runs Curia's startup so it re-reads the vault — that's all this step needs, and it leaves the container and its volumes untouched. If instead you set the phone number via `SIGNAL_PHONE_NUMBER` in `.env`, use `docker compose up -d curia` — a plain restart won't pick up changed env vars.
+</Note>
 
 The Signal channel activates when `channel.signal.phone_number` is in the vault and the `signal-data` volume is populated. `docker compose logs curia` will show the Signal adapter initializing.
 

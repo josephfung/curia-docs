@@ -36,10 +36,10 @@ Email accounts are managed from **Settings → Channels → Email → Email acco
     Once at least one account is connected, enable the email channel from **Settings → Channels**. Restart Curia to bring the email adapter online with the new accounts:
 
     ```bash
-    docker compose up -d --force-recreate curia
+    docker compose restart curia
     ```
 
-    `docker compose logs curia` will show the email adapter initializing. You can add more accounts from the console at any time; each restart picks up the latest set.
+    `docker compose logs curia` will show the email adapter initializing. You can add more accounts from the console at any time; each restart picks up the latest set. (If you configured Nylas credentials via `.env` rather than the console, use `docker compose up -d curia` instead — a plain restart won't pick up changed env vars.)
   </Step>
 </Steps>
 
