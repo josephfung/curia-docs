@@ -71,10 +71,10 @@ Curia ships with the autonomy engine seeded at **score 75 (approval-required ban
 
 The default setup connects one Nylas grant (`nylas_api_key`, `nylas_grant_id`, `nylas_self_email` in the vault). To run multiple accounts — say, a Curia-only address that sends autonomously and a personal address that always drafts for review — define them in `config/local.yaml` under `channel_accounts.email`. See [configuration §Multiple email accounts](/get-started/configuration#multiple-email-accounts) for the YAML shape.
 
-After editing `local.yaml`, recreate the container so the dispatch layer picks up the new account map:
+After editing `local.yaml`, restart Curia so the dispatch layer picks up the new account map (Curia re-reads its YAML config on startup):
 
 ```bash
-docker compose up -d --force-recreate curia
+docker compose restart curia
 ```
 
 ## Where to go next
