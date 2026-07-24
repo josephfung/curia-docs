@@ -105,8 +105,12 @@ In the Curia console, go to **Settings → Channels → Slack** and enter both t
 Then install and enable the Slack channel in the registry and restart Curia so the adapter starts:
 
 ```bash
-docker compose up -d --force-recreate curia
+docker compose restart curia
 ```
+
+<Note>
+  `restart` re-runs Curia's startup so it re-reads the vault (and registry) — that's all this step needs, and it leaves the container and its volumes untouched. If instead you set the tokens via environment variables in `.env`, use `docker compose up -d curia` — a plain restart won't pick up changed env vars.
+</Note>
 
 ## Step 4 — Send your first message
 
@@ -161,7 +165,7 @@ Curia normalizes Slack reactions into a channel-agnostic reaction signal (a reac
 
     1. Both tokens are in the vault (**Settings → Channels → Slack**)
     2. Slack is installed **and** enabled in **Settings → Channels**
-    3. Curia was restarted after enabling (`docker compose up -d --force-recreate curia`)
+    3. Curia was restarted after enabling (`docker compose restart curia`)
   </Accordion>
 
   <Accordion title="No replies in a channel">
