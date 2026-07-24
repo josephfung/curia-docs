@@ -10,7 +10,11 @@ Curia uses two configuration layers: a `config/default.yaml` file that ships wit
 </Note>
 
 <Warning>
-  Most configuration changes take effect on restart. After editing `.env`, any YAML file, or adding a vault secret, recreate the Curia container to apply changes: `docker compose up -d --force-recreate curia`.
+  Most configuration changes take effect once Curia reloads, but how you reload depends on what you changed:
+
+  - **A vault secret (added via the console) or an edited YAML file** — `docker compose restart curia`. Curia re-reads the vault and its config files on startup, and a plain restart leaves the container and its volumes untouched.
+  - **A changed `.env` value** — `docker compose up -d curia`. Environment variables are fixed when the container is created, so a restart won't see them; `up -d` recreates the container with the new environment.
+  - **When in doubt, or if you changed several kinds at once** — `docker compose up -d --force-recreate curia` always recreates the container, so it applies any of the above.
 </Warning>
 
 ## How configuration works

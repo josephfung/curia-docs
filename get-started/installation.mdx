@@ -112,10 +112,10 @@ The image-based install runs everything inside the container, so the host needs 
 
 The quick start gives you a running instance on Anthropic and Postgres. The capabilities below are optional and independent — add them in any order, only when you need them.
 
-Each one follows the same pattern: add the credential to the [encrypted vault](/get-started/secrets-vault) via the Curia console (Settings → Channels for channel credentials), then recreate the Curia container to pick up the change:
+Each one follows the same pattern: add the credential to the [encrypted vault](/get-started/secrets-vault) via the Curia console (Settings → Channels for channel credentials), then restart Curia to pick up the change (it re-reads the vault on startup):
 
 ```bash
-docker compose up -d --force-recreate curia
+docker compose restart curia
 ```
 
 ### Email (Nylas)
@@ -141,7 +141,7 @@ Curia uses [Nylas](https://nylas.com) as its email layer — a unified API that 
 
   <Step title="Apply the change">
     ```bash
-    docker compose up -d --force-recreate curia
+    docker compose restart curia
     ```
 
     The email channel activates automatically when all three vault keys (`nylas_api_key`, `nylas_grant_id`, `nylas_self_email`) are present.
@@ -152,10 +152,10 @@ Curia uses [Nylas](https://nylas.com) as its email layer — a unified API that 
 
 OpenAI's `text-embedding-3-small` model powers entity memory and semantic search in the knowledge graph. Without it, knowledge graph lookups are exact-match only.
 
-Get an API key from [platform.openai.com](https://platform.openai.com) and add it to the vault as `openai_api_key` via the Curia console (Settings → Channels). Then recreate the container to apply it:
+Get an API key from [platform.openai.com](https://platform.openai.com) and add it to the vault as `openai_api_key` via the Curia console (Settings → Channels). Then restart Curia to apply it:
 
 ```bash
-docker compose up -d --force-recreate curia
+docker compose restart curia
 ```
 
 ### Web research (Tavily)
@@ -172,10 +172,10 @@ Tavily powers the `web-search` tool, which lets agents research topics and look 
   </Step>
 
   <Step title="Enable the web-search tool">
-    `web-search` declares `tavily_api_key` in its `install.requires_secrets`, so it stays disabled until the key is in the vault. Once added, enable the tool from the Settings registry in the console, then recreate the container:
+    `web-search` declares `tavily_api_key` in its `install.requires_secrets`, so it stays disabled until the key is in the vault. Once added, enable the tool from the Settings registry in the console, then restart Curia:
 
     ```bash
-    docker compose up -d --force-recreate curia
+    docker compose restart curia
     ```
 
     See [Managing skills, agents, and channels](/core-concepts/registry) for the registry workflow.
@@ -197,7 +197,7 @@ Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Doc
 
   <Step title="Apply the change">
     ```bash
-    docker compose up -d --force-recreate curia
+    docker compose restart curia
     ```
 
     The Signal channel activates when `channel.signal.phone_number` is in the vault and the `signal-data` volume is populated.
@@ -274,7 +274,7 @@ no manual SQL step.
   <Accordion title="Email channel not activating">
     All three Nylas secrets must be in the vault: `nylas_api_key`, `nylas_grant_id`, and `nylas_self_email`. If any is missing, the channel disables itself at startup. Confirm they are all present via Settings → Channels → Email in the console, then check the startup logs for a "email channel disabled" or "email adapter disabled" message.
 
-    Remember to recreate the container after adding secrets: `docker compose up -d --force-recreate curia`.
+    Remember to restart Curia after adding secrets: `docker compose restart curia`.
   </Accordion>
 
   <Accordion title="Let's Encrypt certificate isn't issued (HTTPS topology)">

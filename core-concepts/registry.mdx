@@ -15,7 +15,7 @@ The registry tracks two independent states for each item:
 An item present on disk is not automatically active. A new skill you add, for example, is registered but starts disabled — you enable it before an agent can call it.
 
 <Note>
-  Registry changes are **restart-based**. Enabling or disabling an item updates its state in the database; the change takes effect when the instance reloads. Recreate the container after a change: `docker compose up -d --force-recreate curia`.
+  Registry changes are **restart-based**. Enabling or disabling an item updates its state in the database; the change takes effect when the instance reloads. Restart Curia after a change: `docker compose restart curia`. Curia re-reads the registry on startup, so a plain restart is enough here.
 </Note>
 
 ## Required-secret gates
