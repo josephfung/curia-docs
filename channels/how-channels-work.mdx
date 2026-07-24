@@ -1,15 +1,15 @@
 ---
-title: "Channels: email, Signal, CLI, and HTTP API support"
-description: "Email, Signal, CLI, and HTTP are thin adapters with trust levels. Curia normalizes all messages into a common format and gates actions by channel trust."
+title: "Channels: email, Signal, Slack, CLI, and HTTP API support"
+description: "Email, Signal, Slack, CLI, and HTTP are thin adapters with trust levels. Curia normalizes all messages into a common format and gates actions by channel trust."
 ---
 
-Channels are how messages get in and out of Curia. Whether you send a Signal message from your phone, an email from a colleague, or a command from the terminal, every message travels through a channel adapter that normalizes it into the same internal format. Curia's agents work with that normalized format — they never deal with email headers, Signal protocol specifics, or HTTP request objects directly. Adding a new channel means building one adapter; nothing in the core changes.
+Channels are how messages get in and out of Curia. Whether you send a Signal message from your phone, DM it in Slack, email it from a colleague, or type a command in the terminal, every message travels through a channel adapter that normalizes it into the same internal format. Curia's agents work with that normalized format — they never deal with email headers, Signal protocol specifics, or HTTP request objects directly. Adding a new channel means building one adapter; nothing in the core changes.
 
 <Note>
-  Channels are tracked in the [channel registry](/core-concepts/registry): each one is installed and enabled (or not), and its credentials live in the [vault](/get-started/secrets-vault). Email and Signal are toggleable — enable them once their credentials are configured. **HTTP and CLI are always on and cannot be disabled**, so you can never accidentally lock yourself out of your own instance.
+  Channels are tracked in the [channel registry](/core-concepts/registry): each one is installed and enabled (or not), and its credentials live in the [vault](/get-started/secrets-vault). Email, Signal, and Slack are toggleable — enable them once their credentials are configured. **HTTP and CLI are always on and cannot be disabled**, so you can never accidentally lock yourself out of your own instance.
 </Note>
 
-## The four channels
+## The five channels
 
 <Tabs>
   <Tab title="Email">
@@ -35,6 +35,15 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
     **Required secret (vault):** `channel.signal.phone_number`
 
     **Trust level:** High — Signal identity is tied to a phone number verified by the Signal protocol. Use Signal for sensitive instructions, financial actions, or anything where you want maximum assurance.
+  </Tab>
+  <Tab title="Slack">
+    Slack lets your team reach Curia the way they'd reach a colleague: DM it, @mention it in a channel, or keep talking in a thread after the first mention. Curia connects as a workspace-owned Slack app over **Socket Mode**, so there's no public webhook to host.
+
+    Slack has native threads, so no context bridging is needed. Reactions are normalized into a channel-agnostic reaction signal. See the [Slack setup guide](/channels/slack-setup) to connect it.
+
+    **Required secrets (vault):** `channel.slack.bot_token` (`xoxb-…`), `channel.slack.app_token` (`xapp-…`)
+
+    **Trust level:** Medium — bot/OAuth tokens authenticate the workspace, but tokens can leak. Trust rides the **sender**: once a Slack user id is linked to a contact, that person's messages carry their contact tier (including principal), the same as on email or Signal.
   </Tab>
   <Tab title="CLI">
     The CLI channel is an interactive terminal for local access. It reads from stdin and writes to stdout, making it ideal for setup, testing, and direct executive use when you are on the server.
@@ -64,6 +73,7 @@ Every inbound message is tagged with the trust level of the channel it arrived o
 |---|---|---|
 | CLI | High | Requires SSH or physical access to the host |
 | Signal | High | Strong identity via phone number + Signal protocol |
+| Slack | Medium | Workspace bot/OAuth tokens authenticate, but tokens can leak |
 | HTTP API | Medium | Token-authenticated, but tokens can be shared or leaked |
 | Email | Low | From headers are spoofable; even SPF/DKIM is not identity verification |
 
@@ -86,26 +96,27 @@ Curia no longer queues unknown-sender messages for review (the old `hold_and_not
 
 ## Context bridging on non-threaded channels
 
-Email has native threading — each reply carries a `message_id` that links it to the original conversation, so Curia always knows what it last said. Signal, CLI, and HTTP have no equivalent concept: each inbound message arrives without a reference to Curia's prior response.
+Email and Slack have native threading — each reply links to the original conversation, so Curia always knows what it last said. Signal, CLI, and HTTP have no equivalent concept: each inbound message arrives without a reference to Curia's prior response.
 
 Without bridging, a Signal follow-up like "can you make it 4pm instead?" gives the coordinator no way to know what it's modifying.
 
 **Context bridging** solves this for non-threaded channels. After every outbound response, the dispatch layer writes a compact context memo to working memory. When the user sends a follow-up, the memo is injected as a preamble — giving the coordinator full awareness of what it last said before it reads the new message.
 
-You configure which channels use threading in `config/local.yaml`:
+You configure which channels use threading with the `threaded` key in `config/channel-trust.yaml`:
 
 ```yaml
-channel_accounts:
+channels:
   signal:
     threaded: false   # enables context bridging (default for Signal)
   http:
     threaded: false   # enables context bridging (default for HTTP)
   email:
-    curia:
-      threaded: true  # email is natively threaded; no bridging needed
+    threaded: true    # email is natively threaded; no bridging needed
+  slack:
+    threaded: true    # Slack has native threads; no bridging needed
 ```
 
-Channels with `threaded: false` get context bridging automatically. Channels with `threaded: true` (email) use native thread identifiers instead.
+Channels with `threaded: false` get context bridging automatically. Channels with `threaded: true` (email, Slack) use native thread identifiers instead.
 
 <Note>
 Context memos are short and structured. They are not the full response — only enough to anchor a follow-up. The coordinator still has access to its full working memory and entity context on every turn.

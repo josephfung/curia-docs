@@ -3,10 +3,11 @@ title: "Channel configuration schema"
 description: "Reference for Curia channel configuration — the channel registry, credential vault keys, and multi-account email YAML."
 ---
 
-Channels have two configuration surfaces:
+Channels have three configuration surfaces:
 
 1. **The channel registry** — a DB-backed record of which channels are installed and enabled, plus their credentials in the vault. Managed from the Channels page in the console, not from YAML. See [Managing skills, agents, and channels](/core-concepts/registry).
-2. **`config/local.yaml` under `channel_accounts`** — used only for the multi-account email layout (one set of credentials per logical account). Single-account email, Signal, CLI, and HTTP do not need this block.
+2. **`config/channel-trust.yaml`** — per-channel trust level, unknown-sender policy, and threading. This is where a channel's security posture is set, not the vault or the adapter.
+3. **`config/local.yaml` under `channel_accounts`** — used only for the multi-account email layout (one set of credentials per logical account). Single-account email, Signal, Slack, CLI, and HTTP do not need this block.
 
 ## The channel registry
 
@@ -14,7 +15,7 @@ Each channel is described by a catalog entry and tracked by a row in the `channe
 
 ```typescript
 interface Channel {
-  readonly name: string;          // 'email' | 'signal' | 'http' | 'cli'
+  readonly name: string;          // 'email' | 'signal' | 'slack' | 'http' | 'cli'
   readonly isToggleable: boolean; // false for http and cli — see below
   start(): Promise<void>;         // connect / begin listening
   stop(): Promise<void>;          // graceful, idempotent teardown
@@ -24,7 +25,7 @@ interface Channel {
 Outbound delivery does not go through this interface — all sends are routed through the outbound gateway.
 
 <Note>
-  **HTTP and CLI are always on.** They have `isToggleable: false` and cannot be disabled or uninstalled — this is an operator-lockout safeguard, so you can never accidentally cut off your own access to the instance. Email and Signal are toggleable: install/enable them from the Channels page once their credentials are in the vault.
+  **HTTP and CLI are always on.** They have `isToggleable: false` and cannot be disabled or uninstalled — this is an operator-lockout safeguard, so you can never accidentally cut off your own access to the instance. Email, Signal, and Slack are toggleable: install/enable them from the Channels page once their credentials are in the vault.
 </Note>
 
 ### Credential fields and vault keys
@@ -35,8 +36,29 @@ Each channel declares its credential fields in the catalog. Every field is store
 |---|---|
 | `email` | `channel.email.nylas_api_key`, `channel.email.nylas_grant_id`, `channel.email.nylas_self_email` |
 | `signal` | `channel.signal.socket_path`, `channel.signal.phone_number` |
+| `slack` | `channel.slack.bot_token`, `channel.slack.app_token` |
 
 A field marked required must resolve before the channel can be enabled — the registry blocks enabling a channel whose required credentials are missing, the same way [`install.requires_secrets`](/references/tool-manifest-schema#install) gates tools.
+
+## Channel trust and policy (`config/channel-trust.yaml`)
+
+A channel's **security posture** is set here, not in the vault or the adapter. Each channel gets a block with three keys:
+
+```yaml
+channels:
+  slack:
+    trust: medium          # high | medium | low — max sensitivity of actions via this channel
+    unknown_sender: allow  # allow | ignore
+    threaded: true         # true = native threads; false = enable context bridging
+```
+
+| Key | Values | Meaning |
+|---|---|---|
+| `trust` | `high`, `medium`, `low` | Caps the sensitivity of actions this channel can drive. The dispatcher combines it with the sender's contact confidence and injection-risk score to compute the message trust score. Defaults to `low` when unset. |
+| `unknown_sender` | `allow`, `ignore` | `allow` routes messages from unrecognized senders to the coordinator in low-trust mode (auto-created as a `tier=unknown` contact); `ignore` silently drops them (no rejection notice). |
+| `threaded` | `true`, `false` | `true` when the platform has native threads (email, Slack). `false` enables [context bridging](/channels/how-channels-work#context-bridging-on-non-threaded-channels) for channels without a thread reference (Signal, CLI, HTTP). |
+
+Current defaults: CLI and Signal are `high`, HTTP and Slack are `medium`, email is `low`. HTTP uses `unknown_sender: ignore`; the rest `allow`.
 
 ## Email accounts
 

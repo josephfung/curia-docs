@@ -1,9 +1,11 @@
 ---
 title: "Building custom channels"
-description: "How to create a new channel integration — implementing a channel adapter, declaring trust levels, and registering with the message bus."
+description: "How to create a new channel integration — implementing a channel adapter, contributing principal rules, wiring the outbound gateway, and setting trust policy."
 ---
 
-A channel is the bridge between an external messaging platform and Curia's internal message bus. Every channel — CLI, HTTP, Email, Signal — follows the same pattern: receive platform messages, normalize them into bus events, and deliver outbound responses back through the platform API. Channels implement a small interface and are tracked in the [channel registry](/core-concepts/registry), so they can be installed, enabled, and credentialed like skills.
+A channel is the bridge between an external messaging platform and Curia's internal message bus. Every channel — CLI, HTTP, Email, Signal, Slack — follows the same pattern: receive platform messages, normalize them into bus events, and deliver outbound responses back through the platform. Channels implement a small interface and are tracked in the [channel registry](/core-concepts/registry), so they can be installed, enabled, and credentialed like tools.
+
+Use the Slack adapter (`src/channels/slack/`) as the reference implementation for a full send-and-receive channel.
 
 ## The `Channel` interface
 
@@ -11,14 +13,14 @@ A channel is a class implementing this interface:
 
 ```typescript
 interface Channel {
-  readonly name: string;          // 'email' | 'signal' | 'http' | 'cli' | 'my-channel'
+  readonly name: string;          // 'email' | 'signal' | 'slack' | 'http' | 'cli'
   readonly isToggleable: boolean; // false only for http and cli (always-on safeguard)
   start(): Promise<void>;         // connect, begin listening, subscribe to outbound
   stop(): Promise<void>;          // graceful, idempotent teardown
 }
 ```
 
-There is no `send()` method on the interface. Inside `start()`, the channel publishes inbound messages and subscribes to outbound ones; outbound delivery for email and Signal is routed through the shared outbound gateway, while simple channels (like CLI) write directly.
+There is no `send()` method on the interface. Inside `start()`, the channel publishes inbound messages and subscribes to outbound ones; outbound delivery for email, Signal, and Slack is routed through the shared [outbound gateway](/core-concepts/architecture), while simple channels (like CLI) write directly.
 
 ## Implementation steps
 
@@ -31,7 +33,7 @@ There is no `send()` method on the interface. Inside `start()`, the channel publ
       my-channel-adapter.ts
     ```
 
-    Register on the bus at the `channel` layer — the hard security boundary limits a channel to publishing `inbound.message` and subscribing to `outbound.message`. It cannot invoke tools, read memory, or trigger agent tasks.
+    Register on the bus at the `channel` layer — the hard security boundary limits a channel to publishing `inbound.message` / `inbound.reaction` and subscribing to `outbound.message`. It cannot invoke tools, read memory, or trigger agent tasks.
   </Step>
   <Step title="Add a catalog descriptor">
     Add a `ChannelDescriptor` to `src/channels/catalog.ts` so the registry knows about your channel and what credentials it needs:
@@ -51,69 +53,123 @@ There is no `send()` method on the interface. Inside `start()`, the channel publ
     Each credential is stored in the vault under `channel.<name>.<field>` — here, `channel.my-channel.api_token`. The registry will not let the channel be enabled until every `requiredSecretKeys` entry resolves.
   </Step>
   <Step title="Handle inbound messages">
-    When your platform delivers a message, normalize it into an `inbound.message` event and publish it on the bus:
+    When your platform delivers a message, normalize it with the factory from `src/bus/events.ts` and publish it on the bus. Do not hand-build the event object, and do not add a trust level to the payload (trust is resolved by the dispatcher — see the next step):
 
     ```typescript
-    bus.publish({
-      type: 'inbound.message',
-      payload: {
-        channel: 'my-channel',
-        channelTrust: 'medium',
-        conversationId: 'my-channel:<unique-conversation-id>',
-        sender: {
-          displayName: 'Sender Name',
-          channelIdentity: { type: 'my-channel', value: 'sender-id' },
-        },
-        text: messageContent,
-      },
+    import { createInboundMessage } from '../../bus/events.js';
+    import { sanitizeOutput } from '../../skills/sanitize.js';
+
+    const inbound = createInboundMessage({
+      conversationId: 'my-channel:<unique-thread-id>',
+      channelId: 'my-channel',
+      senderId: 'sender-platform-id',
+      content: sanitizeOutput(messageText, { maxLength: 10_000 }),
+      metadata,   // channel-specific extras the reply path may use
+    });
+
+    await bus.publish('channel', inbound);
+    ```
+
+    Note the shape: `bus.publish(layer, event)` takes the layer (`'channel'`) first, and the payload uses `channelId` / `senderId` / `content`. For emoji reactions, use `createInboundReaction(...)` (an `inbound.reaction` event).
+
+    **Auto-create the sender as a contact** before publishing, so trust scoring has a record. Use `ContactService.ensureChannelContact` (resolve-or-create-once) and make it best-effort — a failure should warn but still let the message through:
+
+    ```typescript
+    await contactService.ensureChannelContact({
+      channel: 'my-channel',
+      channelIdentifier: senderId,
+      source: 'my_channel_participant',  // an IdentitySource value (see below)
+      displayName,
+      fallbackDisplayName: senderId,
+      tier: 'unknown',                   // new senders land as tier=unknown
     });
     ```
 
-    The `channelTrust` field declares your channel's trust level. Choose based on the identity guarantees your platform provides:
+    If your platform's sender id is a strong identity signal (like a Signal phone number or a Slack workspace user id), add a `<channel>_participant` value to `IdentitySource` (`src/contacts/types.ts`) and to `AUTO_VERIFIED_SOURCES` (`src/contacts/contact-service.ts`) so those identities are auto-verified.
+  </Step>
+  <Step title="Set the trust level and policy">
+    A channel's trust level, unknown-sender policy, and threading live in `config/channel-trust.yaml` — not in the adapter and not in the inbound payload:
+
+    ```yaml
+    channels:
+      my-channel:
+        trust: medium          # high | medium | low
+        unknown_sender: allow  # allow | ignore
+        threaded: true         # false enables context bridging
+    ```
+
+    Choose `trust` from the identity guarantees your platform provides:
 
     | Trust level | When to use |
     |---|---|
     | `high` | Strong identity verification (local access, E2E encryption with phone verification) |
     | `medium` | Token-based or OAuth authentication |
     | `low` | Weak identity guarantees (email addresses can be spoofed) |
+
+    The dispatcher reads this policy and combines your channel trust with the sender's contact confidence and injection-risk score. `threaded: false` opts the channel into [context bridging](/channels/how-channels-work#context-bridging-on-non-threaded-channels).
   </Step>
-  <Step title="Handle outbound messages">
-    In `start()`, subscribe to `outbound.message` at the `channel` layer and deliver messages addressed to your channel:
+  <Step title="Contribute principal rules">
+    Add `src/channels/<name>/principal-rules.ts` exporting a `PrincipalChannelRules` object, and append it to the registry in `src/contacts/principal-channel-registry.ts` — the single auditable list of how each channel matches the principal and projects outbound recipients:
+
+    ```typescript
+    export const myChannelPrincipalRules: PrincipalChannelRules = {
+      channel: 'my-channel',
+      // How this channel compares a candidate id to a stored verified identity.
+      identifiersEqual(a, b) { return a === b; },
+      // Project an outbound request onto recipient identifiers. Return null when
+      // the request is not this channel's shape (fail closed).
+      extractRecipients(request) {
+        if (!isMyChannelOutboundRequest(request)) return null;
+        return [{ identifier: request.userId, principalEligible: true }];
+      },
+      // carveoutSkill omitted means no Gate C principal carve-out (conservative default).
+    };
+    ```
+
+    Two fail-closed rules matter here: mark group / conversation ids as `principalEligible: false` (only a per-human id may ever be the principal), and omit `carveoutSkill` unless a send skill needs the Gate C principal-only carve-out. See [how channels work — trust](/channels/how-channels-work#channel-trust-levels).
+  </Step>
+  <Step title="Wire the outbound gateway">
+    In `start()`, subscribe to `outbound.message` at the `channel` layer and deliver messages addressed to your channel — routing the send through the shared `OutboundGateway`, never a direct platform call:
 
     ```typescript
     bus.subscribe('outbound.message', 'channel', async (event) => {
-      if (event.payload.channelId !== 'my-channel') return;
-      await myPlatformApi.sendMessage(
-        event.payload.conversationId,
-        event.payload.content,
+      if (event.payload.channelId !== 'my-channel') return;  // filter by channelId
+      await outboundGateway.send(
+        { channel: 'my-channel', message: event.payload.content /* + recipient fields */ },
+        { taskEventId: event.payload.taskEventId, conversationId: event.payload.conversationId, parentEventId: event.id },
       );
     });
     ```
 
-    Filter by `channelId` so you only handle messages destined for your channel.
+    Teaching the gateway your channel is three edits (see the checklist atop `src/skills/outbound-gateway.ts`): define a request variant in `src/channels/<name>/outbound-request.ts` (with a `channel` discriminant + type guard), re-export it into the `OutboundSendRequest` union and add your client to `OutboundGatewayConfig`, then add a `dispatch<Channel>()` method and a branch in `send()`. The blocked-contact check and content filter run for every channel before dispatch.
   </Step>
-  <Step title="Add configuration and wire it up">
-    Add any non-secret settings (polling intervals, endpoints) to `config/default.yaml`; credentials go in the vault via the catalog, not in YAML. Then add your channel to the bootstrap sequence in `src/index.ts` so it starts with the rest of the system.
+  <Step title="Wire it into bootstrap">
+    Add any non-secret settings (allowlists, endpoints) to `config/default.yaml` under `channels.<name>`; credentials go in the vault via the catalog, not YAML. Then construct the client and adapter in `src/index.ts`, gated on the channel registry (`channelShouldStart`), constructing the adapter **after** the outbound gateway, and start it with the rest of the system.
   </Step>
 </Steps>
+
+<Note>
+  A newly added toggleable channel is registered at startup but starts **disabled**. Enable it from **Settings → Channels** in the console once its credentials are in the vault, then restart Curia. Enable state is read at boot, so toggling a channel is restart-based.
+</Note>
 
 ## What the dispatch layer handles for you
 
 You don't need to implement any of these in your adapter — they're handled by the dispatch layer after your `inbound.message` is published:
 
-- **Contact resolution** — the dispatcher resolves the sender to a contact record
-- **Trust scoring** — your `channelTrust` value is combined with contact confidence and injection risk
+- **Contact resolution** — the dispatcher resolves the sender to the contact record your adapter created
+- **Trust scoring** — your `channel-trust.yaml` trust level is combined with contact confidence and injection risk
 - **Rate limiting** — global and per-sender limits are enforced
 - **Prompt injection scanning** — inbound text is checked against detection patterns
-- **PII redaction** — outbound messages are redacted based on channel-specific policies
+- **PII redaction** — outbound messages are redacted (inside the gateway) based on channel-specific policies
 
 ## Testing
 
 Write tests for your adapter covering:
 
 - Inbound message normalization (platform format → bus event)
-- Outbound message delivery (bus event → platform API call)
-- Authentication and connection handling
+- Outbound message delivery (bus event → `OutboundGateway.send` request), ignoring other channels' events
+- `extractRecipients` — group/conversation ids come back `principalEligible: false`, per-human ids `true`, foreign request shapes `null`
+- The catalog descriptor (required keys) and the shared `Channel` conformance suite
 - Error recovery (platform API failures, connection drops)
 
 Integration tests should use a real bus instance to verify that your events flow through the full dispatch pipeline correctly.
