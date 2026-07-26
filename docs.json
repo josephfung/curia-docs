@@ -130,6 +130,7 @@
               "channels/signal-setup",
               "channels/slack-setup",
               "channels/sms-setup",
+              "channels/voice-setup",
               "channels/cli",
               "channels/http",
               "channels/building-custom-channels"

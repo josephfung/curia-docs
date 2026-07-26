@@ -1,0 +1,149 @@
+---
+title: "Talk to Curia by voice from the web console"
+sidebarTitle: "Voice"
+description: "Enable duplex spoken conversation with your Curia agent from the web console — WebRTC via LiveKit, Deepgram speech-to-text, and Cartesia text-to-speech, with barge-in and live transcripts."
+---
+
+Voice lets you talk to your Curia agent out loud from the web console — a live, two-way call instead of typing. Curia streams your speech to text, thinks and runs tools the same way it does in chat, and speaks its reply back sentence by sentence. You can interrupt it mid-sentence (barge-in) and it stops to listen, the way a real conversation works.
+
+A voice call runs entirely inside an authenticated console session, so it carries the same **high** trust as the CLI: the person on the call is you, the principal. There is no unknown-sender path — voice is principal-only.
+
+<Warning>
+  Enabling voice means your **audio and transcripts leave the host** to three third parties: Deepgram (speech-to-text), Cartesia (text-to-speech), and your configured LLM provider. Speech-vendor keys never reach the browser, but treat these vendors' data-processing terms the way you would any external service before turning voice on.
+</Warning>
+
+## How it works
+
+A call uses three services, wired together by Curia:
+
+- **LiveKit** — a self-hosted WebRTC server that carries the real-time audio between your browser and the host. Curia mints a short-lived (1-hour) join token per call; it never exposes admin credentials to the browser.
+- **Deepgram** — streaming speech-to-text: turns your spoken words into transcripts as you talk.
+- **Cartesia** — streaming text-to-speech: turns Curia's reply into spoken audio in the voice you choose.
+
+The reply is spoken from within the console session (like principal web chat), while any tools Curia calls still run through the normal execution layer and any external sends still go through the outbound gateway. Final transcripts are written to working memory, so the call shows up in your console chat history afterward.
+
+## Prerequisites
+
+- A Curia host reachable from the browser you run the console in.
+- A **LiveKit** server — either the bundled Docker Compose service (below) or your own deployment.
+- A **Deepgram** account and API key.
+- A **Cartesia** account and API key, plus a **voice id** to speak in.
+- Host firewall/NAT access for LiveKit's signaling and media ports.
+
+## Step 1 — Start LiveKit
+
+The root `docker-compose.yml` includes a `livekit` service behind the Compose `voice` profile, so a plain `docker compose up` never starts it — Postgres-only deploys boot normally.
+
+```bash
+docker compose --profile voice up -d livekit
+```
+
+LiveKit uses three ports. Open them on the host firewall and forward them through NAT if Curia sits behind a router:
+
+| Purpose | Port | Notes |
+|---|---|---|
+| HTTP/WebSocket signaling | `7880/tcp` | Browser-reachable; can be fronted by a TLS proxy |
+| WebRTC TCP fallback | `7881/tcp` | Needs direct exposure |
+| WebRTC UDP media | `7882/udp` | Needs direct exposure — cloud firewalls often allow TCP but silently drop UDP |
+
+<Warning>
+  For local development the profiled service runs `livekit-server --dev`, which uses the well-known credentials `devkey` / `secret`. **Never expose `--dev` on a public interface** — anyone who can reach the ports could mint LiveKit tokens without Curia's auth. For any reachable deploy, run LiveKit with a real config (copy `docker/livekit.yaml`, replace the placeholder key/secret, and set `LIVEKIT_COMMAND="--config /etc/livekit.yaml"`) and store the same key/secret in the Curia vault.
+</Warning>
+
+## Step 2 — Get your provider keys
+
+<Steps>
+  <Step title="Deepgram API key">
+    Create a Deepgram account and generate an API key. This is `channel.voice.deepgram_api_key`.
+  </Step>
+
+  <Step title="Cartesia API key">
+    Create a Cartesia account and generate an API key. This is `channel.voice.cartesia_api_key`.
+  </Step>
+
+  <Step title="Pick a Cartesia voice">
+    Browse voices at [play.cartesia.ai](https://play.cartesia.ai) and copy the **voice id** (a UUID) of the one you want Curia to speak in. This is `channel.voice.cartesia_voice_id`. It is **required** — Cartesia cannot synthesize a reply without it, so the channel stays disabled until it is set.
+  </Step>
+</Steps>
+
+## Step 3 — Store the values in the vault
+
+In the Curia console, go to **Settings → Channels → Voice** and enter all six values. They are stored in the [vault](/get-started/secrets-vault) and, unlike some channels, have **no environment-variable fallback** — voice credentials must live in the vault.
+
+| Field | Vault key |
+|---|---|
+| LiveKit WebSocket URL | `channel.voice.livekit_url` |
+| LiveKit API key | `channel.voice.livekit_api_key` |
+| LiveKit API secret | `channel.voice.livekit_api_secret` |
+| Deepgram API key | `channel.voice.deepgram_api_key` |
+| Cartesia API key | `channel.voice.cartesia_api_key` |
+| Cartesia voice id | `channel.voice.cartesia_voice_id` |
+
+<Note>
+  The **LiveKit WebSocket URL** is the *browser-reachable* signaling endpoint, not LiveKit's internal address: `ws://<host>:7880` for private local testing, or `wss://<voice-host>` when you terminate TLS for signaling through a separate proxy. It must match your LiveKit server's key/secret exactly (with `--dev`, that's `devkey` / `secret`).
+</Note>
+
+## Step 4 — Enable and restart
+
+Install and enable the Voice channel in the registry, then restart Curia so it reads the vault on startup:
+
+```bash
+docker compose restart curia
+```
+
+Changing a vault key does not affect a call already in progress — it takes effect on the next call after restart.
+
+## Step 5 — Make a call
+
+Open the console chat. The **Call** button appears once Voice is enabled and the session API can mint LiveKit tokens.
+
+<Steps>
+  <Step title="Click Call and allow the microphone">
+    Your browser will ask for microphone permission. Microphone access requires a secure origin, so serve the console over **HTTPS** (and use `wss://` for LiveKit) on any non-localhost host.
+  </Step>
+
+  <Step title="Talk">
+    Speak naturally. Curia replies out loud, and you can interrupt it mid-sentence — it stops to listen.
+  </Step>
+
+  <Step title="Mute or hang up">
+    Use mute or hang up from the active-call bar. The final transcript is saved to your console chat history.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="The Call button doesn't appear">
+    Confirm Voice is installed **and** enabled in **Settings → Channels**, that all six vault keys are set (the Cartesia voice id is required), and that Curia was restarted after saving them.
+  </Accordion>
+
+  <Accordion title="Token or session creation fails">
+    Verify `channel.voice.livekit_url`, `channel.voice.livekit_api_key`, and `channel.voice.livekit_api_secret` match the LiveKit server exactly. A `--dev` server expects `devkey` / `secret`.
+  </Accordion>
+
+  <Accordion title="The browser connects but there's no audio">
+    Check UDP `7882` first, then TCP `7881`. Cloud firewalls commonly allow TCP while silently dropping UDP, which breaks WebRTC media.
+  </Accordion>
+
+  <Accordion title="Works on localhost but fails remotely">
+    Run LiveKit with `rtc.use_external_ip: true`, set a browser-reachable LiveKit URL, and confirm NAT forwards the RTC ports (`7881/tcp`, `7882/udp`).
+  </Accordion>
+
+  <Accordion title="The browser blocks the microphone or WebSocket">
+    Browsers require a secure origin for microphone access. Serve the console over HTTPS and use `wss://` for LiveKit on any public host.
+  </Accordion>
+
+  <Accordion title="The assistant is slow to start speaking">
+    Voice emits structured latency fields (`voice.ttfa_ms`, `voice.llm_ttft_ms`, `voice.tts_first_byte_ms`) in the logs. Compare them before changing `channels.voice.model` — only switch the model if LLM latency dominates.
+  </Accordion>
+</AccordionGroup>
+
+<CardGroup cols={2}>
+  <Card title="How channels work" icon="tower-broadcast" href="/channels/how-channels-work">
+    Trust levels and the shared channel model.
+  </Card>
+  <Card title="Secrets vault" icon="key" href="/get-started/secrets-vault">
+    Where channel credentials are stored.
+  </Card>
+</CardGroup>

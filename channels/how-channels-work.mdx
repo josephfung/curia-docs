@@ -1,12 +1,13 @@
 ---
-title: "Channels: email, Signal, Slack, SMS, CLI, and HTTP API support"
-description: "Email, Signal, Slack, SMS, CLI, and HTTP are thin adapters with trust levels. Curia normalizes all messages into a common format and gates actions by channel trust."
+title: "Channels: email, Signal, Slack, SMS, voice, CLI, and HTTP API support"
+sidebarTitle: "How channels work"
+description: "Email, Signal, Slack, SMS, voice, CLI, and HTTP are thin adapters with trust levels. Curia normalizes all messages into a common format and gates actions by channel trust."
 ---
 
-Channels are how messages get in and out of Curia. Whether you send a Signal message from your phone, DM it in Slack, text the office number, email it from a colleague, or type a command in the terminal, every message travels through a channel adapter that normalizes it into the same internal format. Curia's agents work with that normalized format — they never deal with email headers, Signal protocol specifics, or HTTP request objects directly. Adding a new channel means building one adapter; nothing in the core changes.
+Channels are how messages get in and out of Curia. Whether you send a Signal message from your phone, DM it in Slack, text the office number, email it from a colleague, talk to it out loud from the console, or type a command in the terminal, every message travels through a channel adapter that normalizes it into the same internal format. Curia's agents work with that normalized format — they never deal with email headers, Signal protocol specifics, or HTTP request objects directly. Adding a new channel means building one adapter; nothing in the core changes.
 
 <Note>
-  Channels are tracked in the [channel registry](/core-concepts/registry): each one is installed and enabled (or not), and its credentials live in the [vault](/get-started/secrets-vault). Email, Signal, Slack, and SMS are toggleable — enable them once their credentials are configured. **HTTP and CLI are always on and cannot be disabled**, so you can never accidentally lock yourself out of your own instance.
+  Channels are tracked in the [channel registry](/core-concepts/registry): each one is installed and enabled (or not), and its credentials live in the [vault](/get-started/secrets-vault). Email, Signal, Slack, SMS, and voice are toggleable — enable them once their credentials are configured. **HTTP and CLI are always on and cannot be disabled**, so you can never accidentally lock yourself out of your own instance.
 </Note>
 
 ## The channels
@@ -54,6 +55,15 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
 
     **Trust level:** Medium — the Telnyx office DID is not end-to-end encrypted and carrier From headers are spoofable. Trust rides the **sender**: a mobile number linked to a contact carries that person's tier.
   </Tab>
+  <Tab title="Voice">
+    Voice is a live, two-way spoken conversation from the web console. Curia streams your speech to text (Deepgram), thinks and runs tools exactly as it does in chat, and speaks its reply back (Cartesia), with WebRTC audio carried by a self-hosted LiveKit server. You can interrupt it mid-sentence (barge-in) and it stops to listen.
+
+    Unlike the async text channels, a call is real-time and runs entirely inside an authenticated console session — there is no unknown-sender path. Final transcripts are written to working memory, so the call appears in your console chat history afterward. See the [Voice setup guide](/channels/voice-setup) to connect it.
+
+    **Required secrets (vault):** `channel.voice.livekit_url`, `channel.voice.livekit_api_key`, `channel.voice.livekit_api_secret`, `channel.voice.deepgram_api_key`, `channel.voice.cartesia_api_key`, `channel.voice.cartesia_voice_id`
+
+    **Trust level:** High — the caller is the principal in their own authenticated console session, the same authority as the CLI.
+  </Tab>
   <Tab title="CLI">
     The CLI channel is an interactive terminal for local access. It reads from stdin and writes to stdout, making it ideal for setup, testing, and direct executive use when you are on the server.
 
@@ -82,6 +92,7 @@ Every inbound message is tagged with the trust level of the channel it arrived o
 |---|---|---|
 | CLI | High | Requires SSH or physical access to the host |
 | Signal | High | Strong identity via phone number + Signal protocol |
+| Voice | High | Live call inside an authenticated console session — the principal |
 | Slack | Medium | Workspace bot/OAuth tokens authenticate, but tokens can leak |
 | SMS | Medium | Telnyx office DID — carrier From is spoofable and not end-to-end encrypted |
 | HTTP API | Medium | Token-authenticated, but tokens can be shared or leaked |
@@ -152,5 +163,8 @@ A compromised email adapter could flood inbound messages, but it cannot execute 
   </Card>
   <Card title="SMS setup" icon="comment-sms" href="/channels/sms-setup">
     Connect a dedicated Telnyx office number.
+  </Card>
+  <Card title="Voice setup" icon="microphone" href="/channels/voice-setup">
+    Talk to Curia from the console over WebRTC.
   </Card>
 </CardGroup>
