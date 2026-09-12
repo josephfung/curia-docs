@@ -152,6 +152,7 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 | `request-clarification` | none | Pause a delegated task mid-execution to ask the CEO a clarifying question; the runtime short-circuits the tool loop and returns a typed result with a resume token so the coordinator can re-delegate seamlessly once the CEO replies |
 | `context-bridge-release` | low | Coordinator-only — explicitly close an active outbound-context entry once the LLM detects a conversation thread has ended, freeing the slot before TTL expiry |
 | `context-bridge-clear` | low | Release all active outbound-context entries for a named meeting subject across the full active table; used by the meeting-debrief agent after "clear meeting X" to ensure every entry is freed, not just the one in the injected window |
+| `async-offramp` | low | **Voice only** — hand a heavyweight ask (deep research, bulk triage, multi-document drafting) off the live call to the async coordinator, so Curia acknowledges and moves on instead of leaving dead air. You get a callback when it finishes |
 
 ## Web research
 
@@ -197,6 +198,8 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 | `date-resolve` | none | Verify or resolve dates deterministically (day-of-week for a date, relative expressions like "next Monday"). LLMs are unreliable at date arithmetic, so agents call this instead of computing dates themselves |
 | `secret-capture-request` | low | Mint a one-time, 30-minute link for the user to enter a new personal secret (e.g. a website password) straight into the vault under a `user.<slug>` key; the tool returns only the link and never sees the value |
 | `system-secret-capture-request` | none | Mint a one-time, 30-minute link for the user to enter a system secret (an API key or channel credential) during setup; value goes straight to the vault, never seen by the agent. Setup-wizard only |
+| `list-user-secrets` | none | List the **names** of personal secrets already in the vault under `user.*` — never values, and never system, channel, or API-key secrets. Called before `secret-capture-request` so an existing key is reused rather than a near-duplicate being captured |
+| `resolve-time-window` | none | Turn a natural-language time reference ("around 11:44am", "8-9am yesterday", "last 2 hours") into the exact ISO time window the audit query needs, plus a plain-English echo of how it was read. Diagnostics agent only |
 
 <CardGroup cols={2}>
   <Card title="Building a tool or skill" icon="plus" href="/tools-and-skills/building">

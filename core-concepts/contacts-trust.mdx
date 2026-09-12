@@ -192,6 +192,10 @@ Curia runs a weekly background scan for likely duplicate contacts — for exampl
 
 Curia never auto-merges contacts. You confirm every merge.
 
+**Saying "no" sticks.** If you tell Curia two contacts are genuinely different people, that ruling is recorded permanently and the pair is never proposed again — including for two people who share a name and have no knowledge-graph presence at all, which is exactly the case that used to fail silently. Exclusions survive later merges: if one of the two is merged into someone else, the ruling follows the surviving contact rather than being quietly forgotten.
+
+A merge is applied as a single all-or-nothing change. A failure partway through cannot leave you with identities, permission overrides, or duplicate rulings stranded on a contact that no longer exists.
+
 ## How authorization works
 
 Authorization runs through a layered check on every request from a non-principal sender:

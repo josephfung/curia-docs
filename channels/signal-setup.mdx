@@ -83,6 +83,23 @@ Because Signal carries `high` trust, you can use it to:
   Trust levels determine which actions Curia can take on a sender's behalf. Signal's `high` trust level is equivalent to CLI access — Curia treats Signal messages with the same confidence it treats local terminal sessions.
 </Info>
 
+## Voice notes
+
+Send Curia a Signal voice note and it transcribes it into an ordinary message — no separate setup beyond having speech-to-text credentials configured (the same Deepgram key the [Voice channel](/channels/voice-setup) uses).
+
+- Audio attachments are downloaded through signal-cli and transcribed, then handled exactly like a typed message. The transcript is tagged so you can tell it came from audio.
+- In a 1:1 conversation, transcription only runs for **senders Curia already knows**.
+- Downloads are capped at **5 MB**. Longer recordings are not transcribed.
+- With no speech-to-text credentials configured, audio-only messages are simply ignored. Text keeps working.
+
+## Voice calls
+
+You can also **call** Curia's Signal number and hold a live spoken conversation. This is off by default and needs additional deploy-side infrastructure — see [Signal calls](/channels/voice-setup#signal-calls) on the Voice page.
+
+<Warning>
+  The v1 call policy is answer-everyone: Curia picks up for strangers too, at unknown trust. That is a different exposure from Signal messaging, where you control who has your number. Read the policy section before enabling it.
+</Warning>
+
 ## Console credential entry
 
 Once signal-cli is running and your phone number is registered, you can enter the connection details in Curia's console instead of setting environment variables.

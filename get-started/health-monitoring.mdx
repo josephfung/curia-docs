@@ -7,7 +7,7 @@ Curia exposes two monitoring hooks: a live health endpoint you can poll from any
 
 ## The health endpoint
 
-`GET /api/health` returns the current status of your instance across seven services. No authentication is required.
+`GET /api/health` returns the current status of your instance across every service it depends on. No authentication is required.
 
 ```bash
 curl https://your-curia-instance.example.com/api/health
@@ -20,13 +20,18 @@ The response includes a top-level `status` field and a `checks` object with per-
   "status": "ok",
   "uptime_s": 3812,
   "checks": {
-    "db":        "ok",
-    "bus":       "ok",
-    "email":     "ok",
-    "signal":    "skipped",
-    "browser":   "ok",
-    "mcp":       { "google_workspace": "ok" },
-    "scheduler": "ok"
+    "db":           "ok",
+    "bus":          "ok",
+    "email":        "ok",
+    "signal":       "skipped",
+    "browser":      "ok",
+    "mcp":          { "google_workspace": "ok" },
+    "nylas_calendar": "ok",
+    "slack":        "skipped",
+    "sms":          "skipped",
+    "voice":        "skipped",
+    "signal_voice": "skipped",
+    "scheduler":    "ok"
   }
 }
 ```
@@ -38,10 +43,35 @@ The response includes a top-level `status` field and a `checks` object with per-
 | `status` | HTTP | When it fires |
 |---|---|---|
 | `ok` | `200` | All enabled services are healthy |
-| `degraded` | `200` | A non-critical service is down (email, Signal, browser, MCP, scheduler) |
+| `degraded` | `200` | A non-critical service is down — anything other than the database or bus |
 | `down` | `503` | The database or message bus is unreachable |
 
 The key distinction: both `ok` and `degraded` return `200`. A `degraded` instance is still processing agent requests — something optional is misbehaving. Only `down` (503) means Curia cannot function.
+
+### What each check covers
+
+| Check | What it probes | Reports `skipped` when |
+|---|---|---|
+| `db` | A live query against Postgres | Never — critical |
+| `bus` | Internal event bus responsiveness | Never — critical |
+| `email` | A successful Nylas poll within the stall window | Email channel not configured |
+| `signal` | Signal-cli's JSON-RPC socket | Signal not configured |
+| `slack` | Socket Mode connection state, with a boot grace period | Slack not configured |
+| `sms` | The Telnyx webhook handler is installed | SMS not configured |
+| `voice` | LiveKit reachability, via its management API | Voice not configured |
+| `signal_voice` | The shared PulseAudio socket that carries Signal call audio | `SIGNAL_PULSE_SOCKET_PATH` unset |
+| `browser` | A bounded round-trip to the Chrome process | Browser automation not running |
+| `mcp.<server>` | A `ping` to each enabled MCP server | Server disabled |
+| `nylas_calendar` | The principal's calendar grant, separately from email | Calendar not configured |
+| `scheduler` | The scheduler ticked within its watchdog window | Never |
+
+<Note>
+  **Three voice-adjacent checks, on purpose.** `signal` is Signal *messaging*, `voice` is *console* calls, and `signal_voice` is Signal *calls*. They fail independently — Signal texts can be perfectly healthy while call audio is dead — so a green one tells you nothing about the others.
+</Note>
+
+<Warning>
+  Two checks are shallower than the rest and worth knowing about: `slack` reads cached socket state, and `sms` only confirms the webhook handler is installed. Neither proves a message could actually reach you. Verifying that would mean calling a third-party API every 30 seconds from a public, unauthenticated endpoint, which is a worse trade than the gap.
+</Warning>
 
 ## Setting up an uptime monitor
 
@@ -113,6 +143,7 @@ health:
 | `embeddings` | Last recorded embedding call outcome | No `OPENAI_API_KEY` |
 | `image_gen` | Last `image-generate` tool outcome | No `OPENAI_API_KEY` |
 | `nylas` | Fetches one message via the Nylas client | Email not configured |
+| `nylas_calendar` | Lists calendars via the principal's calendar grant | Calendar not configured |
 | `signal` | Pings the Signal-cli socket | Signal not configured |
 | `google_workspace` | Checks that the credential file is readable and the refresh token has not expired | Google Workspace MCP server not registered |
 | `tavily` | Checks that the Tavily API key is present | Key not configured |

@@ -30,12 +30,22 @@ This means a half-configured capability fails closed — it cannot be switched o
 
 ## Channels: always-on vs. toggleable
 
-Channels behave like skills and agents, with one safeguard: the **HTTP and CLI channels are always on and cannot be disabled or uninstalled**. They are how you reach your own instance, so locking them off would lock you out. Email and Signal are toggleable — install and enable them from the Channels page once their credentials are in the vault.
+Channels behave like skills and agents, with one safeguard: the **HTTP and CLI channels are always on and cannot be disabled or uninstalled**. They are how you reach your own instance, so locking them off would lock you out. Email, Signal, Slack, SMS, and Voice are toggleable — install and enable them from the Channels page once their credentials are in the vault.
 
 ## Managing from the console
 
-- **Skills and agents** — the Settings registry lists every registered skill and agent with its installed/enabled state. Toggle items there; required-secret gates are surfaced inline so you can see what a disabled item is waiting on.
+- **Tools, skills, and agents** — the **Tools** page lists everything registered, with its installed/enabled state. Required-secret gates are surfaced inline so you can see what a disabled item is waiting on.
 - **Channels** — the Channels page lists each channel, its credential fields, and its enabled state. Enter credentials there (they are written to the vault) and enable the channel.
+
+### Bundles and their tools
+
+A **skill** is a bundle of tools. On the Tools page a bundle appears as a parent row with its member tools nested underneath; a tool that belongs to no bundle sits at the top level on its own.
+
+Enabling or disabling a bundle applies to the bundle **and every tool in it, in one atomic change**. There is no state where the bundle is on and half its tools are off — that partial configuration is precisely what the grouped view exists to prevent, so if any part of the change fails, none of it is applied.
+
+<Warning>
+  **Watch for unresolved pins.** An agent can pin a bundle it needs. If that bundle is not enabled but the agent is, the agent silently loses every tool in it — and the only other symptom is a line in the startup log. The Tools page flags this case explicitly: an unenabled bundle pinned by an enabled agent is marked as unresolved, and names the agent affected. If an agent has mysteriously stopped being able to do something, check here first.
+</Warning>
 
 The same operations are available over the HTTP API under `/api/registry/*` for skills and agents and `/api/vault/*` for credentials — see the [HTTP API reference](/references/http-api).
 
