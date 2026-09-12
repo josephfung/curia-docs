@@ -1,15 +1,22 @@
 ---
-title: "Talk to Curia by voice from the web console"
+title: "Talk to Curia by voice"
 sidebarTitle: "Voice"
-description: "Enable duplex spoken conversation with your Curia agent from the web console — WebRTC via LiveKit, Deepgram speech-to-text, and Cartesia text-to-speech, with barge-in and live transcripts."
+description: "Enable duplex spoken conversation with your Curia agent — from the web console over WebRTC/LiveKit, or by placing a native Signal voice call. Deepgram speech-to-text, Cartesia text-to-speech, barge-in, and live transcripts."
 ---
 
-Voice lets you talk to your Curia agent out loud from the web console — a live, two-way call instead of typing. Curia streams your speech to text, thinks and runs tools the same way it does in chat, and speaks its reply back sentence by sentence. You can interrupt it mid-sentence (barge-in) and it stops to listen, the way a real conversation works.
+Voice lets you talk to your Curia agent out loud — a live, two-way call instead of typing. Curia streams your speech to text, thinks and runs tools the same way it does in chat, and speaks its reply back sentence by sentence. You can interrupt it mid-sentence (barge-in) and it stops to listen, the way a real conversation works.
 
-A voice call runs entirely inside an authenticated console session, so it carries the same **high** trust as the CLI: the person on the call is you, the principal. There is no unknown-sender path — voice is principal-only.
+There are two ways to place a call, and they share everything above the audio layer:
+
+- **From the web console** — WebRTC through a self-hosted LiveKit server. This is the base setup and the rest of this page walks through it.
+- **By Signal call** — anyone can place a native Signal voice call to Curia's Signal number. This is off by default, needs the console path working first, and is covered in [Signal calls](#signal-calls) below.
+
+A console call runs inside an authenticated session, so it carries the same **high** trust as the CLI: the person on the call is you, the principal. A Signal call does not — the caller is whoever dialled, and Curia resolves them like any other Signal contact. See [Who can call, and what they can do](#who-can-call-and-what-they-can-do).
 
 <Warning>
-  Enabling voice means your **audio and transcripts leave the host** to three third parties: Deepgram (speech-to-text), Cartesia (text-to-speech), and your configured LLM provider. Speech-vendor keys never reach the browser, but treat these vendors' data-processing terms the way you would any external service before turning voice on.
+  Enabling voice means **audio and transcripts leave the host** to three third parties: Deepgram (speech-to-text), Cartesia (text-to-speech), and your configured LLM provider. Speech-vendor keys never reach the browser, but treat these vendors' data-processing terms the way you would any external service before turning voice on.
+
+  This applies to **anyone who calls**, not just you. If you enable Signal calls, a caller's speech is transcribed by Deepgram the same way yours is — and Signal's own end-to-end encryption covers the call to Curia, not what Curia does with the audio after that.
 </Warning>
 
 ## How it works
@@ -111,6 +118,88 @@ Open the console chat. The **Call** button appears once Voice is enabled and the
   </Step>
 </Steps>
 
+## What Curia does on a call
+
+<AccordionGroup>
+  <Accordion title="It greets you first">
+    When an inbound call connects, Curia opens the conversation rather than waiting in silence — a short greeting appropriate to the time of day. If something was sent on another channel just before the call, it acknowledges that in the same breath.
+  </Accordion>
+
+  <Accordion title="It knows what just happened on your other channels">
+    Spoken turns read the same active outbound context the text channels write to. Call right after Curia emails someone and it already knows what went out; you do not have to re-establish the subject.
+  </Accordion>
+
+  <Accordion title="It hands heavy work off instead of stalling the call">
+    Some asks take minutes, not seconds — research, a browser session, a multi-step delegation. Rather than leaving dead air while it works, Curia acknowledges the request, dispatches it to the async coordinator, and calls or messages you back when it is done. The call keeps moving.
+  </Accordion>
+
+  <Accordion title="It uses the same guardrails as the text agent">
+    Voice and the text coordinator compose shared prompt modules rather than maintaining two prompts that drift apart. Date resolution is the first of these: a spoken "next Thursday" is resolved through the same tool the text agent uses, so a call cannot book a meeting on a date chat would have gotten right.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  Voice needs a model that genuinely supports **streaming** and **tool calls**, and Curia checks the model registry for both before it will start the channel. A provider exposing a streaming API is not proof — OpenRouter, for instance, exposes one for every model it routes, including models that do neither. If `channels.voice.model` names a model missing either capability (or a model Curia does not know), voice refuses to boot and says which capability is missing.
+</Note>
+
+## Signal calls
+
+Curia can answer inbound **native Signal voice calls**, running them through the same speech pipeline as console calls. The feature is **off by default** and needs deploy-side infrastructure beyond the console setup above.
+
+<Note>
+  This is newer than the console path. Treat it as experimental.
+</Note>
+
+### Prerequisites
+
+Everything from the console setup must already work, plus:
+
+- The **Signal channel** installed, enabled, and connected — see [Signal setup](/channels/signal-setup).
+- **signal-cli 0.14.7 or newer**, which answers calls by spawning a `signal-call-tunnel` process per call.
+- The **`signal-call-tunnel`** binary available to signal-cli.
+- **PulseAudio** running inside the signal-cli container, with its socket shared out to the Curia container.
+
+The published `curia-deploy` Compose stack provides all four. Assembling them by hand is possible but is not a supported path.
+
+### Configuration
+
+These are environment variables in `.env`, not vault keys:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `SIGNAL_VOICE_CALLS_ENABLED` | `false` | Master switch. |
+| `SIGNAL_PULSE_SOCKET_PATH` | — | Path to the shared PulseAudio socket. The `curia-deploy` stack uses `/var/run/pulse-shared/native`. |
+| `SIGNAL_VOICE_MAX_CALL_SECONDS` | `600` | Hard per-call duration cap. On expiry the call is hung up — there is no spoken wrap-up first. |
+
+If `SIGNAL_VOICE_CALLS_ENABLED` is set but any prerequisite is missing, Curia logs a warning at startup naming what it could not find and simply does not start the call bridge. It will not half-enable.
+
+### Who can call, and what they can do
+
+The v1 answer policy is **answer everyone**. Curia picks up for known contacts and strangers alike. Two callers are rejected outright:
+
+- A contact you have **blocked**.
+- A caller with **no phone number** on the call (Signal permits UUID-only callers). There is nothing stable to resolve or to attach a contact to later, so Curia declines rather than talk to someone untraceable.
+
+Callers are resolved against the **same Signal identity** used for text messages, so your own standing carries over — call from the phone number Curia already knows as yours and it treats you as the principal. A stranger is admitted at **unknown** trust, which means the call is answered but the caller stays outside the elevated-tool and cross-channel-context gates. They can talk to Curia; they cannot use it as a lever on your accounts.
+
+<Warning>
+  Answer-everyone means your Signal number is a phone number the public can reach your assistant on. If that is not what you want, leave `SIGNAL_VOICE_CALLS_ENABLED` off — there is no allowlist mode in this version.
+</Warning>
+
+Curia handles **one call at a time**. A second caller while a call is in progress gets a busy rejection.
+
+### Checking that the audio path is alive
+
+Signal calls fail in a way messaging does not: the JSON-RPC socket can be perfectly healthy while the audio stack underneath is dead, so Signal texts keep working and calls connect to silence. `/api/health` covers the three paths separately:
+
+| Check | Covers |
+|---|---|
+| `signal` | Signal **messaging** — the JSON-RPC socket |
+| `voice` | **Console** calls — LiveKit reachability |
+| `signal_voice` | Signal **calls** — the shared PulseAudio socket |
+
+`signal_voice` reports `skipped` when `SIGNAL_PULSE_SOCKET_PATH` is unset. It proves the audio path by **connecting** to the socket, not by checking that the socket file exists — a dead PulseAudio daemon leaves its socket file behind, and that is exactly how this failure once hid behind a green dashboard for hours. See [Health monitoring](/get-started/health-monitoring).
+
 ## Troubleshooting
 
 <AccordionGroup>
@@ -136,6 +225,26 @@ Open the console chat. The **Call** button appears once Voice is enabled and the
 
   <Accordion title="The assistant is slow to start speaking">
     Voice emits structured latency fields (`voice.ttfa_ms`, `voice.llm_ttft_ms`, `voice.tts_first_byte_ms`) in the logs. Compare them before changing `channels.voice.model` — only switch the model if LLM latency dominates.
+  </Accordion>
+
+  <Accordion title="Voice refuses to start and logs a missing capability">
+    The model resolved for spoken turns must declare both `streaming` and `tools` in Curia's model registry. Point `channels.voice.model` at a model that does, or clear it to fall back to the fast tier.
+  </Accordion>
+
+  <Accordion title="Signal calls never ring Curia">
+    Check the startup log first: if a prerequisite was missing, Curia says so and leaves the bridge unstarted. Otherwise confirm `SIGNAL_VOICE_CALLS_ENABLED=true`, that the Signal channel itself is connected (`signal` in `/api/health`), and that signal-cli is 0.14.7 or newer with `signal-call-tunnel` available.
+  </Accordion>
+
+  <Accordion title="A Signal call connects but there's silence">
+    This is the PulseAudio path, not Signal. Check `signal_voice` in `/api/health` — `fail` means nothing is accepting on the shared socket, usually a PulseAudio daemon that did not start. `skipped` means `SIGNAL_PULSE_SOCKET_PATH` is unset, so the call bridge was never wired up at all.
+  </Accordion>
+
+  <Accordion title="A Signal call is rejected immediately">
+    Three causes: the caller is a blocked contact, the call carries no phone number (UUID-only callers are declined), or another call is already in progress — Curia handles one at a time.
+  </Accordion>
+
+  <Accordion title="Calls cut off after ten minutes">
+    That is `SIGNAL_VOICE_MAX_CALL_SECONDS` (default `600`). The cap hangs up hard, with no spoken warning.
   </Accordion>
 </AccordionGroup>
 

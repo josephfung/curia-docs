@@ -31,6 +31,24 @@ Then add the channels and capabilities you need — email, semantic search, web 
 - **Applying configuration changes.** A vault secret added via the console only needs `docker compose restart curia` (Curia re-reads the vault on startup). A changed `.env` value needs `docker compose up -d curia` so the container is recreated with the new environment. If you changed both, `docker compose up -d --force-recreate curia` applies either. See [Initial configuration](/get-started/configuration) for the full breakdown.
 - **Upgrading.** Re-run `install.sh` to move to a newer image. It detects the completed install, regenerates nothing, re-applies migrations idempotently, and restarts the stack on the new image. Because no secrets rotate, live sessions and the encrypted vault are preserved.
 
+## The System page
+
+The console's **System** page is a read-only snapshot of the running instance plus one operator control.
+
+It shows the Curia version, the Node runtime, the configured timezone, how long the process has been up, and which concrete model each capability tier currently routes to. Nothing sensitive appears here — no API keys, no database URL, no vault contents — so it is safe to screenshot when asking for help.
+
+### Restarting from the console
+
+**Restart** performs the same graceful shutdown a `docker compose restart` would: Curia stops accepting new work, lets in-flight tasks finish, closes its connections, and exits. Docker's `restart: unless-stopped` brings it back. This is a *process* restart — no Docker socket is mounted, so the console cannot touch containers, images, or the host.
+
+This is the fastest way to apply a vault change, since Curia reads the vault at startup. A changed `.env` value still needs `docker compose up -d curia`, because the container must be recreated to pick up new environment variables.
+
+<Note>
+  Restarts are capped at **3 per 5 minutes**. The limit is enforced from the audit log rather than in memory, so it survives the very restarts it is limiting. If Curia cannot read that history or cannot record the restart, it refuses to restart at all rather than proceed unrecorded — every operator restart is auditable and distinguishable from a crash.
+</Note>
+
+If the process does not come back, the console gives up waiting after 90 seconds and tells you, rather than spinning indefinitely. Check `docker compose logs curia` at that point.
+
 ## Next steps
 
 <CardGroup cols={2}>

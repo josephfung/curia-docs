@@ -102,6 +102,10 @@ Agents writing to memory pass through validation gates designed to prevent pollu
 
 **Fuzzy entity resolution** — when looking up an entity by name, the system first tries an exact label match. If none is found, it falls back to embedding-based semantic search to catch name variants ("Darlise" / "Darlise Restaurant") before creating a duplicate node. Confirmed matches are stored as aliases on the entity, so future lookups resolve instantly without another embedding search. Aliases are also learned automatically when `memory-store` disambiguates between candidates.
 
+**Same-name people are kept apart** — a person's node in the graph is tied to their **contact record**, not to their display name. Two contacts named "David Chen" each hold their own node, their own facts, and their own context; before this, the second one silently could not have a node at all, and the enrichment layer had nothing to hand the agent. When a name genuinely is ambiguous — two matching entities of the same type — fact extraction **skips and counts** the fact rather than guessing which person it belongs to, and a conversation's known participant is used as a tiebreaker where one exists.
+
+Because these nodes are identity, not learned knowledge, they are exempt from decay: a contact's node is never archived for going quiet, and never surfaced for re-confirmation. The facts attached to it still decay normally. Deleting a contact archives their node, which frees the name for reuse.
+
 **Contradiction detection** — if a new fact contradicts an existing one (for example, "the CEO lives in Toronto" when "the CEO lives in Kitchener" already exists), the system compares confidence scores:
 
 - New fact has lower confidence → write rejected, conflict logged

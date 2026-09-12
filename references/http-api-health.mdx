@@ -1,10 +1,12 @@
 ---
 title: "GET /api/health — instance health check endpoint"
 sidebarTitle: "GET /api/health"
-description: "Returns the live status of your Curia instance across seven service checks. No authentication required. Returns 503 only when a critical service (database or bus) is unreachable."
+description: "Returns the live status of your Curia instance across every service it depends on — database, bus, channels, browser, MCP servers, and the scheduler. No authentication required. Returns 503 only when a critical service (database or bus) is unreachable."
 ---
 
-`GET /api/health` reports whether your Curia instance is healthy. It checks seven services in real time — database, message bus, email, Signal, browser automation, Google Workspace, and the task scheduler — and returns a single `status` field that summarises the result. No authentication is required, so you can point any uptime monitor or load balancer probe directly at this endpoint.
+`GET /api/health` reports whether your Curia instance is healthy. It probes every dependency in real time — database, message bus, each configured channel, browser automation, MCP servers, and the task scheduler — and returns a single `status` field that summarises the result. No authentication is required, so you can point any uptime monitor or load balancer probe directly at this endpoint.
+
+Unconfigured services report `"skipped"`, so the exact set of keys in `checks` depends on what you have enabled.
 
 ## Request
 
@@ -27,7 +29,7 @@ Rate-limited to 60 requests per minute.
 | `status` | HTTP | Meaning |
 |---|---|---|
 | `ok` | `200` | All enabled checks pass |
-| `degraded` | `200` | A non-critical service is down (Signal, email, browser, MCP, or scheduler) |
+| `degraded` | `200` | A non-critical service is down — anything other than the database or bus |
 | `down` | `503` | A critical service is unreachable (database or bus) — Curia cannot function |
 
 Both `ok` and `degraded` return `200`. Your uptime monitor should watch for `503` to detect outages, and optionally check the response body for `"status":"degraded"` to catch softer failures.
@@ -74,6 +76,26 @@ Both `ok` and `degraded` return `200`. Your uptime monitor should watch for `503
       ```
     </ResponseField>
 
+    <ResponseField name="checks.nylas_calendar" type="string" required>
+      The principal's calendar grant, probed separately from email — a calendar grant can fail while the mailbox grant is fine. `"skipped"` when calendar is not configured.
+    </ResponseField>
+
+    <ResponseField name="checks.slack" type="string" required>
+      Slack Socket Mode connection state, with a short grace period at boot. `"skipped"` when Slack is not configured.
+    </ResponseField>
+
+    <ResponseField name="checks.sms" type="string" required>
+      Whether the Telnyx webhook handler is installed. `"skipped"` when SMS is not configured.
+    </ResponseField>
+
+    <ResponseField name="checks.voice" type="string" required>
+      LiveKit reachability for console voice calls, probed via its management API. `"skipped"` when voice is not configured.
+    </ResponseField>
+
+    <ResponseField name="checks.signal_voice" type="string" required>
+      The shared PulseAudio socket that carries Signal call audio. Probed by **connecting**, not by checking that the socket file exists — a dead audio daemon leaves its socket behind. `"skipped"` when `SIGNAL_PULSE_SOCKET_PATH` is unset.
+    </ResponseField>
+
     <ResponseField name="checks.scheduler" type="string" required>
       Task scheduler heartbeat. `"fail"` if the scheduler has not ticked within its expected window.
     </ResponseField>
@@ -87,13 +109,18 @@ Both `ok` and `degraded` return `200`. Your uptime monitor should watch for `503
   "status": "ok",
   "uptime_s": 3812,
   "checks": {
-    "db":        "ok",
-    "bus":       "ok",
-    "signal":    "skipped",
-    "email":     "ok",
-    "browser":   "ok",
-    "mcp":       { "google_workspace": "ok" },
-    "scheduler": "ok"
+    "db":             "ok",
+    "bus":            "ok",
+    "signal":         "skipped",
+    "email":          "ok",
+    "browser":        "ok",
+    "mcp":            { "google_workspace": "ok" },
+    "nylas_calendar": "ok",
+    "slack":          "skipped",
+    "sms":            "skipped",
+    "voice":          "skipped",
+    "signal_voice":   "skipped",
+    "scheduler":      "ok"
   }
 }
 ```
@@ -102,18 +129,25 @@ Both `ok` and `degraded` return `200`. Your uptime monitor should watch for `503
 
 A non-critical service is down. The instance is still operational — other services continue to work.
 
+The example below is a real failure shape worth recognising: `signal` and `voice` are both `ok`, but `signal_voice` is `fail`. Signal messaging works and console calls work; only the audio path behind Signal *calls* is dead. Checks that look related fail independently.
+
 ```json
 {
   "status": "degraded",
   "uptime_s": 7200,
   "checks": {
-    "db":        "ok",
-    "bus":       "ok",
-    "signal":    "fail",
-    "email":     "ok",
-    "browser":   "skipped",
-    "mcp":       { "google_workspace": "skipped" },
-    "scheduler": "ok"
+    "db":             "ok",
+    "bus":            "ok",
+    "signal":         "ok",
+    "email":          "ok",
+    "browser":        "skipped",
+    "mcp":            { "google_workspace": "skipped" },
+    "nylas_calendar": "ok",
+    "slack":          "skipped",
+    "sms":            "skipped",
+    "voice":          "ok",
+    "signal_voice":   "fail",
+    "scheduler":      "ok"
   }
 }
 ```
@@ -127,13 +161,18 @@ A critical service (database or bus) is unreachable. Curia cannot process agent 
   "status": "down",
   "uptime_s": 120,
   "checks": {
-    "db":        "fail",
-    "bus":       "ok",
-    "signal":    "skipped",
-    "email":     "skipped",
-    "browser":   "skipped",
-    "mcp":       {},
-    "scheduler": "fail"
+    "db":             "fail",
+    "bus":            "ok",
+    "signal":         "skipped",
+    "email":          "skipped",
+    "browser":        "skipped",
+    "mcp":            {},
+    "nylas_calendar": "skipped",
+    "slack":          "skipped",
+    "sms":            "skipped",
+    "voice":          "skipped",
+    "signal_voice":   "skipped",
+    "scheduler":      "fail"
   }
 }
 ```
@@ -153,9 +192,15 @@ A critical service (database or bus) is unreachable. Curia cannot process agent 
 
 **Critical (down on failure, 503):** `db`, `bus`
 
-**Non-critical (degraded on failure, 200):** `email`, `signal`, `browser`, `mcp.*`, `scheduler`
+**Non-critical (degraded on failure, 200):** `email`, `signal`, `browser`, `mcp.*`, `nylas_calendar`, `slack`, `sms`, `voice`, `signal_voice`, `scheduler`
 
 The rationale: a crashed Signal socket or a stale scheduler should raise a warning, not page as a full outage when email and the database are healthy.
+
+## How deep each probe goes
+
+Most checks make a real round-trip rather than asserting that an object exists. `browser` does a bounded call into the Chrome process; `signal_voice` opens a connection to the audio socket; `mcp` sends a `ping`. The reason is that holding a handle to something running in another process proves nothing about whether it is alive — a socket file outlives the daemon that made it, and a wedged browser still reports itself as connected.
+
+Two checks are deliberately shallower. `slack` reads cached connection state, and `sms` only confirms the webhook handler is installed — neither proves inbound reachability. Proving that would put a third-party API call on an unauthenticated endpoint probed every 30 seconds, so it belongs in the daily canary instead. Treat those two as "configured and plausibly working", not as delivery guarantees.
 
 ## Use cases
 

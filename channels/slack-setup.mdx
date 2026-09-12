@@ -156,7 +156,20 @@ DMs are never filtered by this list. An empty or absent list means all channels 
 
 ## Reactions
 
-Curia normalizes Slack reactions into a channel-agnostic reaction signal (a reactor's 👍 on a message). Emoji-to-intent mapping — for example reading 👍 on an approval request as approval — is a follow-up; today reactions are captured but not yet acted on.
+Curia normalizes Slack reactions into a channel-agnostic reaction signal, and uses them to resolve approvals: react 👍 to a pending approval request to approve it, 👎 to reject.
+
+- Only the **principal** can decide by reaction. A reaction from anyone else is a no-op, recorded in the audit log.
+- The emoji sets are configurable (`security.reaction_intents` in `config/default.yaml`) and accept both Slack shortcodes and unicode glyphs. Skin-tone modifiers are stripped before matching.
+- An unrecognized emoji on a real pending approval gets a reply explaining which reactions work, rather than being silently dropped.
+- Removing a reaction is a no-op — it does not undo a decision.
+
+The same mechanism works on Signal; adapters normalize the reaction and never map intent themselves.
+
+## Voice notes
+
+Send Curia an audio file or voice message in Slack and it transcribes it into an ordinary message, using the same speech-to-text credentials as the [Voice channel](/channels/voice-setup). The transcript is tagged so you can tell it came from audio. Non-audio file shares are ignored, and downloads are capped at **5 MB** — an oversized recording is aborted mid-stream rather than pulled into memory.
+
+With no speech-to-text credentials configured, audio messages are ignored and text keeps working.
 
 ## Troubleshooting
 

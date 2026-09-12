@@ -33,6 +33,8 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
 
     Signal supports text messages, attachments, and reactions. Conversation IDs are derived from Signal group or 1:1 conversation identifiers, so Curia maintains persistent context within each thread.
 
+    **Voice notes** sent by a known sender are transcribed into ordinary messages (5 MB cap), using the same speech-to-text credentials as the Voice channel. Curia can also **answer Signal voice calls** for a live spoken conversation — off by default, and covered under [Signal calls](/channels/voice-setup#signal-calls).
+
     **Required secret (vault):** `channel.signal.phone_number`
 
     **Trust level:** High — Signal identity is tied to a phone number verified by the Signal protocol. Use Signal for sensitive instructions, financial actions, or anything where you want maximum assurance.
@@ -40,7 +42,7 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
   <Tab title="Slack">
     Slack lets your team reach Curia the way they'd reach a colleague: DM it, @mention it in a channel, or keep talking in a thread after the first mention. Curia connects as a workspace-owned Slack app over **Socket Mode**, so there's no public webhook to host.
 
-    Slack has native threads, so no context bridging is needed. Reactions are normalized into a channel-agnostic reaction signal. See the [Slack setup guide](/channels/slack-setup) to connect it.
+    Slack has native threads, so no context bridging is needed. Reactions are normalized into a channel-agnostic reaction signal, and the principal's 👍 / 👎 resolves a pending approval. Audio files are transcribed into ordinary messages. See the [Slack setup guide](/channels/slack-setup) to connect it.
 
     **Required secrets (vault):** `channel.slack.bot_token` (`xoxb-…`), `channel.slack.app_token` (`xapp-…`)
 
@@ -56,13 +58,13 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
     **Trust level:** Medium — the Telnyx office DID is not end-to-end encrypted and carrier From headers are spoofable. Trust rides the **sender**: a mobile number linked to a contact carries that person's tier.
   </Tab>
   <Tab title="Voice">
-    Voice is a live, two-way spoken conversation from the web console. Curia streams your speech to text (Deepgram), thinks and runs tools exactly as it does in chat, and speaks its reply back (Cartesia), with WebRTC audio carried by a self-hosted LiveKit server. You can interrupt it mid-sentence (barge-in) and it stops to listen.
+    Voice is a live, two-way spoken conversation. Curia streams your speech to text (Deepgram), thinks and runs tools exactly as it does in chat, and speaks its reply back (Cartesia). You can interrupt it mid-sentence (barge-in) and it stops to listen. Curia greets you first when a call connects, and hands genuinely long work off to the async coordinator rather than leaving dead air on the line.
 
-    Unlike the async text channels, a call is real-time and runs entirely inside an authenticated console session — there is no unknown-sender path. Final transcripts are written to working memory, so the call appears in your console chat history afterward. See the [Voice setup guide](/channels/voice-setup) to connect it.
+    Two transports share that pipeline: **web console** calls over WebRTC via a self-hosted LiveKit server, and **Signal calls** placed to Curia's Signal number (off by default). Final transcripts are written to working memory, so a call appears in your chat history afterward. See the [Voice setup guide](/channels/voice-setup) to connect it.
 
     **Required secrets (vault):** `channel.voice.livekit_url`, `channel.voice.livekit_api_key`, `channel.voice.livekit_api_secret`, `channel.voice.deepgram_api_key`, `channel.voice.cartesia_api_key`, `channel.voice.cartesia_voice_id`
 
-    **Trust level:** High — the caller is the principal in their own authenticated console session, the same authority as the CLI.
+    **Trust level:** High for console calls — the caller is the principal in their own authenticated session, the same authority as the CLI. A **Signal** call is different: the caller is whoever dialled, resolved against their Signal identity, and a stranger is answered at `unknown` trust rather than inheriting the channel's.
   </Tab>
   <Tab title="CLI">
     The CLI channel is an interactive terminal for local access. It reads from stdin and writes to stdout, making it ideal for setup, testing, and direct executive use when you are on the server.
@@ -112,7 +114,9 @@ Each channel can be configured with one of two policies for messages from sender
 - **`ignore`** — messages from unknown senders are silently discarded.
 
 <Note>
-Curia no longer queues unknown-sender messages for review (the old `hold_and_notify` policy was removed). Automated senders — noreply addresses, newsletters, bulk mail — are detected and kept out of your way rather than surfaced.
+Curia no longer queues unknown-sender messages for review (the old `hold_and_notify` policy was removed). Automated mail — noreply addresses, newsletters, bulk mail, calendar notifications, out-of-office replies — is detected and kept out of your way rather than surfaced, and Curia does not auto-reply to it.
+
+That detection reads the **message**, not the sender's contact record — mail headers (`Auto-Submitted`, `Precedence`, the `X-Auto*` family), the calendar `METHOD` on an attached invite, and out-of-office subject patterns. Judging by the contact instead gets it backwards in both directions: a real colleague's Exchange client emits RSVP declines that look like ordinary mail from a person, and Curia would cheerfully reply to every one of them.
 </Note>
 
 ## Context bridging on non-threaded channels
@@ -145,6 +149,15 @@ Channels with `threaded: false` get context bridging automatically. Channels wit
 Context memos are short and structured. They are not the full response — only enough to anchor a follow-up. The coordinator still has access to its full working memory and entity context on every turn.
 </Note>
 
+## When a channel goes down
+
+A socket drops, a provider has an outage, an adapter is restarted mid-send. Rather than losing the message, Curia queues outbound sends for channels that can be temporarily unavailable — **Signal, Slack, SMS, and email** — and flushes the queue when the channel reconnects.
+
+- Up to **100 messages per channel**, with a **24-hour** expiry. Older or overflowing messages are dropped rather than delivered as a confusing burst days later.
+- Voice deliberately does **not** queue. A spoken reply delivered later is not the same message; for duplex audio, late delivery is wrong, not merely delayed.
+
+`/api/health` reports each channel separately, so a queued backlog is visible as a `fail` on that channel while the rest of the instance stays green.
+
 ## Channel security
 
 Channel adapters operate within a hard architectural constraint: they can pass inbound messages into the system and receive outbound messages for delivery — and nothing else. They cannot invoke tools, read memory, or trigger agent tasks directly. This is enforced at the framework level, not by policy.
@@ -165,6 +178,6 @@ A compromised email adapter could flood inbound messages, but it cannot execute 
     Connect a dedicated Telnyx office number.
   </Card>
   <Card title="Voice setup" icon="microphone" href="/channels/voice-setup">
-    Talk to Curia from the console over WebRTC.
+    Talk to Curia from the console, or by Signal call.
   </Card>
 </CardGroup>
