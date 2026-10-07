@@ -86,7 +86,7 @@ Dismissal is a neutral close — it doesn't count as an approval or a rejection 
 
 ## Expiry
 
-Approval requests do not stay open indefinitely. Stale requests expire automatically — by default after 24 hours for standard requests, sooner for time-sensitive ones.
+Approval requests do not stay open indefinitely. Stale requests expire automatically 24 hours after they are raised.
 
 Curia checks for expired requests in the background every hour, starting a minute after it boots. The check is a system task, not an agent turn, so it costs no model calls. An expired request can't be approved even before the check runs.
 
@@ -99,7 +99,7 @@ Curia checks for expired requests in the background every hour, starting a minut
 **Staying aware:** Ask Curia **"what's waiting for my approval?"** any time to see everything still open, or fold outstanding approvals into an [on-demand morning briefing](/examples/daily-morning-briefing) so nothing lingers unseen.
 
 <Note>
-Expiry thresholds are configurable in `config/local.yaml` under the approval lifecycle section. To change how often the expiry check runs, set `autonomy.approval_expiry.sweep_interval_minutes` (see [Configuration](/references/configuration#approval-expiry)).
+The 24-hour window is fixed. To change how often the expiry check runs, set `autonomy.approval_expiry.sweep_interval_minutes` (see [Configuration](/references/configuration#approval-expiry)).
 </Note>
 
 ## Approval vs. raising your autonomy score
