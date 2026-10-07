@@ -436,3 +436,15 @@ The autonomy score is stored in Postgres and controlled via natural-language com
 - *"Set your autonomy score to 85."*
 
 The score defaults to **75 (Approval Required)** on first deployment. Changes take effect immediately without a restart. See [Autonomy](/core-concepts/autonomy) for the full band reference and [Autonomy engine](/security/autonomy-engine) for the governance mechanics.
+
+### Approval expiry
+
+Sets how often Curia marks [expired approval requests](/security/approval-workflow#expiry) and emails you about high and critical ones.
+
+```yaml
+autonomy:
+  approval_expiry:
+    sweep_interval_minutes: 60   # how often the expiry check runs
+```
+
+The check is a system task, not an agent turn, so it makes no model calls. The first check runs a minute after startup, then once per interval. The value must be a positive integer; startup fails on anything else.
