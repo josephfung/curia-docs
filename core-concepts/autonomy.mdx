@@ -13,12 +13,12 @@ The score maps to one of five named bands. Each band has a precise behavioral de
 |---|---|---|
 | **Full** | 90–100 | Acts independently. No confirmation needed for standard operations. Flags only genuinely novel, irreversible, or high-stakes actions where the cost of pausing is justified. |
 | **Spot-check** | 80–89 | Proceeds on routine tasks. Notes consequential actions — sending email, creating commitments — in its response so you maintain visibility without being asked. |
-| **Approval Required** | 70–79 | Presents a plan and asks for explicit confirmation before any consequential action. Routine reporting, summarization, and information retrieval proceed without approval. |
+| **Approval Required** | 70–79 | Carries out your direct instructions, using conservative defaults (view-only access, the latest version) and saying which it chose. Presents a plan and asks for explicit confirmation before any consequential action you didn't ask for, or when it can't tell which file or person you mean. Routine reporting, summarization, and information retrieval proceed without approval. |
 | **Draft Only** | 60–69 | Prepares drafts, plans, and analysis but does not send, publish, schedule, or act without an explicit go-ahead. Surfaces work for your review; execution requires a direct instruction. |
 | **Restricted** | < 60 | Advisory only. Presents options and analysis. Takes no independent action whatsoever. Every step with an external effect requires an explicit instruction from you. |
 
 <Note>
-Curia defaults to **75 (Approval Required)** on first deployment. This is a conservative starting point — Curia confirms before taking consequential actions until you decide to extend more independence.
+Curia defaults to **75 (Approval Required)** on first deployment. This is a conservative starting point — Curia does what you tell it, but confirms before taking consequential actions on its own initiative until you decide to extend more independence.
 </Note>
 
 ## Checking your current score
@@ -36,9 +36,9 @@ Example response:
 ```
 Autonomy score: 75 — Approval Required
 
-At this level, I'll confirm before taking consequential actions like
-sending email or creating commitments, but can proceed independently
-on research and summarization.
+At this level, I'll carry out what you ask me to do, but I'll confirm
+before sending email or creating commitments on my own initiative.
+Research and summarization proceed independently.
 
 Recent changes:
   2026-04-03  75 → 75  (approval-required)  "starting point"  — ceo
@@ -64,7 +64,7 @@ A practical approach for new deployments:
 
 <Steps>
   <Step title="Start at 75 (the default)">
-    Approval Required means Curia asks before sending anything or making commitments. This gives you full visibility into what it would do without any risk of surprises.
+    Approval Required means Curia does what you ask, and asks before sending anything or making commitments you didn't ask for. This gives you full visibility into what it would do without any risk of surprises.
   </Step>
   <Step title="Watch it work for a week">
     Pay attention to which confirmations feel unnecessary. If Curia is asking about things you always say yes to, your score is too low for your comfort level.
