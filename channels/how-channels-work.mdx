@@ -18,11 +18,11 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
 
     **Inbound:** Curia polls the Nylas Messages API every 30 seconds (configurable) for new messages. Emails are parsed, attachments extracted, and participants auto-added to your contacts. The adapter persists its high-water mark (the timestamp of the last message it saw) so a restart never re-reads or skips mail, and a watchdog raises an alert if polling stalls for several intervals.
 
-    **Outbound:** Replies and new emails are sent via the Nylas Send API. The Coordinator injects its persona's display name and email signature into every outbound message.
+    **Outbound:** Replies and new emails are sent via the Nylas Send API. The outbound gateway adds your configured email signature (set in the setup wizard or **Settings → Personality**; if none is set, Curia's name and title) to every email Curia sends or drafts. It is left off system alerts, notes for you, and anything sent or drafted from your own mailbox — Curia never signs as itself in your name — and it is never added twice when the body already ends with it.
 
     **CC detection:** The email adapter determines whether Curia is a direct recipient (`to`), copied (`cc`), or blind-copied on each message. When Curia is CC'd, the dispatcher tags the message with the primary recipients so the Coordinator knows who the email was actually addressed to and can respond appropriately — typically by using `email-reply` to the thread rather than composing a new message.
 
-    **Email validation:** Before processing, the email adapter checks SPF, DKIM, and DMARC headers. Messages that fail validation are tagged `sender_verified: false` in their metadata — the Coordinator uses this signal when deciding whether to act on consequential requests.
+    **Email validation:** Before processing, the email adapter checks SPF, DKIM, and DMARC results. Only the header your own mail provider adds on receipt counts — a sender can write their own `Authentication-Results` header claiming a pass, and Curia ignores it. Messages that fail validation are tagged `sender_verified: false` in their metadata — the Coordinator uses this signal when deciding whether to act on consequential requests.
 
     **Required secrets (vault):** `nylas_api_key`, `nylas_grant_id`, `nylas_self_email`
 

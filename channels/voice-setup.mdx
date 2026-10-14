@@ -175,7 +175,7 @@ If `SIGNAL_VOICE_CALLS_ENABLED` is set but any prerequisite is missing, Curia lo
 
 ### Who can call, and what they can do
 
-The v1 answer policy is **answer everyone**. Curia picks up for known contacts and strangers alike. Two callers are rejected outright:
+Whether Curia answers a stranger follows the same setting as Signal texts: `channels.signal.unknown_sender` in `config/channel-trust.yaml`. It ships as `allow`, so by default Curia picks up for known contacts and strangers alike. Set it to `ignore` and unknown callers are turned away — but so are unknown senders' Signal **texts**, because one setting governs both. Two callers are always rejected, whatever the setting:
 
 - A contact you have **blocked**.
 - A caller with **no phone number** on the call (Signal permits UUID-only callers). There is nothing stable to resolve or to attach a contact to later, so Curia declines rather than talk to someone untraceable.
@@ -183,7 +183,7 @@ The v1 answer policy is **answer everyone**. Curia picks up for known contacts a
 Callers are resolved against the **same Signal identity** used for text messages, so your own standing carries over — call from the phone number Curia already knows as yours and it treats you as the principal. A stranger is admitted at **unknown** trust, which means the call is answered but the caller stays outside the elevated-tool and cross-channel-context gates. They can talk to Curia; they cannot use it as a lever on your accounts.
 
 <Warning>
-  Answer-everyone means your Signal number is a phone number the public can reach your assistant on. If that is not what you want, leave `SIGNAL_VOICE_CALLS_ENABLED` off — there is no allowlist mode in this version.
+  With the default `allow`, your Signal number is a phone number the public can reach your assistant on. If that is not what you want, either set `channels.signal.unknown_sender: ignore` (accepting that strangers' texts are ignored too) or leave `SIGNAL_VOICE_CALLS_ENABLED` off. There is no calls-only allowlist in this version.
 </Warning>
 
 Curia handles **one call at a time**. A second caller while a call is in progress gets a busy rejection.

@@ -102,6 +102,8 @@ Your email provider performs these checks at the server level. The email channel
 - `senderVerified: true` — SPF, DKIM, and DMARC all pass
 - `senderVerified: false` — any check fails, or headers are absent (fails closed)
 
+Only the header your own provider adds on receipt counts. A sender can write their own `Authentication-Results` header into a message claiming everything passed; Curia ignores it.
+
 When a message arrives with `senderVerified: false`, the coordinator will not take consequential actions — financial, data, or access changes — without confirmation via a verified channel like Signal or CLI.
 
 ## Handling unknown senders
@@ -173,6 +175,16 @@ Curia creates a contact record, links both channel identities as verified, and a
 > "Grant Jenna permission to send emails on my behalf."
 
 All contact mutations are confirmed with you before they're written, and every change is audit-logged.
+
+## How Curia addresses a message
+
+Curia sends only to a **contact** (or to you), never to an address it has typed out. A model with the right address in front of it still mistypes one now and then, so the address always comes from the contact record. To write to someone new, Curia adds them as a contact first and then sends to that contact.
+
+- **No invented addresses.** Curia won't create a contact from an address that appears in no message or page it has actually read. Copied addresses must match their source exactly.
+- **No accidental duplicates.** If a new contact looks like someone already in your contacts, Curia won't create a second record until it has checked they are different people.
+- **Your addresses are yours.** Curia won't add, change, or remove your own addresses — only you manage them.
+- **Label hints.** "Send it to her work email" picks the contact's address with that label. If the hint fits more than one address, or doesn't clearly fit any, nothing is sent and Curia says why.
+- **Fails closed.** A mistyped recipient is refused outright rather than delivered to whoever happens to own a similar address.
 
 ## Contact profile attributes
 

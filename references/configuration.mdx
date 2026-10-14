@@ -245,9 +245,12 @@ filter:
     model: claude-haiku-4-5
     timeout_ms: 5000
     failMode: split   # split (default) | open | closed
+  identityGate: enforce   # enforce (default) | shadow | off
 ```
 
 `failMode` controls what happens on judge timeout or error: `split` sends to principal-only recipients but blocks mixed-audience sends, `open` sends anyway, `closed` blocks.
+
+`identityGate` checks messages to anyone other than the principal for signs that Curia is guessing who someone is — a hedge on a name it hasn't confirmed, or an unresolved name next to an invitation or attendance cue. `enforce` blocks the send, `shadow` logs what it would have blocked and sends anyway (useful for checking it against your own traffic first), and `off` skips the check.
 
 ## Escalation policy judge
 
@@ -261,6 +264,10 @@ escalation:
     model: claude-haiku-4-5
     timeout_ms: 5000
 ```
+
+The same judge powers **Stage 2.5** of the outbound content filter, a disclosure gate keyed on the recipient's trust tier. It stops Curia oversharing on its own initiative — your availability, or other contacts' details — with someone not trusted enough to receive it. Sends to you, sends to `trusted` contacts, and sends you directed (in a live conversation or by approving the exact action) skip it.
+
+Setting `escalation.judge.enabled: false` turns Stage 2.5 off, and it also means any send or action the judge would have classified escalates to you instead (fail-closed). Startup logs say whether the disclosure gate is active.
 
 ## Contact creation limits
 
@@ -381,13 +388,13 @@ Two related timeouts can be tuned per deployment based on your model's latency p
 
 ```yaml
 delegate:
-  defaultTimeoutMs: 90000   # how long the coordinator waits for a delegated specialist's reply (90 s default)
+  defaultTimeoutMs: 450000  # how long the coordinator waits for a delegated specialist's reply (450 s default)
 
 scheduler:
   defaultExpectedDurationSeconds: 600   # fallback expected duration for scheduled jobs that don't declare one (10 min default)
 ```
 
-Raise `delegate.defaultTimeoutMs` if specialist agents are timing out under standard-tier models that run more slowly than the defaults assume. `scheduler.defaultExpectedDurationSeconds` is what the watchdog uses to compute the recovery timeout for a job — increase it if you run long jobs without an explicit `expectedDurationSeconds` hint. Both values are validated at startup; non-numeric or non-positive values cause a hard startup failure.
+`delegate.defaultTimeoutMs` applies to specialists that don't declare their own expected duration. The 450 s default is sized to how long real delegations take, and it is also the recommended floor: a `local.yaml` value below 450000 brings back false timeouts on healthy runs, and Curia warns at startup when it sees one. Raise it if specialists still time out under slower models. A timed-out delegation doesn't stop the specialist — if it finishes late, its result is still delivered. `scheduler.defaultExpectedDurationSeconds` is what the watchdog uses to compute the recovery timeout for a job — increase it if you run long jobs without an explicit `expectedDurationSeconds` hint. Both values are validated at startup; non-numeric or non-positive values cause a hard startup failure.
 
 ## Outbound context bridge
 
@@ -395,11 +402,13 @@ Controls TTL for the registry that lets the coordinator link incoming replies to
 
 ```yaml
 contextBridge:
-  defaultExpiryHours: 6      # auto-registered entries (proactive sends without explicit context_bridge metadata)
+  defaultExpiryHours: 6      # auto-registered entries on channels with no entry below
   explicitExpiryHours: 24    # entries with explicit context_bridge JSON
+  channelDefaultExpiryHours: # per-channel auto-registration windows
+    email: 72
 ```
 
-Every outbound message auto-registers an entry. Callers can pass a `context_bridge` input with `expires_in_hours` to override per-entry; that value wins over both defaults.
+Every outbound message auto-registers an entry. `channelDefaultExpiryHours` sets that window per channel: email ships at **72 hours**, because email is answered in business days — a late-afternoon send is often answered the next morning, and a Friday ask on Monday. The 6-hour `defaultExpiryHours` applies only to channels with no entry in the map. Callers can pass a `context_bridge` input with `expires_in_hours` to override per-entry; that value wins over all of these defaults.
 
 ## Meeting debrief
 
