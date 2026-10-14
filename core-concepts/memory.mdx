@@ -16,6 +16,8 @@ Working memory holds the active context for an ongoing conversation or task. Eve
 
 Working memory is stored in Postgres — not in the process. If the server restarts mid-task, the agent reloads exactly where it left off.
 
+**Recent history with a contact** — every new email thread or voice call starts a fresh conversation, so on its own Curia would forget what the same person said an hour ago. When a reply stays one-to-one with a contact, Curia also recalls that contact's other recent conversations: the last **72 hours** on email (so next-business-day replies still connect), the last **48 hours** on voice, and **earlier today** on other channels. It is never carried into a group chat, a Slack channel, or a multi-recipient email, where it would expose a private exchange to the room.
+
 **Context summarization** — when a conversation exceeds 20 turns, the oldest turns are summarized into a condensed narrative and archived. The originals remain in Postgres but are not loaded into the LLM's context window. The summary preserves key decisions, entities discussed, and any commitments or action items.
 
 ### The Bullpen

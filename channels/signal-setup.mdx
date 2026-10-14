@@ -97,7 +97,7 @@ Send Curia a Signal voice note and it transcribes it into an ordinary message �
 You can also **call** Curia's Signal number and hold a live spoken conversation. This is off by default and needs additional deploy-side infrastructure — see [Signal calls](/channels/voice-setup#signal-calls) on the Voice page.
 
 <Warning>
-  The v1 call policy is answer-everyone: Curia picks up for strangers too, at unknown trust. That is a different exposure from Signal messaging, where you control who has your number. Read the policy section before enabling it.
+  By default Curia picks up for strangers too, at unknown trust — calls follow the same `unknown_sender` setting as Signal texts, which ships as `allow`. That is a different exposure from Signal messaging, where you control who has your number. Read the [policy section](/channels/voice-setup#who-can-call-and-what-they-can-do) before enabling it.
 </Warning>
 
 ## Console credential entry

@@ -35,13 +35,16 @@ Some tools are also **`elevated`**: they exercise CEO authority directly, so the
 
 Outbound email and console rendering share one sanitized converter: markdown in a draft or reply body becomes HTML with clickable links, bare-URL autolinks, and tables.
 
+**Recipients are people, not addresses.** Every send tool (`email-send`, `email-reply`'s `cc`, `email-draft-save`, `signal-send`, `sms-send`, `slack-send`) takes a contact ID or `principal` — never a typed address or number. The address comes from that person's verified contact record, so a mistyped one can't slip through. Someone new is added with `contact-create` first, then sent to. See [How Curia addresses a message](/core-concepts/contacts-trust#how-curia-addresses-a-message).
+
 | Tool | action_risk | Description |
 |---|---|---|
-| `email-send` | medium | Send a new email to specified recipients. Accepts an optional list of `attachments` (`file://` URLs, 20 MB / 10 files) and an optional `context_bridge` JSON for delegation-aware reply routing. |
+| `email-send` | medium | Send a new email. `to` and `cc` take a contact ID or `principal`; a label hint (`principal#personal`) picks one of that person's labelled addresses. Accepts an optional list of `attachments` (`file://` URLs, 20 MB / 10 files) and an optional `context_bridge` JSON for delegation-aware reply routing. |
 | `email-reply` | medium | Reply to an existing email thread. Appends the quoted original message body to the reply (matching standard email-client behaviour). Accepts optional `attachments` and a `context_bridge` JSON. |
 | `email-list` | none | List recent messages in an inbox |
 | `email-get` | none | Fetch the full body of a specific message |
-| `email-draft-save` | low | Save a draft reply for CEO review |
+| `email-get-thread` | none | Fetch every message in a thread, with full bodies, oldest first, in one call |
+| `email-draft-save` | low | Save a draft for CEO review, addressed to a contact ID or `principal`. Won't save a draft into the CEO's own mailbox — that goes through the CEO Inbox agent (`ceo-inbox-draft-compose` / `-reply`) |
 | `send-draft` | none | Send a previously saved draft |
 | `email-archive` | low | Archive a message |
 | `email-label` | low | Apply one or more labels to an email message (creates the label if it doesn't exist) |
@@ -59,10 +62,10 @@ Tools for the CEO Inbox agent to manage the CEO's personal email account. These 
 |---|---|---|
 | `ceo-inbox-list` | none | List recent unread messages from the CEO's personal inbox |
 | `ceo-inbox-read` | none | Read a specific message, returning plain text and HTML body |
-| `ceo-inbox-search` | none | Search the CEO's inbox using Gmail-native query syntax. When `unread_only` is set alongside a search query, `is:unread` is embedded into the search string so the filter actually applies. |
-| `ceo-inbox-draft-compose` | low | Compose a cold-outreach (new, non-reply) draft into the CEO's Gmail Drafts for review |
-| `ceo-inbox-draft-reply` | low | Create a reply-all draft for CEO review (never sent automatically) |
-| `ceo-inbox-draft-edit` | low | Update an existing draft's recipients, subject, or body, so a wrong-recipient or stale draft can be fixed without recreating it |
+| `ceo-inbox-search` | none | Search the CEO's inbox using Gmail-native query syntax. When `unread_only` is set alongside a search query, `is:unread` is embedded into the search string so the filter actually applies. Spam and Trash are left out unless `include_spam_and_trash` is set. |
+| `ceo-inbox-draft-compose` | low | Compose a cold-outreach (new, non-reply) draft into the CEO's Gmail Drafts for review. `to`/`cc` take contact IDs; a non-contact's address must be copied from the CEO's mail or the CEO's own message, or nothing is saved |
+| `ceo-inbox-draft-reply` | low | Create a reply-all draft for CEO review (never sent automatically). Refuses to draft a reply to a message in Spam or Trash |
+| `ceo-inbox-draft-edit` | low | Update an existing draft's recipients, subject, or body, so a wrong-recipient or stale draft can be fixed without recreating it. Recipients are added or removed one at a time (`add_to` / `add_cc` / `remove`); everyone else stays as they are |
 | `ceo-inbox-download-attachment` | low | Download an attachment from the CEO's inbox by its Nylas ID (10 MB limit) |
 | `ceo-inbox-archive` | low | Archive a message by removing it from the INBOX folder |
 | `ceo-inbox-label` | low | Apply one or more labels to a message, creating labels that don't yet exist |
@@ -141,7 +144,10 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 | `doc-list` | none | List a directory in the document workspace, like `ls` on a path prefix. Returns the directory manifest of direct child documents with titles and types; use `doc-read` for content |
 | `doc-read` | none | Read a document by path. Optionally read just one heading's section to keep context cost down; returns a not-found flag rather than erroring when the path is missing |
 | `doc-search` | none | Case-sensitive substring search across the workspace, optionally scoped to a path prefix. Returns matching paths, line numbers, and line text; use `doc-read` to pull full context |
+| `doc-place` | none | Recommend where a new project document belongs before writing it — extend an existing document, add to an existing `/projects/<name>/` folder, or start a new one. Doesn't write anything itself |
 | `doc-write` | low | Create, append, replace, or section-edit a document. Every write is logged, and version conflicts return the latest versions so the agent can re-read and retry. Project documents are durable; scratch documents are ephemeral |
+
+**Readable placement.** Project documents land in human-readable `/projects/` folders (`/projects/board-offsite/`, not a task ID), with agents checking `doc-place` before starting a new folder so related work stays together.
 
 ## Communication
 
@@ -159,8 +165,12 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 | Tool | action_risk | Description |
 |---|---|---|
 | `web-search` | none | Search the web via Tavily. Requires `tavily_api_key` in the vault — declared in `install.requires_secrets`, so the registry will not enable the tool until the key is provisioned. |
-| `web-fetch` | none | Fetch and extract content from a URL |
-| `web-browser` | medium | Interact with JavaScript-rendered pages via a Patchright-driven browser with a human-behavior layer (curved mouse paths, paced typing, post-load dwell) to reduce bot-detection blocking |
+| `web-fetch` | none | Fetch and extract content from a URL. Refuses Google Docs, Sheets, and Drive links and points to the Google Workspace tools instead |
+| `web-browser` | medium | Interact with JavaScript-rendered pages via a Patchright-driven browser with a human-behavior layer (curved mouse paths, paced typing, post-load dwell) to reduce bot-detection blocking. Refuses Google Docs, Sheets, and Drive links, like `web-fetch` |
+
+## Google Workspace
+
+Google Workspace connects as an [MCP server](/tools-and-skills/building#connect-an-mcp-server) (`google-workspace`) and covers **Drive, Docs, and Sheets** only. Calendar is never reached through it — your calendar always goes through the [Calendar specialist](/agents/built-in-agents#calendar-specialist). The Coordinator doesn't carry these tools on every turn; it activates them when you mention a Google file. When Curia shares a Drive file, you always get edit access, and other people get a role that fits the content.
 
 ## File parsing
 
@@ -194,7 +204,7 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 | `skill-activate` | none | Pull a discovered skill into the working toolkit mid-turn — expands its member tools and injects its `SKILL.md` instructions (given to discovery-enabled agents) |
 | `setup-status` | none | Return the setup catalog with each task's live-derived status (`done` / `pending` / `deferred`); used by the setup-wizard agent to surface what still needs to be configured |
 | `setup-defer` | low | Persist or clear a deferral for a named setup task; deferred tasks are skipped by the setup-wizard until explicitly resumed |
-| `date-resolve` | none | Verify or resolve dates deterministically (day-of-week for a date, relative expressions like "next Monday"). LLMs are unreliable at date arithmetic, so agents call this instead of computing dates themselves |
+| `date-resolve` | none | Verify or resolve dates deterministically (day-of-week for a date, relative expressions like "next Monday"). LLMs are unreliable at date arithmetic, so agents call this instead of computing dates themselves. "Today", "tomorrow", and "yesterday" resolve in your timezone. A bare weekday is ambiguous, so Curia asks — "this Friday or next Friday?" — rather than guessing. Resolved dates carry the right zone label for that date (EST in winter, even when asked in summer) |
 | `secret-capture-request` | low | Mint a one-time, 30-minute link for the user to enter a new personal secret (e.g. a website password) straight into the vault under a `user.<slug>` key; the tool returns only the link and never sees the value |
 | `system-secret-capture-request` | none | Mint a one-time, 30-minute link for the user to enter a system secret (an API key or channel credential) during setup; value goes straight to the vault, never seen by the agent. Setup-wizard only |
 | `list-user-secrets` | none | List the **names** of personal secrets already in the vault under `user.*` — never values, and never system, channel, or API-key secrets. Called before `secret-capture-request` so an existing key is reused rather than a near-duplicate being captured |

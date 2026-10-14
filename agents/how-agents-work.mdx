@@ -199,7 +199,7 @@ When a message arrives, here is what happens inside Curia:
     Tool results flow back through the execution layer (sanitized and validated). Specialist agents complete their work and return results to the Coordinator.
   </Step>
   <Step title="Response published">
-    The Coordinator formulates a reply and publishes an `agent.response` event. The dispatch layer injects the persona's display name and email signature, then routes the outbound message back to the originating channel.
+    The Coordinator formulates a reply and publishes an `agent.response` event. The dispatch layer routes the outbound message back to the originating channel, and the outbound gateway adds the persona's email signature to email — every email Curia sends or drafts, except system alerts, notes for the principal, and mail from the principal's own mailbox.
   </Step>
 </Steps>
 

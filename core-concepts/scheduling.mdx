@@ -66,6 +66,12 @@ To schedule something for a specific time rather than a recurring schedule, spec
 
 One-shot jobs fire once and are marked complete. They don't carry an intent anchor because there's no multi-run drift risk.
 
+## What you hear from a scheduled job
+
+A scheduled job only messages you when its task asks it to. "Every Friday, send me a summary of open deals" sends you **one** message per run; a job that just does background work ("check inbox for new receipts") runs silently. If a job was meant to message you and the message couldn't be delivered, the undelivered text is kept in the audit log rather than lost.
+
+Scheduled debriefs carry their own recap steps, and a **weekly** debrief covers the past seven days, not just the last 24 hours. Asking for a job that already exists with the same task and schedule doesn't create a second copy — Curia tells you about the existing one instead.
+
 ## Managing scheduled jobs
 
 <Tabs>
@@ -165,6 +171,8 @@ You interact with the backlog conversationally:
 ```
 
 Behind that, agents use the `task-create` / `task-list` / `task-update` / `task-complete` tools. A task can carry a **wake time** — when it's time to act, the scheduler fires and the owning agent resumes with the task's full context. You can review the backlog any time — what's for you to do, what's waiting on others, and what Curia is working on.
+
+You don't have to remember to ask. When you message Curia while something is waiting on you — tasks you own, approvals pending, or stored facts that need re-confirming before they're archived — it handles your request first, then mentions the oldest waiting item in a sentence. It raises each item once per conversation rather than on every reply.
 
 ### How tasks differ from scheduled jobs
 

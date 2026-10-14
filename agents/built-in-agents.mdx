@@ -13,7 +13,7 @@ The Coordinator is Curia's primary agent. It receives every inbound message, mai
 |---|---|
 | **Role** | coordinator |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Pinned skills** | 60+ tools across the email, memory, scheduling, tasks, web, autonomy, and Google Workspace skills, and more |
+| **Pinned skills** | Tools across the email, memory, scheduling, tasks, documents, web, and autonomy skills, and more. Google Workspace is **not** pinned — the Coordinator activates it on demand when you mention a Google file |
 | **Discovery** | Enabled — can find and invoke skills not in its pinned list |
 | **Task management** | Enabled (pins the `tasks` skill) — owns and advances the task backlog |
 
@@ -120,12 +120,12 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 **What it handles:**
 - Autonomous inbox triage — reads unread messages and classifies each as URGENT, ACTIONABLE, NEEDS DRAFT, LEAVE FOR CEO, or NOISE
 - Draft reply creation — writes reply-all drafts in the CEO's voice using the stored executive profile; the CEO reviews and sends from Gmail
-- Cold-outreach drafts — composes new (non-reply) drafts into the CEO's Gmail Drafts via `ceo-inbox-draft-compose`
+- Cold-outreach drafts — composes new (non-reply) drafts into the CEO's Gmail Drafts via `ceo-inbox-draft-compose`. Recipients are addressed by contact, so the address comes from the contact record rather than being retyped; someone who isn't a contact must have an address that appears in the CEO's mail or in the CEO's own message. When an address is missing, the agent looks for it in the CEO's mail before asking. Editing a draft adds or removes individual recipients and leaves everyone else as they were
 - Escalation — sends a Signal alert and opens a Bullpen thread for URGENT items; opens a Bullpen thread mentioning the appropriate specialist for ACTIONABLE items
 - Standing rules and decision tagging — maintains a configurable set of per-sender instructions and auto-labels via `config-store`
 - Scheduling replies via calendar consult — for meeting and scheduling emails it consults the Calendar Specialist over a Bullpen thread (which checks conflicts and places tentative holds) and parks the draft pending the reply, rather than guessing times blind; a `consult-timeout` safety wake falls back to a blind draft or escalation if no reply arrives
 - Invite triage — formal calendar invites are linked to calendar events and routed to the Calendar Specialist, which evaluates the invite and sends the RSVP, releasing any matching hold
-- Inbox queries — searches, reads, and labels messages on demand when delegated by the Coordinator
+- Inbox queries — searches, reads, and labels messages on demand when delegated by the Coordinator. Searches skip Spam and Trash unless you ask for them, and the agent won't draft a reply to a message sitting in either folder
 
 The CEO Inbox agent runs directly against the CEO's personal email account via Nylas. It never replies directly to senders — all outbound replies go through draft creation for CEO review.
 

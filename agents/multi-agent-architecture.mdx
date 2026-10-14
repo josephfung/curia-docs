@@ -13,7 +13,7 @@ Curia is a team of agents, not a single assistant. The design is deliberate: a s
 
 ## The three tiers
 
-**You → Coordinator.** The Coordinator is the only agent that communicates outward — with you, with your contacts, with anyone. It holds your configured persona (display name, tone, email signature) and presents a single, coherent face for everything Curia does. There is exactly one Coordinator per deployment.
+**You → Coordinator.** The Coordinator is the only agent that communicates outward — with you, with your contacts, with anyone. It holds your configured persona (display name, tone, email signature — which the outbound gateway adds to every email Curia sends or drafts, other than system alerts, notes for you, and mail from your own mailbox) and presents a single, coherent face for everything Curia does. There is exactly one Coordinator per deployment.
 
 **The Bullpen.** All agents — the Coordinator and every specialist — operate inside the Bullpen, a structured internal channel where agents can delegate, hand off, and coordinate. When the Coordinator needs research done or a calendar conflict resolved, it dispatches a task to the relevant specialist inside the Bullpen and waits for the result. Every exchange is logged with full causal tracing: you can always see who asked whom to do what and why.
 
@@ -26,6 +26,16 @@ The coordinator-specialist pattern solves two problems at once.
 *Coherence.* Having one agent own every outbound message means the persona stays consistent even when six different specialists contributed to the answer. The Coordinator synthesizes, re-voices, and delivers — the underlying specialization is invisible to the recipient.
 
 *Isolation.* Each specialist is granted its own set of skills, enforced by the Execution Layer against every tool's manifest. The research analyst has no inbox skills; the calendar specialist has no contact-write skills. A compromised or misbehaving specialist can only invoke the skills it was granted. (Memory is not partitioned this way — all agents share one knowledge graph; the boundary is capabilities, not data.)
+
+## Notes for the principal
+
+Sometimes a reply to someone else carries a remark meant only for you — "I've told her Thursday works; you may want to confirm the room." Curia cuts that note out of the reply before it goes to the other person and emails it to you separately (unless it already messaged you on that turn). The same applies when a delegation fails while Curia is answering someone: the sender gets a reply written for them, and anything you need to know arrives in its own note to you.
+
+## When a specialist fails
+
+If a specialist errors or times out, Curia still answers in its own voice. The reply doesn't name the specialist or expose internals — no model reasoning, delegation briefs, or error text. When the person waiting is an external sender, the reply is written for them, and the review task it opens for you records that they are waiting on a reply.
+
+A timeout doesn't cancel the work. If the specialist finishes late, its result is handed back so the follow-up still happens, and the review task stays open until the waiting sender has their answer.
 
 ## Extensibility
 
