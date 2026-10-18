@@ -6,7 +6,7 @@ description: "Set up environment variables and LLM routing for your Curia deploy
 Curia uses two configuration layers: a `config/default.yaml` file that ships with the repository and defines all defaults, and a `config/local.yaml` file that you create to override specific values for your deployment. Secrets — API keys, credentials, and tokens — live in an [encrypted vault](/get-started/secrets-vault), not in `.env` and not in YAML files. Only the four values needed to reach and unlock that vault, plus non-secret deployment config, stay in `.env`.
 
 <Note>
-  First-time setup configures everything for you. `pnpm run setup` writes the four bootstrap values to `.env`, prompts for your Anthropic API key, and seeds it (along with the generated API token and login secret) into the encrypted vault after migrations. The in-app setup wizard then captures your identity, operational details, and the assistant's voice and posture. This page covers everything you might want to change later — channels, MCP skill credentials, custom LLM routing, and adding secrets to the vault.
+  First-time setup configures everything for you. `pnpm run setup` writes the four bootstrap values to `.env`, prompts for your Anthropic API key, and seeds it (along with the generated API token and login secret) into the encrypted vault after migrations. The in-app setup wizard then captures your identity, operational details, the assistant's tone & style, and its autonomy level. This page covers everything you might want to change later — channels, MCP skill credentials, custom LLM routing, and adding secrets to the vault.
 </Note>
 
 <Warning>
