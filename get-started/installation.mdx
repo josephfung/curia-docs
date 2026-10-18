@@ -88,7 +88,7 @@ The image-based install runs everything inside the container, so the host needs 
   <Step title="Log in and finish in the app">
     Open your instance (`http://localhost:3000` for a local install, or your domain) and enter your bootstrap secret to create your account.
 
-    Once you're in, the **setup wizard** at `/setup` runs automatically. It's a six-step form: your name (the CEO Curia works for), your operational details (timezone, email, working hours), the assistant's identity, baseline tone, decision-making posture, and a review screen. Submitting the last step writes everything through, restarts external channels if needed, and drops you directly into the chat view at `/chat`.
+    Once you're in, the **setup wizard** at `/setup` runs automatically. It's a six-step form: your name (the CEO Curia works for), your operational details (timezone, email, working hours), the assistant's identity, its tone & style (a few lines on how it sounds, started from a template, plus a Detail level), how independently it acts (an autonomy level) with any standing preferences, and a review screen. Submitting the last step writes everything through, restarts external channels if needed, and drops you directly into the chat view at `/chat`.
 
     At `/chat`, the **setup-wizard specialist agent** greets you and takes an outcome-backward approach: it surfaces what's already done, asks what you most want Curia to do for you, and walks you to the shortest path to that first working integration. Remaining tasks can be deferred and picked up in any future session. The whole thing takes a few minutes and makes every subsequent interaction noticeably more useful.
 
