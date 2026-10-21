@@ -100,7 +100,7 @@ The knowledge graph grows automatically from several sources:
 
 Agents writing to memory pass through validation gates designed to prevent pollution of the knowledge graph.
 
-**Deduplication** — before creating a new fact node, the system checks for existing nodes about the same entity with a similar label (cosine similarity > 0.92). If a near-duplicate exists, the system updates `last_confirmed_at` and merges properties instead of creating a duplicate.
+**Deduplication** — before creating a new fact node, the system checks for existing nodes about the same entity with a similar label (cosine similarity at or above the embedding model's fact-merging threshold). If a near-duplicate exists, the system updates `last_confirmed_at` and merges properties instead of creating a duplicate.
 
 **Fuzzy entity resolution** — when looking up an entity by name, the system first tries an exact label match. If none is found, it falls back to embedding-based semantic search to catch name variants ("Darlise" / "Darlise Restaurant") before creating a duplicate node. Confirmed matches are stored as aliases on the entity, so future lookups resolve instantly without another embedding search. Aliases are also learned automatically when `memory-store` disambiguates between candidates.
 
@@ -118,7 +118,7 @@ Because these nodes are identity, not learned knowledge, they are exempt from de
 
 ## Semantic search
 
-Key facts and node descriptions are embedded using `text-embedding-3-small` (1536 dimensions) and stored in a pgvector HNSW index. This powers natural-language queries across the knowledge graph even when exact keywords don't match:
+Key facts and node descriptions are embedded by the configured embedding model and stored in a pgvector HNSW index. The model is OpenAI's `text-embedding-3-small` or any [OpenAI-compatible embedding server](/integrations/embeddings-endpoint), and its profile sets the vector width. This powers natural-language queries across the knowledge graph even when exact keywords don't match:
 
 ```
 find everything related to fundraising
@@ -135,7 +135,7 @@ investors who attended the Series A close
 Semantic search matches nodes whose embeddings are similar to your query — even when the exact words don't appear in any node labels. Embeddings are generated when a node or fact is created, and regenerated when its properties change significantly.
 
 <Note>
-  Semantic search requires `openai_api_key` in the vault. Without it, the graph browser falls back to exact-match label and property search.
+  Semantic search and entity memory require an embedding source: `openai_api_key` in the vault, or your own server set with `EMBEDDING_BASE_URL` and `EMBEDDING_MODEL`. Without one, the knowledge graph is off. See [OpenAI embeddings](/integrations/openai-embeddings) and [Use your own embedding server](/integrations/embeddings-endpoint).
 </Note>
 
 ## The knowledge graph browser

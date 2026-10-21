@@ -135,7 +135,7 @@ The CEO Inbox agent runs directly against the CEO's personal email account via N
 
 ## Setup Wizard
 
-A specialist agent that owns the first-conversation experience after a new install and stays available for "help me set up X" requests later.
+A specialist agent that owns the first-conversation experience after a new install and stays available for "help me set up X" requests later. It depends on entity memory, so it needs an [embedding source](/integrations/openai-embeddings).
 
 | Field | Value |
 |---|---|
@@ -147,7 +147,7 @@ A specialist agent that owns the first-conversation experience after a new insta
 
 **When it runs:**
 - Auto-triggered on the first chat message after the form wizard at `/setup` completes. The chat view sends a one-shot kickoff message that the Coordinator routes here.
-- On demand when the principal asks "help me set up Nylas / Signal / Tavily / OpenAI" or similar. For channel credentials (email, Signal) it hands off to the console (Settings → Channels) and confirms via `setup-status`; for one-key secrets (Tavily, OpenAI) it mints a one-time secure capture link via `system-secret-capture-request` so the key goes straight to the vault without the agent ever seeing it.
+- On demand when the principal asks "help me set up Nylas / Signal / Tavily" or similar. For channel credentials (email, Signal) it hands off to the console (Settings → Channels) and confirms via `setup-status`; for one-key secrets (Tavily) it mints a one-time secure capture link via `system-secret-capture-request` so the key goes straight to the vault without the agent ever seeing it.
 - On "what can you do?" — returns a plain-language capability summary grouped by category.
 
 **First-conversation flow:**

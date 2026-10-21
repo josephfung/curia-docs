@@ -148,14 +148,19 @@ Curia uses [Nylas](https://nylas.com) as its email layer — a unified API that 
   </Step>
 </Steps>
 
-### Semantic search and entity memory (OpenAI)
+### Semantic search and entity memory (embeddings)
 
-OpenAI's `text-embedding-3-small` model powers entity memory and semantic search in the knowledge graph. Without it, knowledge graph lookups are exact-match only.
+An embedding model powers entity memory and semantic search in the knowledge graph. Without an embedding source, the knowledge graph is off, along with the features that depend on entity memory.
 
-Get an API key from [platform.openai.com](https://platform.openai.com) and add it to the vault as `openai_api_key` via the Curia console (Settings → Channels). Then restart Curia to apply it:
+Choose one source:
+
+- **OpenAI.** Add an OpenAI API key to the vault as `openai_api_key`. See [OpenAI embeddings](/integrations/openai-embeddings).
+- **Your own embedding server.** Set `EMBEDDING_BASE_URL` and `EMBEDDING_MODEL` in `.env` to point at any OpenAI-compatible `/embeddings` server, such as llama.cpp, Ollama or vLLM. If the server checks a key, add it to the vault as `embedding_api_key`. See [Use your own embedding server](/integrations/embeddings-endpoint).
+
+Then recreate the Curia container to apply the change:
 
 ```bash
-docker compose restart curia
+docker compose up -d curia
 ```
 
 ### Web research (Tavily)

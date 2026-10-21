@@ -1,0 +1,124 @@
+---
+title: "Use your own embedding server"
+sidebarTitle: "Embedding server"
+description: "Run the knowledge graph on any OpenAI-compatible embedding server, such as llama.cpp, Ollama or vLLM, instead of OpenAI."
+---
+
+Curia's knowledge graph needs an embedding model to power entity memory and semantic search. OpenAI is one option. The other is any server that speaks OpenAI's `/embeddings` API, such as [llama.cpp](https://github.com/ggml-org/llama.cpp), [Ollama](https://ollama.com), [vLLM](https://docs.vllm.ai) or [text-embeddings-inference](https://github.com/huggingface/text-embeddings-inference). The server can run on the same machine as Curia or on another one.
+
+Use your own server when you want the knowledge graph to work without an OpenAI account, or when you don't want node labels to leave your network.
+
+<Warning>
+  Curia sends every knowledge-graph label to the embedding server, sensitive facts included. Use HTTPS for a server on another machine.
+</Warning>
+
+## Point Curia at the server
+
+The commands below use the stock `docker-compose.yml` and its `curia` service. An install with its own compose file or service name uses that file and service instead.
+
+<Steps>
+  <Step title="Start the embedding server">
+    Serve an embedding model with an OpenAI-compatible `/embeddings` endpoint. Note the base URL, which usually ends in `/v1`, and the model name the server expects.
+
+    <Note>
+      Inside Docker, `localhost` is the Curia container itself. For a server on the host machine or elsewhere on your network, use that machine's address.
+    </Note>
+  </Step>
+
+  <Step title="Set the endpoint in .env">
+    Add both settings to `.env`:
+
+    ```env
+    EMBEDDING_BASE_URL=http://embed.local:8080/v1
+    EMBEDDING_MODEL=Qwen3-Embedding-4B
+    ```
+
+    `EMBEDDING_MODEL` is required when `EMBEDDING_BASE_URL` is set, even if the server ignores the field. Curia picks the model's profile by this name. If `EMBEDDING_MODEL` is missing, entity memory stays off and the log names the variable.
+  </Step>
+
+  <Step title="Add the server's key, if it checks one">
+    Skip this step if the server accepts requests without a key. Otherwise, add the key to the vault as `embedding_api_key`:
+
+    ```bash
+    docker compose run --rm \
+      -e SEED_VAULT_ONLY=embedding_api_key \
+      -e EMBEDDING_API_KEY=<your-key> \
+      curia ./node_modules/.bin/tsx scripts/seed-vault.ts
+    ```
+
+    From a source checkout, run `SEED_VAULT_ONLY=embedding_api_key EMBEDDING_API_KEY=<your-key> pnpm run seed-vault` instead. Curia sends the key as a Bearer token.
+  </Step>
+
+  <Step title="Restart Curia">
+    ```bash
+    docker compose up -d curia
+    ```
+
+    On a fresh install, or any install whose knowledge graph holds no vectors yet, the first boot sizes the vector column to the model's profile. No other step is needed.
+  </Step>
+</Steps>
+
+## Model profiles
+
+Each model needs a profile. A profile tells Curia the vector width to store, any text to put in front of each kind of input, and the similarity thresholds that decide when two facts or two names are the same.
+
+Curia ships profiles for a few models. The list and each profile's values are in [`src/memory/embedding-profiles.ts`](https://github.com/josephfung/curia/blob/main/src/memory/embedding-profiles.ts).
+
+**A model with no profile keeps the knowledge graph off.** Curia logs the reason. Thresholds copied from another model can merge distinct people or facts, and a merge changes stored data. To use another model, add its profile under `embedding.profiles` in `config/local.yaml`. See [Embedding profiles](/references/configuration#embedding-profiles) for the format.
+
+## Change models
+
+Every stored vector records the model that produced it. Curia compares only vectors from the configured model. When you change models on a knowledge graph that already holds vectors, Curia turns the knowledge graph off at boot and logs the command that fixes it. Entity memory, the sensitivity classifier and the `setup-wizard` agent go off with it.
+
+A change of model means any of these:
+
+- a new `EMBEDDING_MODEL`
+- a new `dimensions` value in the model's profile
+- a new `prefixes.document` value in the model's profile
+
+To re-embed the graph with the new model:
+
+The commands below use the stock `docker-compose.yml` and its `curia` service. An install with its own compose file or service name uses that file and service instead.
+
+<Steps>
+  <Step title="Stop Curia">
+    ```bash
+    docker compose stop curia
+    ```
+
+    The re-embed command refuses to run while Curia is up. It names the process that holds the database lock.
+  </Step>
+
+  <Step title="Run the re-embed command">
+    ```bash
+    docker compose run --rm curia ./node_modules/.bin/tsx scripts/reembed-kg.ts
+    ```
+
+    From a source checkout, run `pnpm reembed:kg` instead. Add `--dry-run` to see what the command would change without changing anything.
+
+    The command resizes the vector column if the width changed, rebuilds the index and re-embeds every node. If it is interrupted, run it again. It resumes where it stopped, and Curia keeps the knowledge graph off until a run finishes.
+  </Step>
+
+  <Step title="Start Curia">
+    ```bash
+    docker compose up -d curia
+    ```
+  </Step>
+</Steps>
+
+## Verify it is working
+
+Call `GET /api/health`. The `embeddings` check reports the outcome of the last embedding call. See [Health monitoring](/get-started/health-monitoring).
+
+If the knowledge graph stays off, check the Curia log at boot. It names the reason, such as a missing `EMBEDDING_MODEL`, a model with no profile, or a re-embed that hasn't run.
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="OpenAI embeddings" icon="key" href="/integrations/openai-embeddings">
+    Use OpenAI's hosted embedding model instead.
+  </Card>
+  <Card title="Memory" icon="brain" href="/core-concepts/memory">
+    How the knowledge graph uses embeddings.
+  </Card>
+</CardGroup>
