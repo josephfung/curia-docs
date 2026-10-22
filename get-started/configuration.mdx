@@ -47,6 +47,8 @@ intentDrift:
 | `HTTP_PORT` / `POSTGRES_PORT` | No | Host ports for the app and Postgres. Defaults `3000` / `5432`. |
 | `NYLAS_POLL_INTERVAL_MS` | No | Email poll interval in ms (default `30000`). Non-secret. |
 | `APP_ORIGIN` | No | Public base URL of the deployment (e.g. `https://curia.example.com`). Used to build magic-link URLs such as secret-capture links. Falls back to `http://localhost:<HTTP_PORT>` in development. |
+| `EMBEDDING_BASE_URL` | No | Base URL of an OpenAI-compatible `/embeddings` server, e.g. `http://embed.local:8080/v1`. Replaces OpenAI as the knowledge graph's embedding source. See [Use your own embedding server](/integrations/embeddings-endpoint). |
+| `EMBEDDING_MODEL` | With `EMBEDDING_BASE_URL` | Model name sent to the embedding server, and the name of its [profile](/references/configuration#embedding-profiles). Without it, a custom base URL leaves entity memory off. Defaults to `text-embedding-3-small` when `EMBEDDING_BASE_URL` is unset. |
 | `LOG_LEVEL` | No | pino log level: `error`, `warn`, `info`, `debug` (default `info`). |
 | `NODE_EXTRA_CA_CERTS` | No | Path to a CA bundle (macOS TLS workaround). |
 | `SIGNAL_VOICE_CALLS_ENABLED` | No | Enable inbound [Signal voice calls](/channels/voice-setup#signal-calls) (default `false`). Needs the Signal and Voice channels both configured, plus the PulseAudio socket below. |
@@ -68,7 +70,8 @@ These secrets are stored in the encrypted vault, never in `.env`. `pnpm run setu
 | Vault key | Notes |
 |---|---|
 | `anthropic_api_key` | Powers all agents. Seeded automatically on first setup. |
-| `openai_api_key` | Knowledge graph embeddings (`text-embedding-3-small`) and semantic search. |
+| `openai_api_key` | Knowledge graph embeddings (`text-embedding-3-small`) and semantic search, when `EMBEDDING_BASE_URL` is unset. Also used by `image-generate`. |
+| `embedding_api_key` | Optional. Bearer token for your own embedding server, when it checks one. |
 | `openrouter_api_key` | Optional. Enables multi-model routing via [OpenRouter](https://openrouter.ai). |
 | `api_token` | Bearer token for all HTTP API requests. Generated and seeded by `pnpm run setup`. |
 | `web_app_bootstrap_secret` | Secret for logging in to the console. Generated and shown once by `pnpm run setup`. |

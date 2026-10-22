@@ -145,7 +145,8 @@
             "group": "Integrations",
             "pages": [
               "integrations/tavily",
-              "integrations/openai-embeddings"
+              "integrations/openai-embeddings",
+              "integrations/embeddings-endpoint"
             ]
           }
         ]

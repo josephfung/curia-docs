@@ -1,10 +1,12 @@
 ---
 title: "Enable semantic memory with OpenAI embeddings"
 sidebarTitle: "OpenAI embeddings"
-description: "Add an OpenAI API key to unlock knowledge-graph entity memory — Curia remembers people, projects, and context across conversations."
+description: "Add an OpenAI API key to turn on knowledge-graph entity memory — Curia remembers people, projects, and context across conversations."
 ---
 
-Curia's knowledge graph uses OpenAI's embedding API to build semantic memory: relationships between people, projects, and topics that persist across conversations. This is optional — Curia is fully functional without it.
+Curia's knowledge graph needs an embedding model to build semantic memory: relationships between people, projects, and topics that persist across conversations. OpenAI's `text-embedding-3-small` is one option. You can also [use your own embedding server](/integrations/embeddings-endpoint) instead.
+
+Embeddings are optional, but without an embedding source the knowledge graph is off. Entity memory, semantic search and the features that depend on them are unavailable until you add one.
 
 ## Get an OpenAI API key
 
@@ -22,12 +24,35 @@ Curia's knowledge graph uses OpenAI's embedding API to build semantic memory: re
   </Step>
 </Steps>
 
-## Enter the key via the setup wizard
+## Add the key to the vault
 
-Ask Curia's setup wizard to enable knowledge graph memory. It will send you a one-time secure link — paste your OpenAI API key and submit. The key goes straight to the vault.
+<Steps>
+  <Step title="Store the key as openai_api_key">
+    ```bash
+    docker compose run --rm \
+      -e SEED_VAULT_ONLY=openai_api_key \
+      -e OPENAI_API_KEY=sk-... \
+      curia ./node_modules/.bin/tsx scripts/seed-vault.ts
+    ```
 
-The embedding capability is active immediately after the key is saved (no restart needed).
+    From a source checkout, run `SEED_VAULT_ONLY=openai_api_key OPENAI_API_KEY=sk-... pnpm run seed-vault` instead.
+  </Step>
+
+  <Step title="Restart Curia">
+    ```bash
+    docker compose restart curia
+    ```
+
+    Curia reads the vault at startup, so the key takes effect after the restart.
+  </Step>
+</Steps>
+
+Leave `EMBEDDING_BASE_URL` unset in `.env`. When it is unset, Curia uses OpenAI and the `openai_api_key` vault entry.
 
 ## What changes after connecting
 
 Curia begins building entity nodes for people you mention, projects you discuss, and topics that recur. Over time this creates a network of relationships that informs research, drafting, and scheduling. The change is gradual — you won't notice it immediately, but it compounds over weeks of use.
+
+## Switch to another model later
+
+If you move from OpenAI to your own server after the knowledge graph has stored vectors, you need to re-embed the graph once. See [Change models](/integrations/embeddings-endpoint#change-models).

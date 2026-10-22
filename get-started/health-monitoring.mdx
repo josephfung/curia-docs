@@ -140,7 +140,7 @@ health:
 | Key | What it validates | Skipped when |
 |---|---|---|
 | `llm_fast` / `llm_standard` / `llm_powerful` | Last recorded outcome for that LLM tier (no billed API call made) | No model configured for that tier |
-| `embeddings` | Last recorded embedding call outcome | No `OPENAI_API_KEY` |
+| `embeddings` | Last recorded embedding call outcome, from OpenAI or your own embedding server | Entity memory off (no embedding source) |
 | `image_gen` | Last `image-generate` tool outcome | No `OPENAI_API_KEY` |
 | `nylas` | Fetches one message via the Nylas client | Email not configured |
 | `nylas_calendar` | Lists calendars via the principal's calendar grant | Calendar not configured |

@@ -100,7 +100,7 @@ The audit logger writes events to Postgres *before* delivering them to other sub
 | Config | YAML with env var interpolation |
 | Logging | pino (structured JSON) |
 | Migrations | node-pg-migrate (plain SQL) |
-| Embeddings | OpenAI `text-embedding-3-small` (1536 dimensions) |
+| Embeddings | OpenAI `text-embedding-3-small`, or any OpenAI-compatible `/embeddings` server, with a profile per model |
 
 <CardGroup cols={2}>
   <Card title="The layers model" icon="layer-group" href="/core-concepts/layers-model">

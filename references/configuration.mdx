@@ -304,6 +304,41 @@ dreaming:
 
 Before archiving a node, the decay pass checks whether it is **important** — either high-sensitivity (confidential or restricted) or highly connected (edge count at or above the `edgeCountPercentile` of all nodes, with `edgeCountFloor` as a hard minimum). Important nodes are warned rather than silently archived, and held back for `warnHoldBackDays` before archiving proceeds. `edgeCountPercentile` is a fraction between 0 and 1; `edgeCountFloor` and `warnHoldBackDays` are non-negative integers.
 
+## Embedding profiles
+
+A profile tells Curia how to use one embedding model: the vector width to store, a text prefix for each kind of input, and the similarity thresholds for merging facts and matching names. The endpoint itself is set in `.env` with `EMBEDDING_BASE_URL` and `EMBEDDING_MODEL`. See [Use your own embedding server](/integrations/embeddings-endpoint).
+
+Curia ships profiles for a few models, listed in [`src/memory/embedding-profiles.ts`](https://github.com/josephfung/curia/blob/main/src/memory/embedding-profiles.ts). Add a profile for another model in `config/local.yaml`, keyed by the exact `EMBEDDING_MODEL` value:
+
+```yaml
+# config/local.yaml
+embedding:
+  profiles:
+    # The same model under another server's name: `base` copies a built-in profile,
+    # and any field given beside it overrides that field.
+    "qwen3-embedding:4b":
+      base: Qwen3-Embedding-4B
+    # A model with no built-in profile gives dimensions and all three thresholds.
+    # Placeholder values: calibrate your own with `pnpm embedding-eval`.
+    my-embedding-model:
+      dimensions: 1024
+      prefixes: { query: "", document: "", similarity: "" }
+      thresholds: { fact_dedup: 0.92, fuzzy_resolve: 0.90, fuzzy_ambiguity_floor: 0.75 }
+```
+
+| Key | Description |
+|---|---|
+| `base` | Optional. A built-in profile to copy. Fields given beside it override the copy. |
+| `dimensions` | Vector width to store, at most 2,000 (pgvector's HNSW index limit). Curia truncates and renormalises a longer vector from the server. Truncation is only valid for a Matryoshka-trained model, and Curia logs a warning once after each start, the first time it truncates. |
+| `prefixes.query` / `.document` / `.similarity` | Text put before a search query, a stored node label, and a label matched against stored labels. Each defaults to empty. |
+| `thresholds.fact_dedup` | Cosine score at or above which a new fact merges into an existing one. |
+| `thresholds.fuzzy_resolve` | Score at or above which a name resolves to an existing entity. |
+| `thresholds.fuzzy_ambiguity_floor` | Score at or above which an entity is offered as an ambiguous candidate. Must be below `fuzzy_resolve`. |
+
+A malformed profile fails boot, and the error names the key. A model with no profile keeps the knowledge graph off. Thresholds copied from another model can merge distinct people and facts, so calibrate them for each model. From a source checkout, `pnpm embedding-eval` scores an endpoint against a labelled test set and suggests thresholds.
+
+Changing `dimensions` or `prefixes.document` on a knowledge graph that already holds vectors counts as a model change. Stored vectors keep the prefix they were embedded with. Curia keeps the knowledge graph off until you re-embed it. See [Change models](/integrations/embeddings-endpoint#change-models).
+
 ## Autonomy auto-scoring
 
 A second dream-engine pass runs daily alongside decay. It scores recently completed actions on three dimensions (Competence, Commitment, Compatibility) with an LLM judge, then nudges the [autonomy score](/core-concepts/autonomy) up or down by a small delta. This is how the score drifts on its own between explicit CEO adjustments.

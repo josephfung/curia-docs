@@ -77,7 +77,8 @@ interface KgNode {
   type: NodeType;                      // person, organization, project, etc.
   label: string;                       // display name
   properties: Record<string, unknown>; // arbitrary key-value data
-  embedding?: number[];                // VECTOR(1536) for semantic search
+  embedding?: number[];                // vector for semantic search; width set by the model's profile
+  embeddingModel?: string;             // model that produced the embedding; set whenever embedding is
   temporal: TemporalMetadata;
   sensitivity: Sensitivity;
 }
@@ -123,7 +124,7 @@ Before creating a new fact, the memory validator checks:
 
 | Check | Outcome |
 |---|---|
-| **Deduplication** (cosine similarity > 0.92) | Updates `lastConfirmedAt` and merges properties instead of creating a duplicate |
+| **Deduplication** (cosine similarity at or above the embedding model's fact-merging threshold) | Updates `lastConfirmedAt` and merges properties instead of creating a duplicate |
 | **Contradiction** (conflicting fact exists) | Higher confidence wins; lower is archived with previous values preserved |
 | **Equal confidence conflict** | Flagged for CEO review via alert channel |
 | **Write rate limit** (50 per task) | Excess writes dropped with audit log warning |
