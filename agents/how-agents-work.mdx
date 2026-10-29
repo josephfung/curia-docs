@@ -89,6 +89,10 @@ pinned_skills:
 
 allow_discovery: true
 
+pinned_context:
+  docs: /shared/expenses/rules.md
+  configs: expenses/currency
+
 schedule:
   - cron: "0 9 * * 1"
     task: "Generate weekly expense summary"
@@ -105,6 +109,7 @@ error_budget:
 | `model.tier` | Capability tier: `fast`, `standard`, or `powerful` — mapped to a concrete model by the operator in config |
 | `pinned_skills` | Tools and skills always available to this agent in every task |
 | `allow_discovery` | When `true`, the agent can search the tool registry for capabilities not in its pinned list |
+| `pinned_context` | Shared documents and settings shown to the agent on every turn — see [Pinned context](#pinned-context) |
 | `schedule` | Cron expressions for recurring tasks the agent runs automatically |
 | `error_budget.max_turns` | Maximum LLM round-trips per task execution — hard cap |
 | `error_budget.max_cost_usd` | Maximum dollar spend per task execution — hard cap |
@@ -149,6 +154,42 @@ The registry returns matching skill names and descriptions. Curia then appends t
 Tools tagged `sensitivity: elevated` — such as payment processing or bulk deletion — require human approval the first time an agent attempts to use them. Normal-sensitivity tools discovered via the registry are auto-approved.
 </Note>
 
+### Pinned context
+
+Some agents work from standing instructions: an inbox agent's email rules, a scheduling agent's preferences, a list of your current priorities. `pinned_context` declares them, and Curia puts their current contents into the agent's instructions on every turn. The agent never has to remember to look them up, and an edit you make takes effect on its next turn.
+
+```yaml
+pinned_context:
+  docs:                                   # shared documents: one path, or a list
+    - /shared/inbox/rules.md
+    - path: /shared/priorities.md
+      description: The principal's highest priorities, learned by asking them.
+  configs:                                # single config-store keys: one, or a list
+    - ceo_inbox/decision_tagging
+    - key: ceo_inbox/watermark
+      description: ID of the last message processed. If missing, start from the newest.
+```
+
+- **`docs`** are documents under `/shared/` in the document workspace. They have no length limit, the agent can edit them one `##` section at a time, and you can read and edit them in the console under **Memory → Documents**. Use one when a setting is long or changes a piece at a time, such as a list of rules.
+- **`configs`** are single `config-store` keys, written `<namespace>/<key>`. Use them for short values.
+- **`description`** is optional. It tells the agent what the item is for and what it means when it is missing, and it is shown even before the item exists.
+
+How each item appears to the agent:
+
+| State | What the agent sees |
+|---|---|
+| Exists | Its full contents (documents also show their version) |
+| Not created yet | "Not yet created" or "Not set yet", so the agent knows to create it on first write |
+| Blank | That it exists but is empty |
+| Archived in the console | That you archived it. The agent won't recreate it, so you can restore it |
+| Couldn't be read | "Unavailable this turn". The agent is told not to overwrite it. The failure is logged and never silently skipped |
+
+A shared document can be changed only by the agents that declare it, plus you in the console. Several agents can declare the same document to share it, and simultaneous edits are protected by version checks. Shared documents are durable: they are never tied to a task and never archived when a project completes. Each shared document should describe its own format at the top, so every agent that uses it follows the same format.
+
+<Note>
+Everything in `pinned_context` is sent on every turn. Keep it to what the agent needs most of the time; anything rarer can still be read on demand with `doc-read` or `config-store`. Curia logs a warning when a pinned item grows past `documentWorkspace.pinnedContextWarnChars` (16,000 characters by default), but it still sends the item in full.
+</Note>
+
 ## TypeScript handlers
 
 For agents that need custom logic beyond what YAML configuration supports, you can add a TypeScript handler as an escape hatch. The YAML configuration stays exactly the same; you add a `handler` field pointing to your TypeScript file.
@@ -190,7 +231,7 @@ When a message arrives, here is what happens inside Curia:
     The channel adapter publishes a normalized `inbound.message` event to the bus. The dispatch layer receives it and routes it to the Coordinator.
   </Step>
   <Step title="Context loaded">
-    The Coordinator loads its system prompt, relevant entity memory and knowledge graph context, and any pending Bullpen threads. Conversation history for this `conversation_id` is loaded from working memory.
+    The Coordinator loads its system prompt, the current contents of anything in its `pinned_context`, relevant entity memory and knowledge graph context, and any pending Bullpen threads. Conversation history for this `conversation_id` is loaded from working memory.
   </Step>
   <Step title="LLM called">
     The Coordinator calls its configured LLM. If the LLM decides to invoke a tool or delegate to a specialist, those requests are dispatched via the bus.
