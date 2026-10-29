@@ -381,7 +381,13 @@ intentDrift:
 
 ## Model routing
 
-Agents declare a capability tier rather than a specific model. The `model_routing` config maps each tier to a concrete model. The provider is inferred automatically from a centralized **model registry** based on the model name prefix (e.g., `claude-*` resolves to Anthropic, `google/gemini-*` resolves to OpenRouter).
+Agents declare a capability tier rather than a specific model. The `model_routing` config maps each tier to a concrete model. The provider is inferred automatically from a centralized **model registry** based on the model name prefix:
+
+| Model ID | Provider |
+|---|---|
+| `claude-*` | Anthropic |
+| `global.anthropic.*`, `us.anthropic.*`, `eu.anthropic.*` | AWS Bedrock (requires Bedrock credentials) |
+| `vendor/model`, such as `openai/gpt-4o`, `google/gemini-*` or `deepseek/*` | OpenRouter |
 
 ```yaml
 # config/local.yaml
@@ -412,6 +418,10 @@ model_routing:
 ```
 
 The `ModelRouter` validates at startup that every configured model exists in the model registry. Unknown models cause a startup failure with a clear error message.
+
+### Reasoning watchdog
+
+A model can spend a long time reasoning without acting. When that happens, Curia stops the attempt and makes one more, asking the model to act on what it has already worked out. This bounds how long a single model call can stall a reply. Each occurrence is recorded on the `llm.call` audit event as `reasoningWatchdog`.
 
 <Note>
   The `provider` field was removed from tier config. The model registry infers the provider from the model name — you only need to specify the `model`.
