@@ -42,6 +42,19 @@ pinned_skills:
 # Default: false
 allow_discovery: boolean
 
+# Optional — shared documents and config-store keys shown to the agent on every turn
+# Each of docs / configs is a single string or a list; an item is a string or
+# a mapping with path (docs) / key (configs) and an optional description
+pinned_context:
+  docs:
+    - /shared/<folder>/<name>.md
+    - path: /shared/<folder>/<name>.md
+      description: string            # one line, 300 characters max
+  configs:
+    - <namespace>/<key>
+    - key: <namespace>/<key>
+      description: string
+
 # Optional — inject the list of available specialist agents into the system prompt
 # Used by the coordinator to know which specialists it can delegate to
 # Default: false
@@ -96,6 +109,26 @@ Array of tool and skill names this agent can always invoke. Each entry must be r
 ### `allow_discovery`
 
 When `true`, the agent can use the `tool-registry` tool to search for and invoke tools and skills not in its `pinned_skills` list. The coordinator typically has this enabled; specialists typically do not (they operate with a fixed, auditable skill set).
+
+### `pinned_context`
+
+Shared documents and settings that are part of how the agent works. On every turn, Curia reads each one and adds a **Pinned context** section to the agent's instructions with its current contents. See [Pinned context](/agents/how-agents-work#pinned-context) for how each item is shown.
+
+| Key | Accepts | Rules |
+|---|---|---|
+| `docs` | A path, or a list of paths or `{ path, description }` mappings | Each path must be a `.md` document under `/shared/`. Not `index.md` or `log.md` |
+| `configs` | A key, or a list of keys or `{ key, description }` mappings | Each key is `<namespace>/<key>` with exactly one `/`. Whole namespaces are not supported |
+
+`description` is optional. It must be one line of 300 characters or fewer.
+
+Declaring a document is also what lets the agent write it: `doc-write` refuses a `/shared/` path that the calling agent doesn't declare. Config keys are shown only, and the agent still changes them with `config-store`.
+
+The agent fails to load, with an error naming the agent and the entry, on any of these:
+- a malformed entry or an unknown key
+- a document outside `/shared/` or not ending in `.md`
+- a config key without exactly one `/`
+- a blank or over-long description
+- a duplicate entry
 
 ### Memory access
 

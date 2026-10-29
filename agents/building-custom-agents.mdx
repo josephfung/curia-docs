@@ -115,6 +115,23 @@ Restart Curia after adding the file — agents are loaded at startup.
     The Coordinator, `ceo-inbox`, and `contacts` agents pin them. See [choosing built-in skills](#choosing-built-in-skills).
   </Accordion>
 
+  <Accordion title="pinned_context — standing rules and settings">
+    If your agent follows standing instructions, such as rules, preferences or a list of priorities, declare them in `pinned_context` instead of telling the agent to look them up at the start of each task. Curia puts their current contents into the agent's instructions on every turn:
+
+    ```yaml
+    pinned_skills:
+      - documents          # so the agent can edit its shared documents
+
+    pinned_context:
+      docs:
+        - path: /shared/expenses/rules.md
+          description: How to categorize expenses, one `##` section per rule.
+      configs: expenses/currency
+    ```
+
+    Use a `docs` entry for anything long or edited piece by piece, and a `configs` entry for a short value. Only agents that declare a `/shared/` document can write it, and you can always edit it in the console. Give a document a short format description at its top so every agent that uses it follows the same format. See [Pinned context](/agents/how-agents-work#pinned-context).
+  </Accordion>
+
   <Accordion title="memory — access">
     Agents do not declare memory scopes. Every agent reads and writes a single shared knowledge graph, so a specialist can build on facts other agents recorded (contact preferences, prior research, entity relationships). Whether an agent can touch memory at all is decided by the memory tools you pin to it (e.g. `memory-query`, `memory-store`), not by a per-agent namespace.
   </Accordion>
