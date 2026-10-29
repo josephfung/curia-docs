@@ -386,7 +386,7 @@ Agents declare a capability tier rather than a specific model. The `model_routin
 | Model ID | Provider |
 |---|---|
 | `claude-*` | Anthropic |
-| `global.anthropic.*`, `us.anthropic.*`, `eu.anthropic.*` | AWS Bedrock (requires Bedrock credentials) |
+| Bedrock model IDs with a `global.anthropic.`, `us.anthropic.` or `eu.anthropic.` prefix, for example `us.anthropic.…` | AWS Bedrock (requires Bedrock credentials) |
 | `vendor/model`, such as `openai/gpt-4o`, `google/gemini-*` or `deepseek/*` | OpenRouter |
 
 ```yaml
@@ -419,13 +419,13 @@ model_routing:
 
 The `ModelRouter` validates at startup that every configured model exists in the model registry. Unknown models cause a startup failure with a clear error message.
 
-### Reasoning watchdog
-
-A model can spend a long time reasoning without acting. When that happens, Curia stops the attempt and makes one more, asking the model to act on what it has already worked out. This bounds how long a single model call can stall a reply. Each occurrence is recorded on the `llm.call` audit event as `reasoningWatchdog`.
-
 <Note>
   The `provider` field was removed from tier config. The model registry infers the provider from the model name — you only need to specify the `model`.
 </Note>
+
+### Reasoning watchdog
+
+A model can spend a long time reasoning without acting. When that happens, Curia stops the attempt and makes one more, asking the model to act on what it has already worked out. This bounds how long a single model call can stall a reply. Each occurrence is recorded on the `llm.call` audit event as `reasoningWatchdog`. Providers without streaming, currently AWS Bedrock, are not watched.
 
 ## Delegation and scheduler timeouts
 
