@@ -51,11 +51,12 @@ A specialist agent that owns the full calendar domain.
 |---|---|
 | **Role** | specialist |
 | **Model** | Standard tier (Claude Sonnet by default) — scheduling and RSVP judgment |
-| **Tools** | calendar-* (incl. holds and invite RSVPs), contact-lookup, entity-context, date-resolve, memory-query, memory-store, bullpen |
+| **Tools** | calendar-* (incl. holds and invite RSVPs), contact-lookup, entity-context, date-resolve, memory-query, memory-store, config-store, doc-write, bullpen |
 | **Discovery** | Disabled |
 
 **What it handles:**
-- Scheduling intelligence — finds free time, resolves conflicts, and applies the CEO's scheduling rules, loaded deterministically from config-store at the start of each task so preferences (no-meeting windows, default durations) are reliably enforced (`free`-status events are treated as available)
+- Scheduling intelligence — finds free time, resolves conflicts, and applies the CEO's scheduling rules (no-meeting windows, default durations), which arrive with every turn through [pinned context](/agents/how-agents-work#pinned-context), so they are always in front of it (`free`-status events are treated as available)
+- Scheduling rules — kept in the shared document `/shared/calendar/rules.md`, one section per rule, each with what it applies to, what to do, and whether it is active or paused. Ask Curia to add, change, pause or remove a rule and the Calendar Specialist edits just that section; you can also edit the document yourself under Memory → Documents
 - Free/busy queries across multiple calendars and participants
 - Event CRUD (create, update, delete) with timezone-aware slot finding
 - Tentative holds — places `HOLD (TBC)` events on offered slots so they are not double-offered while a negotiation is in flight, auto-releases them when a real event is booked, and sweeps expired holds daily
@@ -63,7 +64,7 @@ A specialist agent that owns the full calendar domain.
 - Calendar invite RSVPs — evaluates formal invites (relationship tier, sender kind, conflicts) and sends accept / decline / tentative responses via Nylas, releasing any matching hold
 - Scheduling-related message drafting — meeting requests, reschedules, cancellations (the Calendar Specialist has no email skills; it returns the drafted text to the Coordinator to send)
 
-The Coordinator delegates scheduling intent in natural language ("schedule a 30-minute call with Sarah next week"). The Calendar Specialist resolves entities, loads the CEO's scheduling rules from config-store, finds available time, creates the event, and drafts any outgoing message — returning the result to the Coordinator, which sends it.
+The Coordinator delegates scheduling intent in natural language ("schedule a 30-minute call with Sarah next week"). The Calendar Specialist resolves entities, applies the CEO's scheduling rules, finds available time, creates the event, and drafts any outgoing message — returning the result to the Coordinator, which sends it.
 
 ## Contact Specialist
 
@@ -112,7 +113,7 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 |---|---|
 | **Role** | specialist |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Tools** | ceo-inbox-* (incl. `ceo-inbox-draft-compose`), task-* (via task management), contact-register, contact-update, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve, scheduler-report, context-bridge-release, context-bridge-clear |
+| **Tools** | ceo-inbox-* (incl. `ceo-inbox-draft-compose`), task-* (via task management), doc-* (documents), contact-register, contact-update, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve, scheduler-report, context-bridge-release, context-bridge-clear |
 | **Discovery** | Disabled |
 | **Task management** | Enabled (pins the `tasks` skill) |
 | **Schedule** | Every 15 minutes |
@@ -122,7 +123,7 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 - Draft reply creation — writes reply-all drafts in the CEO's voice using the stored executive profile; the CEO reviews and sends from Gmail
 - Cold-outreach drafts — composes new (non-reply) drafts into the CEO's Gmail Drafts via `ceo-inbox-draft-compose`. Recipients are addressed by contact, so the address comes from the contact record rather than being retyped; someone who isn't a contact must have an address that appears in the CEO's mail or in the CEO's own message. When an address is missing, the agent looks for it in the CEO's mail before asking. Editing a draft adds or removes individual recipients and leaves everyone else as they were
 - Escalation — sends a Signal alert and opens a Bullpen thread for URGENT items; opens a Bullpen thread mentioning the appropriate specialist for ACTIONABLE items
-- Standing rules and decision tagging — maintains a configurable set of per-sender instructions and auto-labels via `config-store`
+- Standing rules and decision tagging — standing rules (for example, "label anything from the board BOARD and treat it as urgent") live in the shared document `/shared/inbox/rules.md`, one section per rule, so the list can grow without a size limit and one rule can be added, changed, paused or removed without touching the rest. The rules and the decision-tagging switch (which labels each message with its final classification) arrive with every turn through [pinned context](/agents/how-agents-work#pinned-context). Ask Curia to change a rule, or edit the document yourself under Memory → Documents
 - Scheduling replies via calendar consult — for meeting and scheduling emails it consults the Calendar Specialist over a Bullpen thread (which checks conflicts and places tentative holds) and parks the draft pending the reply, rather than guessing times blind; a `consult-timeout` safety wake falls back to a blind draft or escalation if no reply arrives
 - Invite triage — formal calendar invites are linked to calendar events and routed to the Calendar Specialist, which evaluates the invite and sends the RSVP, releasing any matching hold
 - Inbox queries — searches, reads, and labels messages on demand when delegated by the Coordinator. Searches skip Spam and Trash unless you ask for them, and the agent won't draft a reply to a message sitting in either folder
