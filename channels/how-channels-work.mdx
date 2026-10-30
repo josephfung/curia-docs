@@ -73,16 +73,17 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
 
     **Trust level:** High — CEO only.
   </Tab>
-  <Tab title="HTTP API">
-    The HTTP API provides REST endpoints and a Server-Sent Events stream for programmatic access. This is the interface a web dashboard, mobile app, or custom integration uses to communicate with Curia.
+  <Tab title="HTTP / web console">
+    The HTTP server hosts the web console. Console chat runs on the `web` channel through `/api/chat`, authenticated by your console session (or the `x-web-bootstrap-secret` header):
 
-    - `POST /api/messages` — send a message and receive a response
-    - `GET /api/messages/stream` — SSE stream for real-time response streaming
+    - `POST /api/chat/messages` — send a message; the reply arrives on the stream
+    - `GET /api/chat/stream` — SSE stream of agent replies and tool activity
+    - `GET /api/chat/history` — page through a conversation
     - `GET /api/health` — health check for uptime monitors and load balancers
 
-    All HTTP API requests require a Bearer token. Tokens can be leaked, so the HTTP API carries a medium trust level — lower than CLI and Signal, higher than email.
+    The old bearer-token message routes (`/api/messages`) were removed. See the [HTTP channel](/channels/http) page for details.
 
-    **Trust level:** Medium.
+    **Trust level:** High — the sender is the principal in their own authenticated console session.
   </Tab>
 </Tabs>
 
@@ -97,7 +98,7 @@ Every inbound message is tagged with the trust level of the channel it arrived o
 | Voice | High | Live call inside an authenticated console session — the principal |
 | Slack | Medium | Workspace bot/OAuth tokens authenticate, but tokens can leak |
 | SMS | Medium | Telnyx office DID — carrier From is spoofable and not end-to-end encrypted |
-| HTTP API | Medium | Token-authenticated, but tokens can be shared or leaked |
+| Web console | High | Authenticated console session — the principal |
 | Email | Low | From headers are spoofable; even SPF/DKIM is not identity verification |
 
 Trust levels gate consequential actions. A request arriving over email to change financial settings, export data, or take irreversible action will be declined or held for verification, even if the sender's name is recognized — the Coordinator asks the sender to confirm through a higher-trust channel.
@@ -121,7 +122,7 @@ That detection reads the **message**, not the sender's contact record — mail h
 
 ## Context bridging on non-threaded channels
 
-Email and Slack have native threading — each reply links to the original conversation, so Curia always knows what it last said. Signal, SMS, CLI, and HTTP have no equivalent concept: each inbound message arrives without a reference to Curia's prior response.
+Email and Slack have native threading — each reply links to the original conversation, so Curia always knows what it last said. Signal, SMS, CLI, and the web console have no equivalent concept: each inbound message arrives without a reference to Curia's prior response.
 
 Without bridging, a Signal follow-up like "can you make it 4pm instead?" gives the coordinator no way to know what it's modifying.
 
@@ -133,8 +134,8 @@ You configure which channels use threading with the `threaded` key in `config/ch
 channels:
   signal:
     threaded: false   # enables context bridging (default for Signal)
-  http:
-    threaded: false   # enables context bridging (default for HTTP)
+  web:
+    threaded: false   # enables context bridging (default for console chat)
   sms:
     threaded: false   # enables context bridging (default for SMS)
   email:

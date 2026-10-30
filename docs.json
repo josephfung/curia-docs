@@ -178,8 +178,6 @@
               "references/tool-manifest-schema",
               "references/channel-config-schema",
               "references/http-api",
-              "references/http-api-messages",
-              "references/http-api-stream",
               "references/http-api-health",
               "references/memory-schemas",
               "references/releases"
@@ -190,6 +188,14 @@
     ]
   },
   "redirects": [
+    {
+      "source": "/references/http-api-messages",
+      "destination": "/references/http-api"
+    },
+    {
+      "source": "/references/http-api-stream",
+      "destination": "/references/http-api"
+    },
     {
       "source": "/skills/how-skills-work",
       "destination": "/tools-and-skills/how-tools-work"

@@ -1,10 +1,14 @@
 ---
 title: "Curia HTTP API — overview, auth, and all endpoints"
 sidebarTitle: "HTTP API"
-description: "The Curia HTTP API is a REST and SSE interface for programmatic access. Authenticate with a Bearer token; the base URL defaults to http://localhost:3000."
+description: "The Curia HTTP server hosts the web console and its API: health and agent-status endpoints, plus console chat over REST and SSE. The base URL defaults to http://localhost:3000."
 ---
 
-The Curia HTTP API gives you programmatic access to your assistant from web dashboards, mobile apps, and any integration that speaks HTTP. It exposes a small set of REST endpoints and a Server-Sent Events stream so you can send messages and watch agent activity in real time — all secured with a Bearer token you configure yourself.
+The Curia HTTP server is the process behind the web console. It serves the console's API — chat, jobs, tasks, contacts, the knowledge graph, and the registry — plus two operational endpoints for monitoring: `GET /api/health` and `GET /api/agents/status`.
+
+<Note>
+  `POST /api/messages` and `GET /api/messages/stream` were removed (ADR-057). Requests to them no longer reach an agent. To talk to Curia over HTTP, use [console chat](#console-chat) on `/api/chat`.
+</Note>
 
 ## Base URL
 
@@ -18,26 +22,23 @@ For production deployments behind a reverse proxy, replace `localhost:3000` with
 
 ## Authentication
 
-The API token (`api_token`) lives in the [vault](/get-started/secrets-vault) and is generated automatically by `pnpm run setup`. Every request (except `GET /api/health`) must include the token in the `Authorization` header:
+There are two auth schemes, depending on the route.
+
+**Bearer token.** The API token (`api_token`) lives in the [vault](/get-started/secrets-vault) and is generated automatically by `pnpm run setup`. It guards every route that does not authenticate itself, including `GET /api/agents/status`. Send it in the `Authorization` header:
 
 ```
 Authorization: Bearer <your-token>
 ```
 
-If no API token is configured, authentication is disabled — useful for local development, but not recommended for any network-accessible deployment.
+`GET /api/health` needs no token.
 
-<Note>
-  The HTTP channel carries **medium trust**. It is suited for information queries, scheduling requests, and read-only operations. Actions that require higher trust — such as financial transactions or irreversible operations — must originate from the Signal or CLI channel. If you send a medium-trust request that triggers a high-trust action, Curia will ask you to confirm via a trusted channel before proceeding.
-</Note>
+**Console session.** The console routes — chat, jobs, tasks, contacts, the knowledge graph, the registry, and the vault — authenticate with the `curia_session` cookie set by the `/auth` exchange, or with the `x-web-bootstrap-secret` header carrying `web_app_bootstrap_secret` from the vault.
 
 ### Example authenticated request
 
 ```bash
-curl http://localhost:3000/api/messages \
-  -X POST \
-  -H "Authorization: Bearer your-token-here" \
-  -H "Content-Type: application/json" \
-  -d '{"content": "What is on my calendar today?"}'
+curl http://localhost:3000/api/agents/status \
+  -H "Authorization: Bearer your-token-here"
 ```
 
 If the token is missing or incorrect, the API returns:
@@ -49,12 +50,6 @@ If the token is missing or incorrect, the API returns:
 ## Available endpoints
 
 <CardGroup cols={2}>
-  <Card title="POST /api/messages" icon="paper-plane" href="/references/http-api-messages">
-    Send a message to the Coordinator agent and receive a synchronous response. Supports conversation threading via `conversation_id`.
-  </Card>
-  <Card title="GET /api/messages/stream" icon="signal" href="/references/http-api-stream">
-    Open a Server-Sent Events connection to receive agent responses, tool invocations, and tool results in real time.
-  </Card>
   <Card title="GET /api/health" icon="heart-pulse" href="/references/http-api-health">
     Returns the health status of the Curia instance. No authentication required. Use this for uptime monitors and load balancer probes.
   </Card>
@@ -63,9 +58,33 @@ If the token is missing or incorrect, the API returns:
   </Card>
 </CardGroup>
 
-### Dashboard-only endpoints
+### Console chat
 
-The following endpoints are used by the built-in web dashboard. They authenticate via session cookie (set by the `/auth` exchange) rather than a Bearer token, and require `web_app_bootstrap_secret` to be in the vault.
+Console chat is how you send Curia a message over HTTP. It runs on the `web` channel, where the sender is the principal in their own authenticated session, so it carries **high trust**.
+
+| Endpoint | Description |
+|---|---|
+| `POST /api/chat/messages` | Send a message. Body: `{ "message": "...", "conversationId": "..." }` (`conversationId` optional). Returns `202 { "conversationId": "..." }`; the reply arrives on the stream. |
+| `GET /api/chat/stream` | Server-Sent Events stream of agent replies and tool activity. Filter with `?conversationId=...`. |
+| `GET /api/chat/history` | Page through a conversation. Query: `conversationId` (required), `before` (ISO timestamp cursor), `limit` (default 25, max 50). |
+
+Open the stream for the conversation, post the message, then read the reply from the stream:
+
+```bash
+# Terminal 1 — watch the conversation
+curl -N -H "x-web-bootstrap-secret: $SECRET" \
+  "http://localhost:3000/api/chat/stream?conversationId=my-conv-id"
+
+# Terminal 2 — send a message
+curl -X POST http://localhost:3000/api/chat/messages \
+  -H "x-web-bootstrap-secret: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What is on my calendar today?", "conversationId": "my-conv-id"}'
+```
+
+### Other console endpoints
+
+The following endpoints are used by the built-in web console. They use console session auth (see [Authentication](#authentication)), not the Bearer token.
 
 | Endpoint | Description |
 |---|---|
@@ -77,7 +96,6 @@ The following endpoints are used by the built-in web dashboard. They authenticat
 | `GET/POST /api/kg/*` | Knowledge graph browser — nodes, graph, search, and node merge |
 | `GET/POST /api/tasks`, `PATCH/DELETE /api/tasks/:id` | List, create, update, and delete tasks |
 | `GET/POST /api/contacts`, `PATCH/DELETE /api/contacts/:id` | List, create, update, and delete contacts; sub-routes manage identities, permission overrides, and merges |
-| `POST /api/chat/messages`, `GET /api/chat/stream`, `GET /api/chat/history` | Dashboard chat: send a message, stream the response over SSE, page through history |
 | `GET /api/grant-recommendations` | Pending capability-grant recommendations |
 | `GET /api/autonomy` | Current autonomy score, band, trend direction, `lastSetBy`, and scored action count |
 | `PUT /api/autonomy` | Set the autonomy score (body: `{ "score": 85, "reason": "..." }`) |
@@ -111,8 +129,7 @@ All errors follow the same JSON format:
 | `200` | Success |
 | `400` | Bad request — a required field is missing or invalid |
 | `401` | Unauthorized — token missing or incorrect |
-| `413` | Payload too large — message body exceeds the 64 KiB limit |
+| `413` | Payload too large — request body exceeds the 64 KiB limit |
 | `429` | Rate limited — slow down and retry |
 | `500` | Internal server error — check your Curia logs |
 | `503` | Service degraded — typically a database connectivity issue |
-| `504` | Gateway timeout — the agent did not respond within 120 seconds |
