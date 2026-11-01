@@ -6,7 +6,7 @@ description: "Set up environment variables and LLM routing for your Curia deploy
 Curia uses two configuration layers: a `config/default.yaml` file that ships with the repository and defines all defaults, and a `config/local.yaml` file that you create to override specific values for your deployment. Secrets — API keys, credentials, and tokens — live in an [encrypted vault](/get-started/secrets-vault), not in `.env` and not in YAML files. Only the four values needed to reach and unlock that vault, plus non-secret deployment config, stay in `.env`.
 
 <Note>
-  First-time setup configures everything for you. `pnpm run setup` writes the four bootstrap values to `.env`, prompts for your Anthropic API key, and seeds it (along with the generated API token and login secret) into the encrypted vault after migrations. The in-app setup wizard then captures your identity, operational details, the assistant's tone & style, and its autonomy level. This page covers everything you might want to change later — channels, MCP skill credentials, custom LLM routing, and adding secrets to the vault.
+  First-time setup configures the basics for you. The installer ([Install Curia](/get-started/installation)) writes the four bootstrap values to `.env`, asks for an Anthropic API key, and seeds it, along with a generated API token and login secret, into the encrypted vault after running migrations. (From a source checkout, `pnpm run setup` does the same.) The console's `/setup` form then captures the principal's details, Curia's name and signature, tone and style, and autonomy. This page covers everything you might want to change later — channels, MCP skill credentials, custom LLM routing, and adding secrets to the vault.
 </Note>
 
 <Warning>
@@ -41,8 +41,8 @@ intentDrift:
 |---|---|---|
 | `DB_USER` | Yes | PostgreSQL user. |
 | `DB_PASSWORD` | Yes | PostgreSQL password. |
-| `DATABASE_URL` | Yes | Postgres connection string. Constructed from `DB_USER`, `DB_PASSWORD`, and `POSTGRES_PORT` by `pnpm run setup`. |
-| `SECRET_ENCRYPTION_KEY` | Yes | Base64-encoded 32-byte AES-256 master key that encrypts the vault. Generate with `openssl rand -base64 32`; `pnpm run setup` fills it in. **Back this up — losing it makes the vault unrecoverable.** |
+| `DATABASE_URL` | Yes | Postgres connection string. Constructed from `DB_USER`, `DB_PASSWORD`, and `POSTGRES_PORT` by the installer. |
+| `SECRET_ENCRYPTION_KEY` | Yes | Base64-encoded 32-byte AES-256 master key that encrypts the vault. Generate with `openssl rand -base64 32`; The installer fills it in. **Back this up — losing it makes the vault unrecoverable.** |
 | `TIMEZONE` | No | IANA timezone (e.g. `America/Toronto`). Used to resolve relative dates in agent prompts. |
 | `HTTP_PORT` / `POSTGRES_PORT` | No | Host ports for the app and Postgres. Defaults `3000` / `5432`. |
 | `NYLAS_POLL_INTERVAL_MS` | No | Email poll interval in ms (default `30000`). Non-secret. |
@@ -57,7 +57,7 @@ intentDrift:
 
 ```env
 DB_USER=curia
-DB_PASSWORD=<generated-by-setup>
+DB_PASSWORD=<generated-by-installer>
 DATABASE_URL=postgres://curia:<password>@localhost:5432/curia
 SECRET_ENCRYPTION_KEY=<openssl rand -base64 32>
 TIMEZONE=America/Toronto
@@ -65,7 +65,7 @@ TIMEZONE=America/Toronto
 
 ### What goes in the vault
 
-These secrets are stored in the encrypted vault, never in `.env`. `pnpm run setup` seeds the core credentials automatically. For channel-specific secrets (Nylas, Signal, Tavily), see each channel's setup guide. See [Secrets vault](/get-started/secrets-vault) for how to add or update vault entries manually.
+These secrets are stored in the encrypted vault, never in `.env`. The installer seeds the core credentials automatically. For channel-specific secrets (Nylas, Signal, Tavily), see each channel's setup guide. See [Secrets vault](/get-started/secrets-vault) for how to add or update vault entries manually.
 
 | Vault key | Notes |
 |---|---|
@@ -73,14 +73,14 @@ These secrets are stored in the encrypted vault, never in `.env`. `pnpm run setu
 | `openai_api_key` | Knowledge graph embeddings (`text-embedding-3-small`) and semantic search, when `EMBEDDING_BASE_URL` is unset. Also used by `image-generate`. |
 | `embedding_api_key` | Optional. Bearer token for your own embedding server, when it checks one. |
 | `openrouter_api_key` | Optional. Enables multi-model routing via [OpenRouter](https://openrouter.ai). |
-| `api_token` | Bearer token for all HTTP API requests. Generated and seeded by `pnpm run setup`. |
-| `web_app_bootstrap_secret` | Secret for logging in to the console. Generated and shown once by `pnpm run setup`. |
+| `api_token` | Bearer token for all HTTP API requests. Generated and seeded by the installer. |
+| `web_app_bootstrap_secret` | Secret for logging in to the console. Generated and shown once by the installer. |
 
 ## Next steps
 
 <CardGroup cols={2}>
   <Card title="Set up email" icon="envelope" href="/channels/email-setup">
-    Connect your inbox and configure email accounts.
+    Give Curia its own mailbox and add more email accounts.
   </Card>
   <Card title="Full configuration reference" icon="book" href="/references/configuration">
     Every configurable setting: rate limits, security rules, knowledge graph decay, and more.

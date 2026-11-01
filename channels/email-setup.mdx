@@ -1,56 +1,52 @@
 ---
 title: "Configure Curia's email channel with Nylas integration"
 sidebarTitle: "Email"
-description: "Configure Nylas to give Curia a dedicated email account for sending and receiving."
+description: "Reference for Curia's email channel: the Nylas credentials, Curia's mailboxes, the email tools and troubleshooting."
 ---
 
-Curia's email channel is powered by [Nylas](https://nylas.com) — a unified API that handles the OAuth and IMAP/SMTP complexity across Gmail, Outlook, and other providers. Once connected, Curia can send emails on your behalf, draft replies for your review, and read your inbox.
+Curia's email channel connects **Curia's own mailbox** through [Nylas](https://nylas.com), a unified API for Gmail, Outlook and other providers. With it, Curia receives email at its own address, replies in-thread, sends new email and saves drafts, all signed as Curia.
 
-## Setup
-
-Email accounts are managed from **Settings → Channels → Email → Email accounts** in the console. You can connect one or many agent-owned mailboxes — each gets its own Nylas grant stored in the vault.
-
-<Steps>
-  <Step title="Create a Nylas account">
-    Sign up at [app.nylas.com](https://app.nylas.com). The free tier is sufficient for development and small deployments.
-  </Step>
-
-  <Step title="Create a Nylas application and add the API key">
-    In the Nylas dashboard, create a new application and choose **Email** as the product. Once created, copy your **API key** and enter it in the Curia console under **Settings → Channels → Email** — this is a one-time, app-level step shared across all email accounts.
-
-    <Tip>
-      Only the Nylas API key needs to be entered here. Individual account grants are connected through the console in the next step.
-    </Tip>
-  </Step>
-
-  <Step title="Add an email account from the console">
-    In the Curia console, go to **Settings → Channels → Email → Email accounts** and click **Add account**. Give the account a name (e.g., `curia`), then paste the Nylas Grant ID for that mailbox. The console stores the grant in the vault at `channel.email.<name>.nylas_grant_id`.
-
-    To get a grant ID: in the Nylas dashboard, go to **Grants** and add a new grant. This walks you through an OAuth flow to connect a Gmail, Outlook, or other email account to Nylas.
-
-    <Tip>
-      Use a dedicated email address for Curia (e.g., `curia@yourdomain.com`) rather than your primary inbox. Curia will read and process all incoming messages on this account.
-    </Tip>
-  </Step>
-
-  <Step title="Enable the email channel and restart">
-    Once at least one account is connected, enable the email channel from **Settings → Channels**. Restart Curia to bring the email adapter online with the new accounts:
-
-    ```bash
-    docker compose restart curia
-    ```
-
-    `docker compose logs curia` will show the email adapter initializing. You can add more accounts from the console at any time; each restart picks up the latest set. (If you configured Nylas credentials via `.env` rather than the console, use `docker compose up -d curia` instead — a plain restart won't pick up changed env vars.)
-  </Step>
-</Steps>
+This channel is for mailboxes that belong to Curia. Access to your principal's own email and calendar is set up separately: see [5. Your principal's email and calendar](/get-started/principal-email-calendar).
 
 <Note>
-  You can connect as many email accounts as you need. All accounts share the same app-level Nylas API key (`nylas_api_key` in the vault). The `account` parameter on email tools lets agents target a specific account by name; omit it to use Curia's own account.
+  Setting up email for the first time? Follow [2. Curia's own email](/get-started/curia-email) for the step-by-step walkthrough. This page is the reference.
 </Note>
+
+## Where the values go
+
+Everything is entered in the console under **Settings → Channels → email**. Nothing goes in `.env`.
+
+**Credentials** (one set for the whole channel):
+
+| Field | Whose value | Vault key |
+|---|---|---|
+| **Nylas API key** | Your Nylas application's | `channel.email.nylas_api_key` |
+| **Nylas grant ID** | Curia's first mailbox | `channel.email.nylas_grant_id` |
+| **Mailbox address** | Curia's first mailbox | `channel.email.nylas_self_email` |
+
+All three must be configured before **Enable** becomes available, and the setup agent checks for the same three keys.
+
+**Email accounts** (one entry per Curia mailbox): an account name, the mailbox address and its Nylas grant ID. Each entry's grant is stored in the vault as `channel.email.<name>.nylas_grant_id`. These entries are the mailboxes Curia actually reads and sends from. If there are none, the channel doesn't start, even with all three credentials saved.
+
+Saved credentials, enabling the channel and adding or removing accounts all take effect on the next restart:
+
+```bash
+docker compose restart curia
+```
+
+<Note>
+  Older installs may have `NYLAS_API_KEY`, `NYLAS_GRANT_ID` and `NYLAS_SELF_EMAIL` in `.env`. Curia still reads them as fallbacks, but a value saved in the console wins. A grant ID in `.env` does not create an email account: add the account in the console.
+</Note>
+
+## More than one mailbox
+
+Curia can work from several mailboxes of its own, for example a general address and a scheduling address. Connect each one to Nylas as its own grant, then add it under **Email accounts** with a different account name. All accounts share the one Nylas API key. Restart Curia after adding one.
+
+Each Nylas grant counts as a connected account on your Nylas plan.
 
 ## Email tools
 
-Once the email channel is active, the following tools become available to Curia and any agents you configure:
+Once the email channel is running, these tools are available to Curia and any agents you configure:
 
 | Tool | What it does |
 |---|---|
@@ -62,36 +58,44 @@ Once the email channel is active, the following tools become available to Curia 
 | `send-draft` | Send a previously saved draft (CEO-authorized) |
 | `email-archive` | Archive a message by ID |
 
-All email tools accept an `account` parameter to target a specific named account. Omit it to use Curia's own account.
+All email tools accept an `account` parameter naming one of the email accounts. If it's left out, Curia uses the first enabled account by name.
 
 ## File attachments
 
-Outbound email tools (`email-send`, `email-reply`, and their CEO-inbox counterparts) accept an optional list of attachments. Files are referenced by `file://` URLs backed by Curia's temp-file store rather than passed inline, with a cap of **20 MB total across at most 10 attachments** per message. Anything an agent has written to the temp-file store can be attached; the [`drive-download-file`](/tools-and-skills/built-in-tools#email) tool bridges Google Drive by downloading a file (including Google-native exports) into that store and returning a `file://` URL ready to attach. No extra configuration is needed beyond a working Nylas grant — attachments ride the same Send API as the message body.
+Outbound email tools (`email-send`, `email-reply`, and their CEO-inbox counterparts) accept an optional list of attachments. Files are referenced by `file://` URLs backed by Curia's temp-file store rather than passed inline, with a cap of **20 MB total across at most 10 attachments** per message. Anything an agent has written to the temp-file store can be attached; the [`drive-download-file`](/tools-and-skills/built-in-tools#email) tool bridges Google Drive by downloading a file (including Google-native exports) into that store and returning a `file://` URL ready to attach. No extra configuration is needed beyond a working Nylas grant: attachments ride the same Send API as the message body.
 
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="Email channel not activating">
-    The `nylas_api_key` must be in the vault and at least one email account must be configured in Settings → Channels → Email → Email accounts. If the API key is missing, the channel disables itself at startup:
+  <Accordion title="Email channel not starting">
+    Check the startup logs (`docker compose logs curia | grep -i "email channel"`). The message says what's missing:
 
-    ```
-    NYLAS_API_KEY not set — email channel disabled
-    ```
+    - `NYLAS_API_KEY not set — email channel disabled`: save the **Nylas API key** under **Credentials**.
+    - `No email accounts resolved — email channel disabled`: add Curia's mailbox under **Email accounts**, with its grant ID.
+    - `channel enabled but required credentials missing; not starting`: one of the three **Credentials** fields is empty.
 
-    Confirm the API key is in the vault (Settings → Channels → Email in the console), then verify accounts are configured in the console. Recreate the container after any change.
+    Also check that the email row shows **enabled**, not just **installed**, and that you restarted Curia after your last change.
+  </Accordion>
+
+  <Accordion title="The Enable button is greyed out">
+    All three credential fields (Nylas API key, Nylas grant ID, Mailbox address) must show **configured**. Save any that read **missing**.
   </Accordion>
 
   <Accordion title="Messages not appearing">
-    Curia polls the Nylas Messages API every 30 seconds by default. If messages are slow to appear, confirm the email account's OAuth grant is active in the Nylas dashboard and that the grant ID entered in Settings → Channels → Email → Email accounts matches the one shown in the Nylas Grants view.
+    Curia polls Nylas every 30 seconds by default. If messages are slow to appear, check that the mailbox's grant is active in the Nylas dashboard and that the grant ID under **Email accounts** matches the one Nylas shows.
 
-    You can also adjust the polling interval (non-secret config in `.env`):
+    `/api/health` reports `"email": "fail"` when polling has stopped succeeding.
+
+    You can change the polling interval in `.env` (it isn't a secret):
 
     ```env
     NYLAS_POLL_INTERVAL_MS=15000
     ```
+
+    Run `docker compose up -d curia` after editing `.env`: a plain restart doesn't pick up changed environment variables.
   </Accordion>
 
   <Accordion title="Outbound emails going to drafts unexpectedly">
-    Outbound sends are governed by the [autonomy engine](/core-concepts/autonomy). If your autonomy score is below 70, `email-send` and `email-reply` are blocked and drafts are saved instead. Ask Curia its current score ("What is your autonomy score?") and raise it if needed.
+    Outbound sends are governed by the [autonomy engine](/core-concepts/autonomy). If the autonomy score is below 70, `email-send` and `email-reply` are blocked and drafts are saved instead. Ask Curia for its current score ("What is your autonomy score?") and raise it if needed.
   </Accordion>
 </AccordionGroup>

@@ -7,46 +7,37 @@ These playbooks are short, opinionated recipes for common Curia workflows. Each 
 
 ## First run after setup
 
-You just ran `pnpm run setup`, logged in with your bootstrap secret, and the form wizard at `/setup` walked you through identity, tone & style, and autonomy. Here's what happens next.
+You've installed Curia, signed in to the console with your bootstrap secret, and filled in the `/setup` form. Here's what happens next.
 
 <Steps>
   <Step title="Land in the chat view">
-    Submitting the last step of the form wizard navigates you directly to `/chat`. If the process booted in setup-required mode (no `CEO_PRIMARY_EMAIL` was set before first boot), you'll see a brief **Setting up channels…** screen first — the supervisor is restarting Curia so email and Signal can come online. This usually takes 10–30 seconds.
+    Saving the last step of the form (**Confirm & save**) takes you to `/chat`. If email or Signal credentials were waiting for a restart, you'll see a brief **Setting up channels…** screen first while Curia restarts so those channels can come online. This usually takes 10–30 seconds.
   </Step>
 
-  <Step title="Greet the setup wizard">
-    Within about a second of landing in `/chat`, a kickoff message fires automatically and the **setup-wizard specialist** introduces itself through the Coordinator. Expect a warm greeting followed by a single question:
+  <Step title="Meet the setup assistant">
+    A kickoff message fires automatically and the **setup-wizard** specialist introduces itself through the Coordinator. It starts with a few quick wins that need no credentials:
 
-    > "What takes up most of your time right now — email, scheduling, research, staying on top of news?"
+    - **Persona:** one open question about tone, priorities and how Curia should communicate.
+    - **Debrief:** whether a regular digest would help, daily at the end of the day or weekly on Fridays. If yes, it schedules the job straight away. You can change or cancel it later from `/jobs` in the console, or by asking Curia.
+    - **How to refer to the principal:** pronouns first, because emails go out in their name, then preferred name and title if the form didn't capture them.
+    - **Capability tour:** the five or six things Curia can already do.
 
-    Answer in plain language. There's no right answer — the wizard uses what you say to recommend the next setup steps.
+    Then it asks what you'd most like help with and starts that setup.
+
+    <Note>
+      The setup assistant checks progress against Curia's memory, so it needs an embedding source. Without one it can't tell what you've set up. See [Search and memory](/get-started/search-and-memory).
+    </Note>
   </Step>
 
-  <Step title="Capture working hours">
-    Based on your answer, the wizard appends a behavioral preference to `OfficeIdentity.behavioralPreferences` (you can confirm later via the knowledge graph browser or by reading `office_identity_versions`). It then asks for your usual working hours and timezone. Reply with something like:
+  <Step title="Connect the rest">
+    Work through the Setup pages in order: [Curia's own email](/get-started/curia-email), [Reach your principal](/get-started/reach-your-principal), [Voice](/get-started/voice), [Your principal's email and calendar](/get-started/principal-email-calendar), [Google Docs](/get-started/google-docs) and [Search and memory](/get-started/search-and-memory). Then confirm everything with [Check your setup](/get-started/check-your-setup).
 
-    > "Weekdays 9 to 6, America/Toronto."
-
-    This shapes when proactive features like the meeting debrief poller and CEO Inbox triage run.
-  </Step>
-
-  <Step title="Decide on a debrief cadence">
-    Finally, the wizard asks whether a regular debrief would be useful — a daily end-of-day summary, a weekly Friday digest, or no recurring debrief. If you accept, it schedules the job via `scheduler-create` immediately. You can change or cancel the schedule later from `/jobs` in the console, or by asking Curia in chat.
-  </Step>
-
-  <Step title="Add channels as you need them">
-    After the first conversation closes, your instance is configured but minimal: it can answer questions, do web research, and manage memory. Add channels when you're ready:
-
-    - **Email** — add credentials via the Curia console (Settings → Channels → Email) and recreate the container. See [installation §Email](/get-started/installation#email-nylas).
-    - **Signal** — register a phone with `signal-cli`, add `channel.signal.phone_number` via Settings → Channels → Signal, and recreate. See [installation §Signal messaging](/get-started/installation#signal-messaging).
-    - **Web search** — add `tavily_api_key` via Settings → Channels and enable the `web-search` tool from the registry.
-
-    You can also ask the setup-wizard for help any time: "Help me set up Nylas" or "What can you do?" both route back to it.
+    You can also ask the setup assistant for help at any time: "Help me set up email" or "What can you do?" both route back to it.
   </Step>
 </Steps>
 
 <Note>
-  If you skipped the form wizard or want to revise your assistant's voice later, visit `/setup` directly. The form remains accessible even after onboarding is complete, and it pre-populates with your current identity values.
+  To revise the assistant's identity or tone later, visit `/setup` directly. The form stays available after setup and pre-fills with the current values.
 </Note>
 
 ## Calibrating autonomy
@@ -67,21 +58,17 @@ Curia ships with the autonomy engine seeded at **score 75 (approval-required ban
   </Step>
 </Steps>
 
-## Connecting a second email account
+## Connecting another mailbox Curia owns
 
-The default setup connects one Nylas grant (`nylas_api_key`, `nylas_grant_id`, `nylas_self_email` in the vault). To run multiple accounts — say, a Curia-only address that sends autonomously and a personal address that always drafts for review — define them in `config/local.yaml` under `channel_accounts.email`. See [configuration §Multiple email accounts](/get-started/configuration#multiple-email-accounts) for the YAML shape.
+Curia can run more than one mailbox of its own, for example a second address for a different role. Each one is a separate Nylas grant on the same Nylas application. Add it in the console under **Settings → Channels → Email → Email accounts**, then restart Curia. See [Email](/channels/email-setup) for the details.
 
-After editing `local.yaml`, restart Curia so the dispatch layer picks up the new account map (Curia re-reads its YAML config on startup):
-
-```bash
-docker compose restart curia
-```
+Your principal's own mailbox is different: Curia works in it as the principal rather than answering from it. Don't add it as an email account. See [Your principal's email and calendar](/get-started/principal-email-calendar).
 
 ## Where to go next
 
 <CardGroup cols={2}>
   <Card title="Built-in agents" icon="users" href="/agents/built-in-agents">
-    The specialists Curia delegates to, including the setup-wizard you just met.
+    The specialists Curia delegates to, including the setup assistant you just met.
   </Card>
   <Card title="Autonomy engine" icon="shield-check" href="/security/autonomy-engine">
     How Curia decides what to do on its own vs. what to escalate.

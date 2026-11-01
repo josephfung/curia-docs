@@ -62,10 +62,10 @@ Before you start, install the following:
   </Step>
 
   <Step title="Log in and finish in the app">
-    Open [http://localhost:3000](http://localhost:3000) and enter your bootstrap secret to create your account. The in-app **setup wizard** and the **setup-wizard specialist agent** then walk you through the rest — this is identical to the image install, so see the [quick start](/get-started/installation#quick-start) for the details.
+    Open [http://localhost:3000](http://localhost:3000) and enter your bootstrap secret to create your account. The in-app **setup wizard** and the **setup-wizard specialist agent** then walk you through the rest — this is identical to the image install, so see [Install Curia](/get-started/installation) for the details.
 
     <Note>
-      Checkpoint: Curia is running from your local source with hot reload. Edit a file under `src/`, and the app rebuilds. Add email, semantic search, or Signal from the [Full setup](/get-started/installation#full-setup) section whenever you need them.
+      Checkpoint: Curia is running from your local source with hot reload. Edit a file under `src/`, and the app rebuilds. Connect email, search and memory, or Signal by following the [Setup pages](/get-started/what-to-expect) whenever you need them.
     </Note>
   </Step>
 </Steps>
@@ -82,7 +82,7 @@ Before you start, install the following:
 
 ## Adding channels and capabilities
 
-Email, semantic search, web research, and Signal are added the same way as on the image install — add the credential to the [vault](/get-started/secrets-vault) via the console, then recreate the container. Follow the [Full setup](/get-started/installation#full-setup) steps.
+Email, semantic search, web research, and Signal are added the same way as on the image install — add the credential to the [vault](/get-started/secrets-vault) via the console, then recreate the container. Follow the [Setup pages](/get-started/what-to-expect).
 
 The only difference is the recreate command: because the source build uses the development overlay, include it when recreating so Compose rebuilds from your checkout rather than pulling the image:
 
