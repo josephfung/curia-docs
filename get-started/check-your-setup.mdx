@@ -1,0 +1,171 @@
+---
+title: "Check your setup"
+description: "The finish line for Setup: a concrete check for every item, then handing Curia over to your principal."
+---
+
+## What this is for
+
+This page is the finish line for Setup. It lists every Setup item with a check you can run yourself. When every check passes, hand Curia over to your principal using the steps at the end of this page.
+
+## What you'll need
+
+- About 15–20 minutes.
+- The console address and your access key (the bootstrap secret the installer printed).
+- A terminal on the server, for the health endpoint and the logs.
+- The principal's phone and inbox, or the principal sitting with you. Some checks send them a real message.
+
+<Warning>
+  Some of these checks message the principal's real phone and inbox. If you're setting Curia up for someone else, tell them first, or run those checks together at hand-over.
+</Warning>
+
+## Before you start: restart once
+
+Enabling a channel, and many credential changes, take effect only on the next restart. If you changed anything since the last restart, restart now: in the console, open **Settings → System**, click **Restart**, then **Restart now**, or on the server:
+
+```bash
+docker compose restart curia
+```
+
+## The checklist
+
+<Steps>
+  <Step title="Curia is up and healthy">
+    Call the health endpoint. It needs no login:
+
+    ```bash
+    curl https://your-curia-domain.example.com/api/health
+    ```
+
+    On a fully set-up instance the response looks like this:
+
+    ```json
+    {
+      "status": "ok",
+      "uptime_s": 412,
+      "checks": {
+        "db": "ok",
+        "bus": "ok",
+        "signal": "ok",
+        "email": "ok",
+        "browser": "ok",
+        "mcp": { "google_workspace": "ok" },
+        "nylas_calendar": "ok",
+        "slack": "skipped",
+        "sms": "skipped",
+        "voice": "ok",
+        "signal_voice": "skipped",
+        "scheduler": "ok"
+      }
+    }
+    ```
+
+    Check that:
+
+    - `status` is `ok`. `degraded` means one of the checks below reads `fail`. `down` (HTTP 503) means the database or the internal message bus is unreachable.
+    - `db`, `bus` and `scheduler` are `ok`.
+    - The fields for the items you set up read `ok`. The steps below say which field goes with which item.
+
+    `skipped` means that service isn't configured. That's fine for a route you didn't choose: if Curia reaches the principal by Signal, `sms` reads `skipped`, and the other way round. See [Health monitoring](/get-started/health-monitoring) for what each check probes.
+  </Step>
+
+  <Step title="The dashboard shows no setup gaps">
+    Open the console dashboard. Under **System health**, look for a line starting with **Setup ·**. It lists any channel that's installed but not enabled ("email channel not enabled") and any mailbox without a Nylas grant ("… missing grant"). Click it to go to the Channels page.
+
+    When nothing is left, the line disappears. It doesn't cover channels you never installed, so keep going with the checks below.
+  </Step>
+
+  <Step title="The channels are enabled">
+    Open **Settings → Channels**. Check that each channel you set up shows **enabled**:
+
+    - **email**. Open it and look under **Email accounts**: Curia's mailbox is listed, without a "⚠ no grant" warning.
+    - **signal** or **sms**, whichever route reaches the principal.
+    - **voice**.
+
+    A channel that shows **installed** isn't running yet. Open it, check its credentials, click **Enable**, then restart.
+  </Step>
+
+  <Step title="Curia's own email sends and receives">
+    In `/api/health`, `email` reads `ok`. That means Curia polled its mailbox successfully, recently.
+
+    Then try it end to end. In console chat, ask Curia: "Send me a test email." It arrives in the principal's inbox, from Curia's own address. Reply to it from the principal's address. Curia answers in the same thread.
+
+    Details: [Curia's own email](/get-started/curia-email).
+  </Step>
+
+  <Step title="Curia can reach your principal">
+    In `/api/health`, `signal` reads `ok` (for Signal) or `sms` reads `ok` (for SMS). The `sms` check only confirms the Telnyx webhook handler is installed, so the test message below matters more.
+
+    Check that the principal's number is on their contact: open **Contacts**, open the principal, and confirm their Signal number or mobile number is listed as a channel identity. Without it, Curia can't address messages to them on that channel.
+
+    Then, in console chat, ask Curia: "Send me a test message on Signal" (or "by SMS"). It should arrive on the principal's phone from Curia's number. Reply from that phone, and Curia answers.
+
+    Details: [Reach your principal](/get-started/reach-your-principal).
+  </Step>
+
+  <Step title="Voice calls work">
+    In `/api/health`, `voice` reads `ok`. That means Curia can reach LiveKit.
+
+    Then make a test call. Open console chat. A **Voice** button appears above the message box when voice is available. Click it and allow the microphone. The bar shows "Greeting…" while Curia says hello, then "Listening…". Say something, hear the answer, then click **Hang up**.
+
+    No **Voice** button means voice isn't available: check the voice channel is enabled and LiveKit is running. Details: [Voice](/get-started/voice).
+  </Step>
+
+  <Step title="The principal's calendar is connected">
+    In `/api/health`, `nylas_calendar` reads `ok`.
+
+    - `skipped` means Curia has no grant for the principal's mailbox and calendar yet (`ceo_nylas_grant_id`). Calendar features stay off until it's set and Curia restarts.
+    - `fail` means the grant is set, but Curia couldn't list the principal's calendars with it.
+
+    This item needs the principal's mailbox grant. Details: [Your principal's email and calendar](/get-started/principal-email-calendar).
+  </Step>
+
+  <Step title="Google Docs works">
+    In `/api/health`, `mcp.google_workspace` reads `ok`. That only shows the Google Workspace server is running.
+
+    - No `google_workspace` key at all means the server isn't enabled. Check **Settings → MCP Skills**.
+    - `fail` means it's enabled but didn't start, usually because a credential is missing.
+
+    Then check that Google actually accepts Curia's sign-in. In console chat, ask Curia: "List the five newest files in your Google Drive." A list (even an empty one) means it works. An error about authorisation means Curia's Google sign-in has failed or expired.
+
+    Curia also runs a daily check that makes a real Drive call. Look for a `Health canary result` log line with `"canary":"google_workspace"` and `"status":"ok"`. Details: [Google Docs](/get-started/google-docs).
+  </Step>
+
+  <Step title="Memory is on">
+    Embeddings don't have a health field. Check the startup logs instead:
+
+    ```bash
+    docker compose logs curia | grep -i "entity memory"
+    ```
+
+    You want `Entity memory initialized with knowledge graph`. If you see `No embedding endpoint: set EMBEDDING_BASE_URL and EMBEDDING_MODEL, or seed openai_api_key in the vault`, memory is off, and so is most of the setup assistant. Details: [Search and memory](/get-started/search-and-memory).
+  </Step>
+
+  <Step title="Optional: web search works">
+    If you added a Tavily key, ask Curia in console chat to search the web for something recent. A daily check also tests the key; look for a `Health canary result` log line with `"canary":"tavily"`.
+  </Step>
+</Steps>
+
+<Tip>
+  You can also ask Curia in console chat: "What's left to set up?" The setup assistant lists the items it thinks are pending. It only checks that credentials are saved, not that a channel works, so use it alongside the checks above, not instead of them.
+</Tip>
+
+## Handing over to your principal
+
+If you set Curia up for yourself, you're done. Start using it.
+
+If you set it up for someone else, tell your principal:
+
+- **How to open the console:** its address and the access key. A phone's browser works too.
+- **Curia's email address,** so they can forward mail and write to Curia.
+- **Curia's Signal or SMS number,** so they can save it as a contact and message Curia.
+- **How to call Curia:** open console chat and click **Voice**.
+
+### After hand-over, use Settings, not chat
+
+The console treats everyone in console chat as the principal. Anything typed there after hand-over, including by you, is taken as the principal speaking, and Curia may remember it as their preference. Console chat is also one shared thread, so your principal will see your setup conversation in its history.
+
+After hand-over, make changes through the Settings pages instead: **Channels**, **MCP Skills**, **System** and **Contacts**.
+
+<Note>
+  **Coming soon.** A **Start onboarding** step in the console. Once every Setup item passes, it gives you a link to send your principal, valid for 48 hours, and Curia starts its first conversation with them.
+</Note>

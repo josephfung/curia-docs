@@ -46,6 +46,54 @@
   "navigation": {
     "tabs": [
       {
+        "tab": "Get Started",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "index",
+              "get-started/what-to-expect"
+            ]
+          },
+          {
+            "group": "Setup",
+            "pages": [
+              "get-started/installation",
+              "get-started/curia-email",
+              "get-started/reach-your-principal",
+              "get-started/voice",
+              "get-started/principal-email-calendar",
+              "get-started/google-docs",
+              "get-started/search-and-memory",
+              "get-started/check-your-setup"
+            ]
+          },
+          {
+            "group": "Running Curia",
+            "pages": [
+              "get-started/secrets-vault",
+              "get-started/deployment",
+              "get-started/configuration",
+              "get-started/health-monitoring",
+              "get-started/playbooks"
+            ]
+          },
+          {
+            "group": "Examples",
+            "pages": [
+              "examples/overview",
+              "examples/daily-morning-briefing"
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": [
+              "get-started/development"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Core Concepts",
         "groups": [
           {
@@ -63,30 +111,6 @@
               "core-concepts/ant-farm",
               "core-concepts/registry",
               "core-concepts/releases"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Get Started",
-        "groups": [
-          {
-            "group": "Get Started",
-            "pages": [
-              "get-started/installation",
-              "get-started/development",
-              "get-started/configuration",
-              "get-started/secrets-vault",
-              "get-started/deployment",
-              "get-started/health-monitoring",
-              "get-started/playbooks"
-            ]
-          },
-          {
-            "group": "Examples",
-            "pages": [
-              "examples/overview",
-              "examples/daily-morning-briefing"
             ]
           }
         ]

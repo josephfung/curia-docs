@@ -1,41 +1,46 @@
 ---
 title: "Curia: Governance-First AI Executive Assistant"
+sidebarTitle: "Welcome"
 description: "Self-hosted AI executive assistant — manages email, calendar, contacts, and scheduling with a full audit trail, persistent memory, and configurable autonomy."
 ---
 
-Curia is your AI executive office — a team of specialized agents that reads your email, manages your calendar, tracks expenses, conducts research, and responds on your behalf across Signal and email. Unlike typical AI tools, Curia runs on your own server, maintains a persistent knowledge graph of your world, and enforces governance and audit trails that enterprise security demands.
+Curia is an AI executive office for one executive, the **principal**. A team of specialized agents reads email, manages the calendar, keeps track of people and decisions, does research, and replies on the principal's behalf by email, Signal, SMS, Slack, voice, and the web console. Curia runs on your own server, keeps a persistent knowledge graph of the principal's world, and records every action in an audit trail.
+
+<Card title="Start here: what to expect" icon="map" href="/get-started/what-to-expect">
+  Getting started has two phases: **Setup**, done by whoever runs Curia, and **Onboarding**, for the executive. See who does what, how long it takes, and what you'll need.
+</Card>
 
 <CardGroup cols={2}>
-  <Card title="Quick Start" icon="rocket" href="/get-started/installation">
-    Get Curia running and send your first message in under 15 minutes.
+  <Card title="Install Curia" icon="rocket" href="/get-started/installation">
+    The first Setup step: one script and Docker.
   </Card>
   <Card title="Core Concepts" icon="lightbulb" href="/core-concepts/introduction">
     Understand agents, skills, memory, channels, and the autonomy engine.
   </Card>
-  <Card title="Configuration" icon="sliders" href="/get-started/configuration">
-    Customize LLM providers, email accounts, autonomy settings, and more.
+  <Card title="Check your setup" icon="list-check" href="/get-started/check-your-setup">
+    The finish line: how you know Setup is done.
   </Card>
   <Card title="API Reference" icon="code" href="/references/http-api">
-    Integrate with Curia over HTTP — send messages and stream real-time events.
+    Integrate with Curia over HTTP.
   </Card>
 </CardGroup>
 
 ## What Curia does
 
-Curia handles the operational work that consumes an executive's time — automatically, with your voice and your boundaries.
+Curia handles the operational work that consumes an executive's time, in the principal's voice and within the principal's boundaries.
 
 <CardGroup cols={2}>
-  <Card title="Email & Calendar" icon="envelope" href="/channels/email-setup">
-    Reads your inbox, extracts action items, drafts replies, and manages your calendar — all on your behalf.
+  <Card title="Email & Calendar" icon="envelope" href="/get-started/principal-email-calendar">
+    Reads the inbox, extracts action items, drafts replies, and manages the calendar on the principal's behalf.
   </Card>
   <Card title="Research" icon="magnifying-glass" href="/agents/how-agents-work">
-    Multi-session research tasks that build on previous findings, with full web search and page fetching.
+    Multi-session research tasks that build on previous findings, with web search and page fetching.
   </Card>
   <Card title="Knowledge Graph" icon="diagram-project" href="/core-concepts/memory">
     Persistent memory of people, decisions, and relationships — with temporal awareness and semantic search.
   </Card>
   <Card title="Autonomy Engine" icon="gauge" href="/core-concepts/autonomy">
-    A single score (0–100) controls how independently Curia acts. Adjust it with a single command.
+    A single score (0–100) controls how independently Curia acts.
   </Card>
 </CardGroup>
 
@@ -43,7 +48,7 @@ Curia handles the operational work that consumes an executive's time — automat
 
 <Steps>
   <Step title="Your data stays on your server">
-    Curia is single-tenant and self-hosted. Your emails, contacts, and knowledge graph never leave your infrastructure.
+    Curia is single-tenant and self-hosted. Emails, contacts, and the knowledge graph are stored on your infrastructure. The model and speech providers you configure process the content they're sent.
   </Step>
   <Step title="Every action is auditable">
     An append-only audit log traces every event — every message received, tool invoked, and decision made — with full causal chains.
