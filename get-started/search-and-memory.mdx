@@ -1,0 +1,77 @@
+---
+title: "Search and memory"
+sidebarTitle: "7. Search and memory"
+description: "Add an embedding source so Curia's memory and setup assistant work, and optionally a Tavily key for live web search."
+---
+
+## What this is for
+
+Two capabilities depend on outside services, and the installer sets up neither:
+
+- **Embeddings (needed).** Curia's memory, the knowledge graph of people, organisations and facts, needs an embedding model. Without one, memory is off, and so are things built on it: the setup assistant can't check what you've set up, working hours from setup aren't saved, and the sensitivity classifier that flags confidential content is off. Treat this as required.
+- **Web search (optional).** A [Tavily](https://tavily.com) key lets Curia search the web for research and news.
+
+## What you'll need
+
+- **An embedding source.** Either an [OpenAI](https://platform.openai.com) API key with billing set up, or your own OpenAI-compatible embedding server, such as [Ollama](https://ollama.com) running an embedding model.
+- **Optionally, a Tavily account.**
+- **Shell access to the Curia host,** to store the OpenAI key. There's no console field for it yet.
+
+**Time:** about 15 minutes.
+
+**Cost** (checked 2026-11-01):
+
+- OpenAI `text-embedding-3-small`: $0.02 per million tokens.
+- Your own embedding server: no fee, but it runs on your hardware.
+- Tavily: 1,000 free credits a month, no card needed.
+
+<Note>
+  The embedding-server option is newer than the latest release (v0.44.0, 2026-10-16). It reaches the default `latest` image with the next release. Until then, use OpenAI.
+</Note>
+
+## Steps
+
+<Steps>
+  <Step title="Add an embedding source">
+    Pick one:
+
+    - **OpenAI:** store your key in the vault as `openai_api_key` and restart. The command is on [OpenAI embeddings](/integrations/openai-embeddings).
+    - **Your own server:** set `EMBEDDING_BASE_URL` and `EMBEDDING_MODEL` in `.env`, add a key if the server needs one, and recreate the container. The steps are on [Use your own embedding server](/integrations/embeddings-endpoint).
+
+    Choose before Curia stores much in memory. Switching models later means re-embedding the whole graph once.
+  </Step>
+
+  <Step title="Turn on fact extraction">
+    Two background tools build memory from conversations, and they stay off on a new install even after you add embeddings. In the console, go to **Tools**, then install and enable `extract-facts` and `extract-relationships`.
+  </Step>
+
+  <Step title="Optional: add a Tavily key for web search">
+    Sign up at [tavily.com](https://tavily.com) and copy your API key (it starts with `tvly-`). In the console, go to **Tools**, open `web-search`, and save the key in its `tavily_api_key` field.
+
+    <Warning>
+      If the setup assistant offers you a secure link for your Tavily key, use the **Tools** page instead. Today the link stores the key under a name web search doesn't read, so search stays off even though the assistant marks the step done.
+    </Warning>
+  </Step>
+
+  <Step title="Restart Curia">
+    Curia picks up the embedding source, the newly enabled tools and the Tavily key when it starts. Web search is turned on automatically at the first start after the key is saved. Restart from the console's **System** page, or run:
+
+    ```bash
+    docker compose restart curia
+    ```
+
+    If you changed `.env` for your own embedding server, run `docker compose up -d curia` instead, so the container picks up the new values.
+  </Step>
+</Steps>
+
+## Check it works
+
+1. In the logs (`docker compose logs curia`), look for `Entity memory initialized with knowledge graph`. A warning ending in `knowledge graph unavailable` means there's still no usable embedding source, and names what's missing.
+2. In the console chat, tell Curia a harmless fact, such as the name of a colleague and their role, then later ask about it.
+3. For web search, ask something only a live search can answer, such as today's news on a topic. Curia's daily health check also logs `Health canary result` with `"canary":"tavily"` and `"status":"ok"` once the key works.
+
+## What your principal will notice
+
+- **With memory on,** Curia remembers people, organisations and decisions across conversations and channels. It builds up gradually over weeks rather than all at once.
+- **With web search on,** Curia can answer questions about current events and research topics with up-to-date sources.
+- **Without memory,** Curia still answers, but doesn't build up what it knows about people and facts from one conversation to the next.

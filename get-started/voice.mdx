@@ -1,0 +1,111 @@
+---
+title: "Voice"
+sidebarTitle: "4. Voice"
+description: "Turn on spoken conversations with Curia: run LiveKit, add Deepgram and Cartesia keys, and choose the voice Curia speaks in."
+---
+
+## What this is for
+
+Voice lets your principal talk to Curia out loud, in a live two-way call, instead of typing. Curia listens, works the same way it does in chat, and answers in a spoken voice that you choose here. Today a call is placed from the **console chat** in a web browser.
+
+This page walks you through setup in order. For ports, settings and troubleshooting, see the [Voice reference](/channels/voice-setup).
+
+## What you'll need
+
+- **LiveKit,** the server that carries call audio. It is bundled with Curia: the install's `docker-compose.yml` includes a `livekit` service, but the installer doesn't start it. You'll start it in step 3.
+- **A Deepgram account** for speech-to-text (turning speech into words).
+- **A Cartesia account** for text-to-speech (Curia's spoken voice).
+- **HTTPS for the console** on any host other than `localhost`. Browsers only allow the microphone on a secure page.
+- **For a server install:** an HTTPS route to LiveKit's signaling port, and two ports open to the internet for call audio (`7881/tcp` and `7882/udp`). See [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server).
+
+**Time:** about 20 minutes to try it on a laptop. Allow an hour on a server, mostly for LiveKit's config and firewall.
+
+**Cost** (checked 2026-11-01):
+
+- LiveKit runs on your own server, with no separate fee.
+- Deepgram: $200 of free credit, then Nova-3 streaming at $0.0077 per minute.
+- Cartesia: a free tier of 20,000 credits (one credit per character spoken), which appears not to include a commercial licence. Pro is $5/month for 100,000 credits.
+
+<Warning>
+  Call audio and transcripts leave your server. They go to Deepgram, Cartesia and your LLM provider. Read their data terms before you turn voice on.
+</Warning>
+
+## Steps
+
+<Steps>
+  <Step title="Get a Deepgram API key">
+    Sign up at [deepgram.com](https://deepgram.com) and create an API key. Keep it for step 4.
+  </Step>
+
+  <Step title="Get a Cartesia API key and choose Curia's voice">
+    Sign up at [cartesia.ai](https://cartesia.ai) and create an API key.
+
+    Then choose the voice your principal will hear. Browse and preview voices at [play.cartesia.ai](https://play.cartesia.ai), and copy the **voice ID** (a UUID) of the one you want. It's worth choosing with your principal in mind: they'll hear this voice on every call.
+
+    The voice ID is required. Voice stays off until it's set. To change voices later, replace the value in step 4 and restart.
+  </Step>
+
+  <Step title="Start LiveKit">
+    Run these commands from the directory you installed Curia into.
+
+    **To try voice on the machine you're sitting at** (`http://localhost:3000`), start LiveKit in development mode:
+
+    ```bash
+    docker compose --profile voice up -d livekit
+    ```
+
+    Development mode uses the well-known key `devkey` and secret `secret`, and its signaling URL is `ws://localhost:7880`.
+
+    **On a server,** don't use development mode: anyone who can reach the ports could use those well-known credentials. Give LiveKit its own key and secret, put HTTPS in front of its signaling port, and open the media ports. Follow [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server), then come back here.
+  </Step>
+
+  <Step title="Enter the six values in the console">
+    In the console, go to **Settings → Channels → Voice** and fill in:
+
+    | Field | What to enter |
+    |---|---|
+    | LiveKit signaling URL | `ws://localhost:7880` for the laptop try-out, or `wss://<your-domain>` on a server |
+    | LiveKit API key | `devkey`, or your own key on a server |
+    | LiveKit API secret | `secret`, or your own secret on a server |
+    | Deepgram API key | From step 1 |
+    | Cartesia API key | From step 2 |
+    | Cartesia voice ID | From step 2 |
+
+    The values are stored in the encrypted [vault](/get-started/secrets-vault). Voice has no `.env` fallback.
+
+    Then install the Voice channel if it isn't already, and enable it.
+  </Step>
+
+  <Step title="Restart Curia">
+    Curia reads the voice settings when it starts. Restart from the console's **System** page, or run:
+
+    ```bash
+    docker compose restart curia
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  **Signal calls.** Curia can also answer calls to its Signal number. This is experimental, off by default, and needs extra pieces (a newer signal-cli, a call tunnel and PulseAudio) that the standard install doesn't include. See [Signal calls](/channels/voice-setup#signal-calls).
+</Note>
+
+## Check it works
+
+1. Open `/api/health` on your Curia address. `checks.voice` should read `ok`. It reads `fail` if Curia can't reach LiveKit, and `skipped` if voice didn't start.
+2. Open the console **Chat**. A **Voice** button (with a phone icon) appears once voice is running. If it's missing, see [The Voice button doesn't appear](/channels/voice-setup#troubleshooting).
+3. Click **Voice**, allow the microphone, and say something. Curia greets you first, then answers out loud. Hang up from the call bar. The transcript appears in the chat history.
+
+If the setup assistant shows **Voice (console)** as done, that only means the six values are saved. The test call is the real check.
+
+## What your principal will notice
+
+- A **Voice** button in the console chat. They click it, allow the microphone, and talk.
+- Curia speaks in the voice you chose. It greets them first, waits a moment when they pause, and stops talking when they interrupt.
+- For longer jobs, Curia says it will get back to them rather than leaving silence on the line.
+- Each call's transcript is saved to the chat history, so they can scroll back to it.
+
+Whoever uses the console chat is treated as your principal, so a test call you make during setup is a conversation as them. Keep test calls short and neutral.
+
+<Note>
+  **Coming soon:** calling Curia from the phone app. Until it ships, calls are placed from the console in a browser.
+</Note>
