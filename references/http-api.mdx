@@ -62,25 +62,69 @@ If the token is missing or incorrect, the API returns:
 
 Console chat is how you send Curia a message over HTTP. It runs on the `web` channel, where the sender is the principal in their own authenticated session, so it carries **high trust**.
 
+There is **one web conversation**, and the server owns it. Every browser and paired phone uses the same thread, so you don't choose or send a conversation id.
+
 | Endpoint | Description |
 |---|---|
-| `POST /api/chat/messages` | Send a message. Body: `{ "message": "...", "conversationId": "..." }` (`conversationId` optional). Returns `202 { "conversationId": "..." }`; the reply arrives on the stream. |
-| `GET /api/chat/stream` | Server-Sent Events stream of agent replies and tool activity. Filter with `?conversationId=...`. |
-| `GET /api/chat/history` | Page through a conversation. Query: `conversationId` (required), `before` (ISO timestamp cursor), `limit` (default 25, max 50). |
+| `GET /api/chat/conversation` | Returns `200 { "conversationId": "..." }`: the shared web thread. It's created on first use, adopting your most recent web conversation if there is one. |
+| `POST /api/chat/messages` | Send a message. Body: `{ "message": "...", "clientMessageId": "..." }`. `message` is required. `clientMessageId` is optional (8–80 characters of letters, digits and `-`), and it's echoed back on the stream so the sender can recognise its own message. Returns `202 { "conversationId": "..." }` right away, without waiting for Curia's reply; the reply arrives on the stream. |
+| `GET /api/chat/stream` | Server-Sent Events stream for the shared thread. See the events below. |
+| `GET /api/chat/history` | Page through the shared thread, oldest first. Query: `before` (ISO timestamp cursor) and `limit` (default 25, max 50). Returns `{ "messages": [{ "id", "role", "content", "html", "timestamp" }], "hasMore" }`. |
 
-Open the stream for the conversation, post the message, then read the reply from the stream:
+A `conversationId` sent to any of these is ignored, and Curia logs it when it differs from the shared thread.
+
+The stream sends one `data:` line of JSON per event:
+
+| Event `type` | When |
+|---|---|
+| `user.message` | One of your messages, from any device. It's sent before Curia starts working on it, and carries `content` and `client_message_id`. |
+| `message` | Curia's reply, with `content`, rendered `html` and `timestamp`. |
+| `tool.invoke`, `tool.result` | Curia started or finished a tool. |
+| `message.rejected` | A message was blocked before it reached an agent, with the `reason`. |
+| `ping` | A heartbeat every 30 seconds, so a client can tell when the connection has died. |
+
+Open the stream, post the message, then read your message's echo and Curia's reply from the stream:
 
 ```bash
-# Terminal 1 — watch the conversation
+# Terminal 1: watch the shared thread
 curl -N -H "x-web-bootstrap-secret: $SECRET" \
-  "http://localhost:3000/api/chat/stream?conversationId=my-conv-id"
+  "http://localhost:3000/api/chat/stream"
 
-# Terminal 2 — send a message
+# Terminal 2: send a message
 curl -X POST http://localhost:3000/api/chat/messages \
   -H "x-web-bootstrap-secret: $SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"message": "What is on my calendar today?", "conversationId": "my-conv-id"}'
+  -d '{"message": "What is on my calendar today?"}'
 ```
+
+### Sessions and devices
+
+A console session lasts **90 days from its last use**, and it survives restarts. These endpoints back **Settings → Devices**.
+
+| Endpoint | Description |
+|---|---|
+| `POST /auth` | Exchange the access key for a session cookie |
+| `POST /auth/logout` | End the current session and clear its cookie |
+| `GET /api/sessions` | List live sessions: name, kind, created, last seen, whether it's the current device, and whether notifications are on |
+| `PATCH /api/sessions/:id` | Rename a session. Body: `{ "name": "..." }` |
+| `DELETE /api/sessions/:id` | Sign a session out, which also turns off its notifications |
+| `POST /api/sessions/revoke-others` | Sign out every session except the caller's. Called with only the `x-web-bootstrap-secret` header (no cookie), it signs out every session. |
+
+Signing in, logging out, revoking a session and signing out others are recorded in the audit log as `operator.session` events. See [Use Curia on your phone](/channels/phone-app).
+
+### Phone pairing and notifications
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/pairing/origin` | The address a phone should use, and whether that address can install the phone app |
+| `POST /api/pairing/codes` | Create a pairing code: a single-use QR token and an 8-character short code, valid for 10 minutes |
+| `GET /api/pairing/codes/:id` | Which parts of a pairing code have been used, and whether it has expired |
+| `POST /api/pairing/redeem` | Public. A phone exchanges a pairing token or short code for its own session cookie. |
+| `GET /api/push/config` | Whether notifications are available, and the public key a browser subscribes with |
+| `PUT /api/push/settings` | Notification settings, such as hiding message previews |
+| `POST /api/push/subscriptions` | Save this browser's notification subscription for the current session |
+| `DELETE /api/push/subscriptions` | Remove this browser's notification subscription |
+| `POST /api/push/notices/:id/dismiss` | Dismiss a notice, such as "your phone stopped receiving notifications" |
 
 ### Other console endpoints
 

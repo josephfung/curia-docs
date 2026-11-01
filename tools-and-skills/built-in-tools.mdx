@@ -35,7 +35,7 @@ Some tools are also **`elevated`**: they exercise CEO authority directly, so the
 
 Outbound email and console rendering share one sanitized converter: markdown in a draft or reply body becomes HTML with clickable links, bare-URL autolinks, and tables.
 
-**Recipients are people, not addresses.** Every send tool (`email-send`, `email-reply`'s `cc`, `email-draft-save`, `signal-send`, `sms-send`, `slack-send`) takes a contact ID or `principal` — never a typed address or number. The address comes from that person's verified contact record, so a mistyped one can't slip through. Someone new is added with `contact-create` first, then sent to. See [How Curia addresses a message](/core-concepts/contacts-trust#how-curia-addresses-a-message).
+**Recipients are people, not addresses.** Every send tool (`email-send`, `email-reply`'s `cc`, `email-draft-save`, `signal-send`, `sms-send`, `slack-send`, `web-send`) takes a contact ID or `principal` — never a typed address or number. The address comes from that person's verified contact record, so a mistyped one can't slip through. Someone new is added with `contact-create` first, then sent to. See [How Curia addresses a message](/core-concepts/contacts-trust#how-curia-addresses-a-message).
 
 | Tool | action_risk | Description |
 |---|---|---|
@@ -154,6 +154,7 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 | Tool | action_risk | Description |
 |---|---|---|
 | `signal-send` | medium | Send a Signal message. Accepts an optional `context_bridge` JSON for delegation-aware reply routing. |
+| `web-send` | medium | Message the principal in the console chat, with a notification to their phone app when the chat isn't open. Principal only. If the phone can't be reached, it sends on the next configured channel and says which one it used. See [Use Curia on your phone](/channels/phone-app). |
 | `bullpen` | low | Open or contribute to an inter-agent discussion thread |
 | `request-clarification` | none | Pause a delegated task mid-execution to ask the CEO a clarifying question; the runtime short-circuits the tool loop and returns a typed result with a resume token so the coordinator can re-delegate seamlessly once the CEO replies |
 | `context-bridge-release` | low | Coordinator-only — explicitly close an active outbound-context entry once the LLM detects a conversation thread has ended, freeing the slot before TTL expiry |

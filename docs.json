@@ -132,6 +132,7 @@
               "channels/slack-setup",
               "channels/sms-setup",
               "channels/voice-setup",
+              "channels/phone-app",
               "channels/cli",
               "channels/http",
               "channels/building-custom-channels"

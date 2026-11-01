@@ -10,9 +10,10 @@ The HTTP adapter is the Fastify server behind the web console. It is not a chat 
 
 | Endpoint | Method | Auth | Description |
 |---|---|---|---|
-| `/api/chat/messages` | POST | Console session | Send a message to Curia. Returns `202` with the `conversationId`; the reply arrives on the stream. |
-| `/api/chat/stream` | GET | Console session | Subscribe to agent replies and tool activity via SSE |
-| `/api/chat/history` | GET | Console session | Page through a conversation's history |
+| `/api/chat/conversation` | GET | Console session | The shared web thread's id. Every browser and paired phone uses the same one. |
+| `/api/chat/messages` | POST | Console session | Send a message to Curia. Returns `202` with the shared `conversationId` right away; the reply arrives on the stream. |
+| `/api/chat/stream` | GET | Console session | Subscribe to the shared thread's messages, replies and tool activity via SSE |
+| `/api/chat/history` | GET | Console session | Page through the shared thread's history |
 | `/api/health` | GET | None | Health check |
 | `/api/agents/status` | GET | Bearer token | Agent status information |
 
@@ -25,6 +26,8 @@ For full endpoint documentation, including the console's jobs, tasks, contacts, 
 ## Authentication
 
 Console routes, including chat, authenticate with the `curia_session` cookie set when you sign in to the console, or with the `x-web-bootstrap-secret` header carrying `web_app_bootstrap_secret` from the [vault](/get-started/secrets-vault).
+
+A console session lasts **90 days from its last use**, and every request you make starts the 90 days again. Sessions are stored in the database, so restarting or updating Curia doesn't sign anyone out. **Settings → Devices** lists every signed-in browser and phone, and lets you rename them, sign one out, or sign out all the others. You can also pair a phone from there without typing the access key; see [Use Curia on your phone](/channels/phone-app).
 
 Routes that do not authenticate themselves, such as `/api/agents/status`, require a Bearer token in the `Authorization` header:
 
@@ -46,12 +49,19 @@ Messages from console chat pass through the full dispatch pipeline, including tr
 
 ## Streaming
 
-`/api/chat/stream` delivers real-time events as they occur:
+You have **one conversation with Curia across every device**. The server owns the web thread, so every browser and phone you sign in on shows the same history.
 
+`/api/chat/stream` delivers real-time events for that thread as they occur:
+
+- Your own messages (`user.message`), from any device, so a message sent from your phone appears on your computer
 - Agent replies
 - Tool invocations and results
 
-The console opens the stream for a conversation, posts the message, and renders the reply when it arrives. Filter the stream with `?conversationId=...` to watch a single thread.
+The stream is always the shared thread, so there's nothing to filter. The console keeps it open while the page is visible and closes it when the tab is hidden. It reconnects with backoff after a dropped connection, and reloads anything it missed when it comes back. The server sends a `{"type":"ping"}` event every 30 seconds so a client can tell when a connection has died.
+
+<Note>
+  A reverse proxy in front of Curia must not compress `/api/chat/stream`, or the events arrive in bursts instead of one by one. With Caddy, exclude the path from `encode`.
+</Note>
 
 <CardGroup cols={2}>
   <Card title="HTTP API reference" icon="book" href="/references/http-api">
