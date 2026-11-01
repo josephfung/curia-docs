@@ -125,6 +125,28 @@ Open the console chat. The **Call** button appears once Voice is enabled and the
     When an inbound call connects, Curia opens the conversation rather than waiting in silence — a short greeting appropriate to the time of day. If something was sent on another channel just before the call, it acknowledges that in the same breath.
   </Accordion>
 
+  <Accordion title="It waits a beat before answering">
+    When you stop talking, Curia waits briefly before it replies, so a pause mid-thought doesn't get answered as if you had finished. Deepgram first waits for 400 ms of silence, then Curia holds another 350 ms. If you start talking again inside that window, it is all one request. In practice a reply starts about two seconds after your last word.
+
+    If Curia cuts you off when you pause to think, raise the hold in `config/local.yaml`:
+
+    ```yaml
+    channels:
+      voice:
+        turn_hold_ms: 600
+    ```
+
+    It takes a whole number of milliseconds from `0` to `5000`. Curia refuses to start on any other value. A longer hold means fewer interruptions but slower replies.
+  </Accordion>
+
+  <Accordion title="It says 'One moment' while it works">
+    When a request needs a tool, such as a calendar lookup, Curia says "One moment." once and then goes quiet until it has the answer, even if the work takes several steps. It talks about the work itself ("Let me check your calendar"), not about the assistants or tools doing it behind the scenes.
+  </Accordion>
+
+  <Accordion title="You can interrupt it">
+    Start talking while Curia is speaking and it stops to listen. Detection takes about a second, because Curia waits for enough of your speech to rule out its own voice or background noise. On console calls, audio already queued is dropped as soon as you're detected. On Signal calls, up to about two seconds of queued audio can still play out before it goes quiet.
+  </Accordion>
+
   <Accordion title="It knows what just happened on your other channels">
     Spoken turns read the same active outbound context the text channels write to. Call right after Curia emails someone and it already knows what went out; you do not have to re-establish the subject.
   </Accordion>
@@ -224,7 +246,22 @@ Signal calls fail in a way messaging does not: the JSON-RPC socket can be perfec
   </Accordion>
 
   <Accordion title="The assistant is slow to start speaking">
-    Voice emits structured latency fields (`voice.ttfa_ms`, `voice.llm_ttft_ms`, `voice.tts_first_byte_ms`) in the logs. Compare them before changing `channels.voice.model` — only switch the model if LLM latency dominates.
+    Each reply logs where the time went:
+
+    - `voice.end_of_speech_wait_ms`: your last word until Curia decided you'd finished. This is the silence threshold plus `channels.voice.turn_hold_ms`.
+    - `voice.turn_queue_wait_ms`: time the request waited behind a reply that was still running.
+    - `voice.ttfa_ms`: from starting the reply to its first audio, which covers the model (`llm_ttft_ms`) and speech synthesis (`voice.tts_first_byte_ms`).
+    - `voice.last_word_to_audio_ms`: the whole gap you hear.
+
+    Lower `turn_hold_ms` if the wait dominates. Only switch `channels.voice.model` if model latency dominates.
+  </Accordion>
+
+  <Accordion title="Curia cuts me off mid-thought">
+    Your pause was longer than the turn hold, so Curia treated it as the end of your request. Raise `channels.voice.turn_hold_ms` (default `350`) in `config/local.yaml` and restart. See [It waits a beat before answering](#what-curia-does-on-a-call).
+  </Accordion>
+
+  <Accordion title="Barge-in feels slow, or the audio is choppy">
+    Each interruption logs `voice.barge_in_detect_ms` (from when you started speaking to detection) and whether queued audio was dropped (`flushed`). Each spoken sentence logs `voice.tts_starved_ms`: anything above zero means audio arrived slower than real time, which you hear as choppiness. At hang-up, the `voice session audio summary` line totals these for the call and adds event-loop delay, which shows whether the host was too busy to keep audio flowing.
   </Accordion>
 
   <Accordion title="Voice refuses to start and logs a missing capability">
