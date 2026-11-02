@@ -18,11 +18,13 @@ Curia's web research capability is powered by [Tavily](https://tavily.com) — a
   </Step>
 </Steps>
 
-## Enter the key via the setup wizard
+## Enter the key in the console
 
-Ask Curia's setup wizard to connect web search. It will send you a one-time secure link — paste your Tavily API key into the form and submit. The key goes straight to the vault; Curia never sees it in plaintext.
+In the console, go to **Tools**, open `web-search`, and save the key in its `tavily_api_key` field. Then restart Curia; web search is turned on at the first start after the key is saved. See [Search and memory](/get-started/search-and-memory) for the full steps.
 
-The web research tool is active immediately after the key is saved (no restart needed).
+<Warning>
+  If the setup assistant offers you a secure link for your Tavily key, use the **Tools** page instead. Today the link stores the key under a name web search doesn't read, so search stays off even though the assistant marks the step done.
+</Warning>
 
 ## Verify it is working
 

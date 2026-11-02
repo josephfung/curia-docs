@@ -1,26 +1,41 @@
 ---
 title: "Install Curia"
-description: "Run Curia from the published container image with a single script — no source checkout, no toolchain, just Docker."
+sidebarTitle: "1. Install Curia"
+description: "Run Curia from the published container image on a host with its own domain and HTTPS. One script, no source checkout."
 ---
 
-Getting Curia running takes one script and about five minutes. `install.sh` pulls the published container image, generates your secrets, starts the database and app in Docker, and runs migrations — the only thing you provide is an Anthropic API key. Nothing is built from source, so you don't need Node, pnpm, or a checkout of the code. Once it's running, you finish configuration inside the app and add optional capabilities (email, search, Signal) whenever you need them.
+## What this is for
+
+This page gets Curia running on a server you control. `install.sh` pulls the published container image, generates your secrets, starts the database and app in Docker and runs migrations. Nothing is built from source, so you don't need Node, pnpm or a checkout of the code.
+
+When you're done, Curia is running and you can sign in to its console. It can't reach anyone yet: you connect its email, a way to message your principal and its voice on the next pages.
 
 <Note>
-  Want to modify Curia, not just run it? The [build from source](/get-started/development) path clones the repo and hot-reloads your changes. This page is the fastest route to a running instance.
+  Want to change Curia's code, not just run it? [Build from source](/get-started/development) instead.
 </Note>
 
-## Prerequisites
+## What you'll need
 
-The image-based install runs everything inside the container, so the host needs very little:
+- **A host with Docker and the Compose plugin.** Docker 20.10 or later: [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI.
+- **curl**, to download the installer.
+- **An Anthropic API key** (it starts with `sk-ant-`). The installer asks for it and won't continue without one. Get one at [console.anthropic.com](https://console.anthropic.com); usage is billed by Anthropic. OpenRouter and Amazon Bedrock also work, but only with configuration changes after install (see the [configuration reference](/references/configuration)).
+- **A domain pointing at the host,** with ports 80 and 443 open. Create a DNS A record for it before you start. If you already terminate TLS at your own proxy or load balancer, you can use that instead.
 
-- **Docker with the Compose plugin** — Postgres and the app both run in Docker; install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI (Docker 20.10+)
-- **curl** — used once to download the installer and the compose files
+You don't need Node, pnpm or openssl on the host. Migrations, secret generation and vault seeding all run inside the image.
 
-<Note>
-  You do **not** need Node, pnpm, or openssl on the host. Migrations, secret generation, and vault seeding all run inside the pulled image.
-</Note>
+**Time:** a few minutes once the host and DNS record are ready. Connecting everything else takes an hour or two, at your own pace. See [What to expect](/get-started/what-to-expect).
 
-## Quick start
+### Why HTTPS by default
+
+Run Curia on its own domain with HTTPS unless you're only trying it out:
+
+- Browsers only allow microphone access on HTTPS (or on `localhost`), so voice calls from the console need it.
+- SMS needs a public HTTPS address for the Telnyx webhook.
+- The phone app and your principal's email sign-in will need it too. Both are coming soon.
+
+A local install on `http://localhost:3000` is fine for a try-out on your own machine. It isn't a setup you can hand to a principal.
+
+## Steps
 
 <Steps>
   <Step title="Download the installer">
@@ -29,16 +44,16 @@ The image-based install runs everything inside the container, so the host needs 
     ```
 
     <Warning>
-      Download the script first, then run it — do **not** pipe curl straight into bash (`curl … | bash`). The installer uses interactive prompts that need a real terminal, and piped input has no TTY. Reviewing the script before running it is also just good practice.
+      Download the script first, then run it. Don't pipe curl into bash (`curl … | bash`): the installer asks questions and needs a real terminal. It also gives you a chance to read the script first.
     </Warning>
 
     <Note>
-      By default the installer uses the **latest release** — both the config files and the container image come from it. Set `CURIA_VERSION` to choose a different one; it pins the config *and* the image together:
+      By default the installer uses the **latest release**, for both the config files and the container image. Set `CURIA_VERSION` to choose a different one; it pins the config and the image together:
 
-      - `CURIA_VERSION=v0.40.1 bash install.sh` — pin a specific release.
-      - `CURIA_VERSION=edge bash install.sh` — track the newest `main` build (advanced / testing).
+      - `CURIA_VERSION=v0.40.1 bash install.sh` pins a specific release.
+      - `CURIA_VERSION=edge bash install.sh` tracks the newest `main` build (for testing).
 
-      The Postgres image is a separate axis, versioned by its major (`CURIA_POSTGRES_TAG=pg16`) rather than the Curia release. On a re-run of an existing install, `CURIA_VERSION` does not change the image tag — edit `CURIA_IMAGE_TAG` in `.env` and `docker compose pull` to upgrade.
+      The Postgres image is versioned separately, by its major version (`CURIA_POSTGRES_TAG=pg16`). On a re-run of an existing install, `CURIA_VERSION` doesn't change the image tag: edit `CURIA_IMAGE_TAG` in `.env` and run `docker compose pull` to upgrade.
     </Note>
   </Step>
 
@@ -47,180 +62,129 @@ The image-based install runs everything inside the container, so the host needs 
     bash install.sh
     ```
 
-    The installer does everything needed to get Curia running, without a source checkout:
+    The installer:
 
-    - Checks that Docker, the Compose plugin, and curl are available
-    - Fetches the compose files and the `.env` template next to the script
-    - Generates the database password and the vault master key (`SECRET_ENCRYPTION_KEY`) and writes them to `.env`
-    - Prompts you for an Anthropic API key — get one at [console.anthropic.com](https://console.anthropic.com)
-    - Asks how you'll reach Curia (the deployment topology step below)
-    - Pulls the published image, starts Postgres, runs database migrations **inside the image**, and seeds the encrypted vault
-    - Brings the full Curia stack up and waits for it to become healthy
+    - checks that Docker, the Compose plugin and curl are available;
+    - fetches the compose files and the `.env` template next to the script;
+    - generates the database password and the vault master key (`SECRET_ENCRYPTION_KEY`) and writes them to `.env`;
+    - asks for your Anthropic API key;
+    - asks how you'll reach Curia (next step);
+    - pulls the image, starts Postgres, runs migrations and seeds the encrypted vault;
+    - starts Curia and waits for it to report healthy.
 
-    The Anthropic key is the only value you supply. Everything else is generated for you. Secrets land in the [encrypted vault](/get-started/secrets-vault); only the four bootstrap values needed to reach and unlock it stay in `.env`.
+    Secrets go into the [encrypted vault](/get-started/secrets-vault). Only the four bootstrap values needed to reach and unlock it stay in `.env`.
   </Step>
 
-  <Step title="Choose your deployment topology">
-    The installer asks how you plan to reach the instance and configures the stack accordingly:
+  <Step title="Choose how you'll reach Curia">
+    The installer offers three options. Its default is **1**, but for a real setup choose **2**:
 
-    - **Local / evaluation** — `http://localhost:3000`, no TLS. The right choice for a laptop or a quick trial.
-    - **Public domain + HTTPS** — automatic Let's Encrypt certificates via a bundled Caddy reverse proxy. You supply a domain (with a DNS A record pointing at the host and ports 80/443 open).
-    - **Public IP / my own proxy** — plain HTTP on `:3000`, for when you terminate TLS at an upstream load balancer or proxy.
+    - **2 — Public domain + HTTPS.** Recommended. A bundled Caddy proxy gets a Let's Encrypt certificate automatically. Enter your domain when asked.
+    - **3 — Public IP / my own proxy.** Plain HTTP on port 3000, for when your own proxy or load balancer handles TLS.
+    - **1 — Local / evaluation.** `http://localhost:3000`, no TLS. For a try-out on your own machine only.
 
-    You can change this later by editing `.env` and re-running the installer.
+    Re-running the installer won't ask this again. To change topology later, see [Deployment and self-hosting](/get-started/deployment).
   </Step>
 
   <Step title="Save your bootstrap secret">
-    When the installer finishes, it prints a summary box with your login URL and a **bootstrap secret**:
+    When the installer finishes, it prints your console address and a **bootstrap secret**:
 
     ```
     ╔══════════════════════════════════════════════════════════════════════╗
     ║   Curia is running.                                                    ║
-    ║   Open:    http://localhost:3000                                       ║
+    ║   Open:    https://curia.example.com                                   ║
     ║   Bootstrap secret (save this to a password manager):                  ║
     ║   a1b2c3d4...                                                          ║
     ╚══════════════════════════════════════════════════════════════════════╝
     ```
 
-    Save the bootstrap secret to a password manager now. You'll use it to log in, and it won't be shown again.
+    Save the bootstrap secret in a password manager now. It's how you sign in, and the installer won't show it again.
   </Step>
 
-  <Step title="Log in and finish in the app">
-    Open your instance (`http://localhost:3000` for a local install, or your domain) and enter your bootstrap secret to create your account.
+  <Step title="Sign in and fill in the setup form">
+    Open the address from the summary and paste the bootstrap secret into the **Access key** field.
 
-    Once you're in, the **setup wizard** at `/setup` runs automatically. It's a six-step form: your name (the CEO Curia works for), your operational details (timezone, email, working hours), the assistant's identity, its tone & style (a few lines on how it sounds, started from a template, plus a Detail level), how independently it acts (an autonomy level) with any standing preferences, and a review screen. Submitting the last step writes everything through, restarts external channels if needed, and drops you directly into the chat view at `/chat`.
+    Curia opens its setup form at `/setup`. It has six steps:
 
-    At `/chat`, the **setup-wizard specialist agent** greets you and takes an outcome-backward approach: it surfaces what's already done, asks what you most want Curia to do for you, and walks you to the shortest path to that first working integration. Remaining tasks can be deferred and picked up in any future session. The whole thing takes a few minutes and makes every subsequent interaction noticeably more useful.
+    1. **About you:** a name.
+    2. **Your details:** timezone, email, preferred name, title and working hours.
+    3. **Assistant identity:** Curia's name, title and email signature.
+    4. **Tone & style:** how Curia sounds, started from a template, plus a detail level.
+    5. **Autonomy & preferences:** how independently Curia acts, and any standing preferences.
+    6. **Review:** check everything, then **Confirm & save**.
 
-    <Note>
-      Checkpoint: Curia is running on Anthropic and Postgres. Agents are live, the web app is working, and the assistant knows enough about you to be useful. Add email, semantic search, or Signal below whenever you need them.
-    </Note>
+    The form speaks to "you" as the executive Curia works for: the name, email and timezone are your principal's. If you're setting Curia up for someone else, enter their details.
+
+    When you save, Curia restarts if it needs to bring channels online ("Setting up channels…"), then opens the chat view at `/chat`.
+  </Step>
+
+  <Step title="Meet the setup agent">
+    At `/chat`, the setup agent greets you. It starts with a few quick wins that need no credentials: Curia's persona, a scheduled debrief, how Curia refers to your principal, and a tour of what's ready. Then it helps you connect the rest, one item at a time. You can stop at any point and pick up in a later session.
+
+    <Warning>
+      Add an embedding source soon after you install. Without one, Curia's memory is off and the setup agent can't check what you've already set up. See [Search and memory](/get-started/search-and-memory).
+    </Warning>
   </Step>
 </Steps>
 
 <Accordion title="Running the installer again">
-  `install.sh` is safe to re-run. Once a fresh install completes, it writes a `SETUP_COMPLETE` marker to `.env`, and every subsequent run takes a non-rotating **upgrade/restart** path:
+  `install.sh` is safe to re-run. After a fresh install completes, it writes a `SETUP_COMPLETE` marker to `.env`, and every later run takes an **upgrade/restart** path:
 
-  - **No secrets are regenerated** — your database credentials and vault master key are preserved, so existing encrypted secrets stay readable.
-  - **Migrations are re-applied idempotently** — already-applied migrations are skipped, so this is safe on every run and is how you pick up a new image version.
-  - **The vault is verified, not re-seeded** — the installer confirms the required secrets are present and fails loudly if any are missing, rather than overwriting them.
+  - **No secrets are regenerated.** Your database credentials and vault master key are kept, so existing encrypted secrets stay readable.
+  - **Migrations are re-applied safely.** Already-applied migrations are skipped.
+  - **The vault is checked, not re-seeded.** The installer confirms the required secrets are present and fails loudly if any are missing, rather than overwriting them.
 
-  Because secrets are never silently regenerated, re-running is the normal way to upgrade or restart the stack.
+  Re-running is the normal way to upgrade or restart the stack.
 </Accordion>
 
-## Full setup
+## Check it works
 
-The quick start gives you a running instance on Anthropic and Postgres. The capabilities below are optional and independent — add them in any order, only when you need them.
+- The installer ends with **Curia is running.**
+- You can sign in at your domain over HTTPS, and the browser shows a valid certificate.
+- The health endpoint answers. From any machine:
 
-Each one follows the same pattern: add the credential to the [encrypted vault](/get-started/secrets-vault) via the Curia console (Settings → Channels for channel credentials), then restart Curia to pick up the change (it re-reads the vault on startup):
+  ```bash
+  curl https://curia.example.com/api/health
+  ```
 
-```bash
-docker compose restart curia
-```
+  `"status"` should be `"ok"`. Channel checks such as `email`, `signal` and `sms` read `"skipped"` until you connect them. That's expected. See [Health monitoring](/get-started/health-monitoring) for every field.
+- The setup form saved and you're in `/chat` with the setup agent.
 
-### Email (Nylas)
+## What your principal will notice
 
-Curia uses [Nylas](https://nylas.com) as its email layer — a unified API that handles IMAP and SMTP complexity and provides a consistent interface across Gmail, Outlook, and other providers.
+Nothing yet. Curia has no email, messaging or voice connected, so it can't contact anyone. Your principal first hears from Curia once you've connected a channel to reach them.
 
-<Steps>
-  <Step title="Create a Nylas account">
-    Sign up at [app.nylas.com](https://app.nylas.com). The free tier is sufficient for development.
-  </Step>
+## Troubleshooting
 
-  <Step title="Create an application">
-    In the Nylas dashboard, create a new application and choose **Email** as the product. Once created, copy your **API key** (stored as `nylas_api_key` in the vault).
-  </Step>
+<AccordionGroup>
+  <Accordion title="Re-running the installer on an existing install">
+    This is expected and safe. Once the first install completes, `install.sh` finds the `SETUP_COMPLETE` marker in `.env` and switches to upgrade/restart mode: it never regenerates secrets, re-applies migrations safely, and checks (rather than re-seeds) the vault. If the vault check fails because required secrets are missing, run a fresh install from a clean directory.
+  </Accordion>
 
-  <Step title="Add credentials via the console">
-    In the Curia console, go to **Settings → Channels → Email** and enter your Nylas API key. Then go to **Email accounts** and add an account — paste the Nylas Grant ID for that mailbox. The console stores these in the vault automatically.
-
-    <Warning>
-      Use a dedicated email account rather than your primary inbox for development. Curia reads and processes all incoming messages.
-    </Warning>
-  </Step>
-
-  <Step title="Apply the change">
-    ```bash
-    docker compose restart curia
-    ```
-
-    The email channel activates automatically when all three vault keys (`nylas_api_key`, `nylas_grant_id`, `nylas_self_email`) are present.
-  </Step>
-</Steps>
-
-### Semantic search and entity memory (embeddings)
-
-An embedding model powers entity memory and semantic search in the knowledge graph. Without an embedding source, the knowledge graph is off, along with the features that depend on entity memory.
-
-Choose one source:
-
-- **OpenAI.** Add an OpenAI API key to the vault as `openai_api_key`. See [OpenAI embeddings](/integrations/openai-embeddings).
-- **Your own embedding server.** Set `EMBEDDING_BASE_URL` and `EMBEDDING_MODEL` in `.env` to point at any OpenAI-compatible `/embeddings` server, such as llama.cpp, Ollama or vLLM. If the server checks a key, add it to the vault as `embedding_api_key`. See [Use your own embedding server](/integrations/embeddings-endpoint).
-
-Then recreate the Curia container to apply the change:
-
-```bash
-docker compose up -d curia
-```
-
-### Web research (Tavily)
-
-Tavily powers the `web-search` tool, which lets agents research topics and look up current information during tasks.
-
-<Steps>
-  <Step title="Get a Tavily API key">
-    Sign up at [tavily.com](https://tavily.com) and copy your API key from the dashboard.
-  </Step>
-
-  <Step title="Add the key to the vault">
-    In the Curia console, go to **Settings → Channels → Web search** and enter the key (stored as `tavily_api_key`).
-  </Step>
-
-  <Step title="Enable the web-search tool">
-    `web-search` declares `tavily_api_key` in its `install.requires_secrets`, so it stays disabled until the key is in the vault. Once added, enable the tool from the Settings registry in the console, then restart Curia:
+  <Accordion title="Postgres connection refused">
+    Confirm the container is running:
 
     ```bash
-    docker compose restart curia
+    docker compose ps
     ```
 
-    See [Managing skills, agents, and channels](/core-concepts/registry) for the registry workflow.
-  </Step>
-</Steps>
+    The database password is generated during install and passed to the container through `.env`, so the credentials match by default. If you've edited `.env` by hand, check that `DATABASE_URL` still matches `DB_USER` and `DB_PASSWORD`.
+  </Accordion>
 
-### Signal messaging
+  <Accordion title="Let's Encrypt certificate isn't issued (HTTPS option)">
+    Caddy requests a certificate on first start. It needs a DNS A record for your domain pointing at the host, ports 80 and 443 reachable from the internet, and the right `DOMAIN` value in `.env`. Check the proxy logs for the result:
 
-Signal messaging runs via [signal-cli](https://github.com/AsamK/signal-cli). Docker Compose manages the socket path automatically — the only thing you need to provide is your phone number.
-
-<Steps>
-  <Step title="Bootstrap signal-cli">
-    Signal requires registering a phone number with signal-cli and seeding the `signal-data` Docker volume with the resulting credentials. Refer to your deployment documentation for the bootstrap procedure.
-  </Step>
-
-  <Step title="Add your phone number to the vault">
-    In the Curia console, go to **Settings → Channels → Signal** and enter the E.164 number you registered (e.g. `+12223334444`). It is stored under the vault key `channel.signal.phone_number`. Do not configure `SIGNAL_SOCKET_PATH` — the deployment layer manages this automatically.
-  </Step>
-
-  <Step title="Apply the change">
     ```bash
-    docker compose restart curia
+    docker compose logs caddy
     ```
-
-    The Signal channel activates when `channel.signal.phone_number` is in the vault and the `signal-data` volume is populated.
-  </Step>
-</Steps>
+  </Accordion>
+</AccordionGroup>
 
 ## Updating Curia
 
-Curia applies pending database migrations automatically on every startup, under an
-advisory lock, and skips migrations that are already applied. Updating is therefore
-just pulling the new images and restarting; a schema-changing version bump migrates
-unattended, and re-running when you're already up to date is a safe no-op. There is
-no manual SQL step.
+Curia applies pending database migrations automatically on every startup and skips ones already applied. Updating is pulling the new images and restarting. There's no manual SQL step.
 
 <Warning>
-  Always back up your database before updating. Migrations move your schema forward,
-  and a bad interruption mid-migration is far easier to recover from with a fresh dump
-  in hand.
+  Back up your database before updating. A fresh dump makes an interrupted migration much easier to recover from.
 </Warning>
 
 <Steps>
@@ -229,8 +193,7 @@ no manual SQL step.
     docker compose exec -T postgres pg_dump -U curia -Fc curia > curia-backup-$(date +%Y%m%d).dump
     ```
 
-    This writes a compressed, custom-format dump you can restore with `pg_restore`.
-    Keep it until you've confirmed the update is healthy.
+    This writes a compressed dump you can restore with `pg_restore`. Keep it until you've confirmed the update is healthy.
   </Step>
 
   <Step title="Pull and restart">
@@ -239,15 +202,11 @@ no manual SQL step.
     docker compose up -d
     ```
 
-    On startup the app runs any pending migrations before serving traffic. Watch the
-    logs (`docker compose logs -f curia`) — a successful boot ends with the health
-    check passing at `http://localhost:3000/api/health`.
+    On startup Curia runs any pending migrations before serving traffic. Watch the logs (`docker compose logs -f curia`) until `/api/health` reports `"ok"`.
   </Step>
 
   <Step title="Roll back if needed">
-    If an update misbehaves, restore the backup in place. Stop the app so nothing
-    is writing, restore (`--clean --if-exists` drops and recreates objects), then
-    bring the stack back up:
+    If an update misbehaves, restore the backup. Stop Curia so nothing is writing, restore (`--clean --if-exists` drops and recreates objects), then start the stack again:
 
     ```bash
     docker compose stop curia
@@ -259,51 +218,21 @@ no manual SQL step.
   </Step>
 </Steps>
 
-## Troubleshooting
+## Next: connect Curia
 
-<AccordionGroup>
-  <Accordion title="Re-running the installer on an existing install">
-    This is expected and safe. Once the first install completes, `install.sh` detects the `SETUP_COMPLETE` marker in `.env` and switches to upgrade/restart mode: it never regenerates secrets, re-applies migrations idempotently, and verifies (rather than re-seeds) the vault. If the vault verification fails because required secrets are missing, run a fresh install from a clean directory.
-  </Accordion>
-
-  <Accordion title="Postgres connection refused">
-    Confirm the container is running:
-
-    ```bash
-    docker compose ps
-    ```
-
-    The database password is generated during install and shared with the container automatically through `.env`, so the credentials match by default. If you've edited `.env` by hand, make sure `DATABASE_URL` is still consistent with `DB_USER` and `DB_PASSWORD`.
-  </Accordion>
-
-  <Accordion title="Email channel not activating">
-    All three Nylas secrets must be in the vault: `nylas_api_key`, `nylas_grant_id`, and `nylas_self_email`. If any is missing, the channel disables itself at startup. Confirm they are all present via Settings → Channels → Email in the console, then check the startup logs for a "email channel disabled" or "email adapter disabled" message.
-
-    Remember to restart Curia after adding secrets: `docker compose restart curia`.
-  </Accordion>
-
-  <Accordion title="Let's Encrypt certificate isn't issued (HTTPS topology)">
-    Caddy requests a certificate on first start and needs three things in place: a DNS A record for your domain pointing at the host, ports 80 and 443 reachable from the internet, and the `DOMAIN` value set correctly in `.env`. Check the proxy logs for the ACME challenge result:
-
-    ```bash
-    docker compose logs caddy
-    ```
-  </Accordion>
-</AccordionGroup>
-
-## Next steps
+Curia is running, but it can't reach anyone yet. Work through the Setup pages in order:
 
 <CardGroup cols={2}>
-  <Card title="Deploy to a server" icon="server" href="/get-started/deployment">
-    Run Curia in production: topology, HTTPS, backups, and what to keep safe.
+  <Card title="2. Curia's own email" icon="envelope" href="/get-started/curia-email">
+    Give Curia a mailbox of its own.
   </Card>
-  <Card title="Build from source" icon="code" href="/get-started/development">
-    Clone the repo and hot-reload your changes to contribute or customize Curia.
+  <Card title="3. Reach your principal" icon="comment" href="/get-started/reach-your-principal">
+    Choose Signal or SMS, and link your principal's number.
   </Card>
-  <Card title="Configure your instance" icon="sliders" href="/get-started/configuration">
-    Set up multiple email accounts, tune the autonomy engine, and customize security rules.
+  <Card title="4. Voice" icon="microphone" href="/get-started/voice">
+    Let your principal talk to Curia.
   </Card>
-  <Card title="Core concepts" icon="lightbulb" href="/core-concepts/introduction">
-    Understand how agents, skills, memory, and channels fit together.
+  <Card title="8. Check your setup" icon="list-check" href="/get-started/check-your-setup">
+    Confirm every item works.
   </Card>
 </CardGroup>

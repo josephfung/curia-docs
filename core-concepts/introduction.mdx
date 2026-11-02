@@ -4,7 +4,7 @@ sidebarTitle: "Introduction"
 description: "What Curia is, how it works, and why it was built differently — governance by architecture, persistent memory, and an autonomy engine you control."
 ---
 
-Curia is a multi-agent AI platform that runs on your own server and handles the operational work that consumes an executive's time. It reads your email, manages your calendar, tracks expenses, conducts research, and responds on your behalf across Signal and email — all with your voice and your boundaries. Because it runs on your infrastructure, your data never leaves your control.
+Curia is a multi-agent AI platform that runs on your own server and handles the operational work that consumes an executive's time. It reads your email, manages your calendar, tracks expenses, conducts research, and responds on your behalf across email, Signal, SMS, Slack and voice — all with your voice and your boundaries. Because it runs on your infrastructure, your data never leaves your control.
 
 <Note>
   Curia is currently in pre-alpha. Core functionality is implemented and working; some advanced features are in progress. Check the [GitHub repository](https://github.com/josephfung/curia) for current status before deploying to production.
@@ -25,8 +25,8 @@ Curia is a multi-agent AI platform that runs on your own server and handles the 
   <Card title="Knowledge graph" icon="diagram-project">
     Maintains a persistent graph of people, organizations, decisions, and events with temporal awareness and semantic search.
   </Card>
-  <Card title="Signal messaging" icon="message">
-    Communicates via end-to-end encrypted Signal messages — the same agents, the same context, a different channel.
+  <Card title="Messaging and voice" icon="message">
+    Reach Curia by email, Signal, SMS, Slack or a live voice call — the same agents and the same context on every channel.
   </Card>
   <Card title="Scheduled tasks" icon="clock">
     Works while you sleep: recurring jobs via cron, long-running tasks that survive restarts, and dynamically created reminders.
@@ -92,10 +92,13 @@ Talk to your agents wherever you are. Every channel is a thin adapter that norma
 
 | Channel | How it works |
 |---|---|
-| **Email** | IMAP polling + SMTP via Nylas. Agents read your inbox, extract action items, and reply on your behalf. |
+| **Email** | Via the Nylas API. Curia sends and replies from its own mailbox and, with delegated access, triages your inbox and drafts replies for you. |
 | **Signal** | Via signal-cli. End-to-end encrypted messaging with your agents. |
-| **CLI** | Interactive terminal for local development and testing. |
+| **SMS** | Text messages through Telnyx. |
+| **Slack** | Messages in your Slack workspace. |
+| **Voice** | Live spoken calls from the web console, through a self-hosted LiveKit server, with Deepgram and Cartesia for speech. |
 | **Web console** | Chat with Curia in the browser over `/api/chat` (REST + SSE), authenticated by your console session. |
+| **CLI** | Interactive terminal for local development and testing. |
 
 ## Multi-provider LLM support
 
@@ -103,11 +106,11 @@ Each agent declares a capability tier (`fast`, `standard`, `powerful`) rather th
 
 | Provider | Models | Use case |
 |---|---|---|
-| **Anthropic** | Claude Opus, Sonnet, Haiku | Primary — best for nuanced reasoning and long context |
-| **OpenRouter** | Gemini Flash, DeepSeek V3, GPT-4o, and others | Multi-model routing — cost optimization and model diversity via a single API key |
-| **Ollama** | Llama, Mistral, Gemma, and others | Local/private — no data leaves your server |
+| **Anthropic** | Claude Opus, Sonnet, Haiku | The default. The installer asks for an Anthropic API key, and the default tiers use Claude models. |
+| **OpenRouter** | Models from many vendors, such as DeepSeek, Gemini and GPT | One API key for many models. Remap the tiers to OpenRouter models in your configuration. |
+| **AWS Bedrock** | Claude on Bedrock | Opt-in, for running Claude through your AWS account. Newer than the latest release (v0.44.0). |
 
-Each tier maps to a single model. If your primary provider is unavailable, change the tier mapping to a different model or provider — no agent files need to change.
+Each tier maps to a single model. If your primary provider is unavailable, change the tier mapping to a different model or provider — no agent files need to change. See [Model routing](/references/configuration#model-routing).
 
 ## How Curia differs from typical agent frameworks
 
@@ -118,15 +121,15 @@ Each tier maps to a single model. If your primary provider is unavailable, chang
 | **Memory** | Conversation history (lost on restart) | Knowledge graph + entity memory + temporal awareness (survives restarts, ages gracefully) |
 | **Error handling** | Retry and hope | Error budgets, state continuity, pattern detection — agents resume, not restart |
 | **Agent communication** | Agents work in isolation | The Bullpen — structured, auditable, threaded inter-agent discussions |
-| **Multi-channel** | Single chat interface | Email, Signal, CLI, HTTP API — same agent, any channel |
+| **Multi-channel** | Single chat interface | Email, Signal, SMS, Slack, voice, web console — same agent, any channel |
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Get started" icon="rocket" href="/get-started/installation">
-    Clone, configure, and run Curia in under 15 minutes.
+  <Card title="What to expect" icon="rocket" href="/get-started/what-to-expect">
+    The two phases of getting started, who does what, how long each takes and what you'll need.
   </Card>
   <Card title="Configure your instance" icon="sliders" href="/get-started/configuration">
-    Set up email accounts, tune autonomy settings, and customize security rules.
+    Configuration layers, environment variables and the encrypted vault.
   </Card>
 </CardGroup>

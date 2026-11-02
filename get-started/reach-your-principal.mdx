@@ -1,0 +1,73 @@
+---
+title: "Reach your principal"
+sidebarTitle: "3. Reach your principal"
+description: "Choose how Curia and your principal message each other, Signal or SMS, and link your principal's number so Curia knows it's them."
+---
+
+## What this is for
+
+Curia needs a direct line to your principal's phone: to send them updates and questions, and to take their instructions wherever they are. Today that line is **Signal** or **SMS**. You choose the route, set up the channel, then tell Curia which number is your principal's.
+
+<Note>
+  **Coming soon: the phone app.** A Curia app your principal installs on their phone will become the default route. Until it ships, use Signal or SMS.
+</Note>
+
+## What you'll need
+
+- **Your principal's mobile number,** and to know whether they use Signal.
+- **For Signal:** a phone number for Curia, and [signal-cli](https://github.com/AsamK/signal-cli) running on the same host as Curia. Your principal needs the Signal app.
+- **For SMS:** a [Telnyx](https://telnyx.com) account with a funded balance, Curia on a public HTTPS address (for the Telnyx webhook) and, for a US number, 10DLC brand and campaign registration. Your principal needs nothing beyond their phone.
+
+**Cost** (checked 2026-11-01):
+
+| Route | Cost |
+|---|---|
+| Signal | Free. Curia's number costs whatever your carrier charges. |
+| SMS (Telnyx) | $0.004 per message part, plus carrier fees. Number rent and 10DLC fees vary by country and number type. |
+
+**Time:** Signal takes as long as it takes to get signal-cli running on your host. SMS on a US number waits on 10DLC registration, which needs approval before you can send.
+
+## Steps
+
+<Steps>
+  <Step title="Choose the route">
+    | | Signal | SMS |
+    |---|---|---|
+    | **Trust** | High: Signal verifies the number, so your principal can approve sensitive actions | Medium: carrier sender IDs can be spoofed and texts aren't end-to-end encrypted |
+    | **Your principal needs** | The Signal app | Any phone |
+    | **You run** | signal-cli on the Curia host | Nothing extra; Telnyx calls Curia's webhook |
+    | **Curia's number** | Any number that can receive a verification code | A Telnyx number you buy for the office |
+
+    Pick Signal if your principal already uses it. Pick SMS if they don't, or would rather not. You can set up both.
+  </Step>
+
+  <Step title="Set up the channel">
+    Follow the guide for the route you chose, up to the point where the channel is enabled and Curia has restarted:
+
+    - [Signal setup](/channels/signal-setup), Steps 1 to 3
+    - [SMS setup](/channels/sms-setup), Steps 1 and 2
+  </Step>
+
+  <Step title="Link your principal's number to their contact">
+    This is the step people miss. Curia only knows a message is from your principal if their number is on your principal's contact. Without it, Curia treats your principal as a stranger: it answers them warily and won't act on their instructions. Messages Curia sends them can also be held back by its outbound filter.
+
+    In the console, open **Contacts →** your principal and add their number under **Channel identities**, with the channel **signal** or **sms** to match the route. Use **your principal's** number, never Curia's. The details are in [Signal setup, Step 4](/channels/signal-setup#step-4-link-your-principals-signal-number) and [SMS setup, Step 3](/channels/sms-setup#step-3-link-your-principals-mobile).
+
+    Adding the number doesn't send your principal anything.
+  </Step>
+</Steps>
+
+## Check it works
+
+- **Health.** `curl https://<your-domain>/api/health` shows `"signal": "ok"` or `"sms": "ok"` for the route you chose.
+- **Console.** The channel's row in **Settings → Channels** shows **enabled**. Your principal's contact lists a verified **signal** or **sms** identity with their number.
+- **A real message.** Message Curia's number from your own phone, and Curia replies. (Unless you're the principal, Curia treats you as an unknown sender, which is expected.) Don't test on your principal's phone before they know Curia is coming.
+
+## What your principal will notice
+
+Nothing until Curia messages them. Then:
+
+- **On Signal,** the first message arrives from a number they don't know, so Signal shows it as a message request to accept.
+- **On SMS,** texts come from the office number.
+
+Either way, give your principal Curia's number to save as a contact before Curia first gets in touch.

@@ -1,0 +1,104 @@
+---
+title: "Your principal's email and calendar"
+sidebarTitle: "5. Your principal's email and calendar"
+description: "Give Curia delegated access to your principal's Google mailbox and calendar, so it can triage their inbox, draft replies and manage their schedule."
+---
+
+## What this is for
+
+Much of an assistant's work happens in the executive's own inbox and calendar. Delegated access lets Curia work there as your principal: triage their unread mail, draft replies for them to send, and read and update their calendar. Without it, Curia has no calendar at all, and its inbox triage is off.
+
+This is your **principal's** mailbox, not Curia's. Curia's own address is set up in [2. Curia's own email](/get-started/curia-email). Don't add the principal's mailbox there: email accounts in that list are mailboxes Curia owns and answers from.
+
+Only **Google** accounts (Gmail or Google Workspace) are supported for the principal today. The inbox tools use Gmail's search syntax and labels.
+
+## What you'll need
+
+- **Curia's own email working,** from page 2. This step uses the same Nylas application.
+- **Your principal, or their Google sign-in.** Connecting the mailbox means signing in to their Google account, so do it with them.
+- **Shell access to the Curia host,** to store the grant. There's no console field for it yet.
+
+**Time:** about 20 minutes, plus finding a moment with your principal.
+
+**Cost** (checked 2026-11-01): the principal's mailbox is one more connected account on your Nylas plan. Nylas Free covers up to 5 accounts (Nylas describes it as "for proving it works" and doesn't say whether it covers production use). Essentials is $15/month for up to 10.
+
+## Steps
+
+<Steps>
+  <Step title="Connect your principal's Google account to Nylas">
+    In the Nylas dashboard, open the same application you used for Curia's mailbox. Go to **Grants** and add a grant, the same way you connected Curia's mailbox, but sign in as your **principal's** Google account. Allow access to both mail and calendar.
+
+    Copy the new **grant ID**.
+  </Step>
+
+  <Step title="Store the grant in the vault">
+    From the directory you installed Curia into, run:
+
+    ```bash
+    docker compose run --rm \
+      -e SEED_VAULT_ONLY=ceo_nylas_grant_id,ceo_self_email,nylas_api_key,nylas_self_email \
+      -e CEO_NYLAS_GRANT_ID=<principal's grant ID> \
+      -e CEO_SELF_EMAIL=<principal's email address> \
+      -e NYLAS_API_KEY=<your Nylas API key> \
+      -e NYLAS_SELF_EMAIL=<Curia's email address> \
+      curia ./node_modules/.bin/tsx scripts/seed-vault.ts
+    ```
+
+    What each value is:
+
+    | Vault key | Value |
+    |---|---|
+    | `ceo_nylas_grant_id` | The grant ID from the previous step: your principal's mailbox |
+    | `ceo_self_email` | Your principal's email address |
+    | `nylas_api_key` | The same Nylas API key you entered for Curia's email |
+    | `nylas_self_email` | Curia's own address, so Curia skips its own messages in your principal's inbox |
+
+    The inbox tools read the Nylas key and Curia's address under these older names, not the names the console stores them under, so they have to be stored again here.
+
+    From a source checkout, run `SEED_VAULT_ONLY=… CEO_NYLAS_GRANT_ID=… pnpm run seed-vault` with the same values instead.
+  </Step>
+
+  <Step title="Turn on the inbox and calendar specialists">
+    These are off on a new install. In the console:
+
+    - On **Agents**, install and enable `calendar` and `ceo-inbox`.
+    - On **Tools**, install and enable the `ceo-inbox` bundle, plus `voice-learn`, `task-completion-from-sent`, `list-learning-digest` and `resolve-learning-digest`. These four let Curia learn from what your principal actually sends.
+  </Step>
+
+  <Step title="Restart Curia">
+    Curia reads the grant, and the agent and tool changes, only when it starts. Restart from the console's **System** page, or run:
+
+    ```bash
+    docker compose restart curia
+    ```
+  </Step>
+</Steps>
+
+<Note>
+  **Coming soon:** your principal will connect their own mailbox by signing in from a link Curia sends, with no grant ID to copy and no restart.
+</Note>
+
+## Check it works
+
+1. In the logs (`docker compose logs curia`), look for `Nylas calendar client initialized (bound to the principal's Nylas grant)`. If you see `Calendar disabled — ceo_nylas_grant_id is not configured`, the grant isn't in the vault.
+2. Open `/api/health` on your Curia address. `checks.nylas_calendar` should read `ok`. It reads `skipped` when there's no grant.
+3. In the console chat, ask "What's on my calendar tomorrow?" and check the answer against the real calendar.
+
+Console chat counts as your principal, so keep test questions to reading, not changing.
+
+## What your principal will notice
+
+**In their inbox**, every hour from 6am to 11pm:
+
+- Curia works through unread mail. Messages it has dealt with are marked read or archived.
+- Replies appear as **drafts** in their Drafts folder for them to review and send.
+- Some messages get labels, such as `⏳ In Progress` while Curia waits on something, or `⚠️ Stuck` when it needs them.
+- Anything urgent reaches them on another channel, such as Signal.
+
+**On their calendar:**
+
+- Curia answers scheduling questions from their real calendar.
+- While it negotiates a time, it may place tentative events titled `HOLD (TBC): …`. It clears stale holds every night.
+- It can accept invitations and create events as them. At the default autonomy level (75), creating an event waits for their approval first.
+
+Changes appear as made by their own account, because Curia acts as them.

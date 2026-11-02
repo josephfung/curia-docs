@@ -7,7 +7,11 @@ description: "Email, Signal, Slack, SMS, voice, CLI, and HTTP are thin adapters 
 Channels are how messages get in and out of Curia. Whether you send a Signal message from your phone, DM it in Slack, text the office number, email it from a colleague, talk to it out loud from the console, or type a command in the terminal, every message travels through a channel adapter that normalizes it into the same internal format. Curia's agents work with that normalized format — they never deal with email headers, Signal protocol specifics, or HTTP request objects directly. Adding a new channel means building one adapter; nothing in the core changes.
 
 <Note>
-  Channels are tracked in the [channel registry](/core-concepts/registry): each one is installed and enabled (or not), and its credentials live in the [vault](/get-started/secrets-vault). Email, Signal, Slack, SMS, and voice are toggleable — enable them once their credentials are configured. **HTTP and CLI are always on and cannot be disabled**, so you can never accidentally lock yourself out of your own instance.
+  Channels are tracked in the [channel registry](/core-concepts/registry): each one is installed and enabled (or not), and its credentials live in the [vault](/get-started/secrets-vault). Email, Signal, Slack, SMS, and voice are toggleable: install and enable them in **Settings → Channels** once their credentials are configured, then restart Curia. **HTTP (the web console) and CLI are always on and cannot be disabled**, so you can never accidentally lock yourself out of your own instance.
+</Note>
+
+<Note>
+  **Phone app: coming soon.** A Curia app for your principal's phone is on the way. Today, your principal reaches Curia from their phone over Signal or SMS, or by opening the web console in the phone's browser.
 </Note>
 
 ## The channels
@@ -24,18 +28,18 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
 
     **Email validation:** Before processing, the email adapter checks SPF, DKIM, and DMARC results. Only the header your own mail provider adds on receipt counts — a sender can write their own `Authentication-Results` header claiming a pass, and Curia ignores it. Messages that fail validation are tagged `sender_verified: false` in their metadata — the Coordinator uses this signal when deciding whether to act on consequential requests.
 
-    **Required secrets (vault):** `nylas_api_key`, `nylas_grant_id`, `nylas_self_email`
+    **Required secrets (vault):** `channel.email.nylas_api_key`, `channel.email.nylas_grant_id`, `channel.email.nylas_self_email`, plus at least one email account added in the console (its grant is stored as `channel.email.<name>.nylas_grant_id`). See the [email reference](/channels/email-setup#where-the-values-go).
 
     **Trust level:** Low — email From headers are trivially spoofable, and even with SPF/DKIM validation, email is the least trustworthy channel.
   </Tab>
   <Tab title="Signal">
-    Signal provides end-to-end encrypted messaging with strong identity guarantees. Curia connects via `signal-cli` running in JSON-RPC mode as a subprocess.
+    Signal provides end-to-end encrypted messaging with strong identity guarantees. Curia has its own Signal number and connects to a `signal-cli` daemon, which you run on the same host, over a JSON-RPC Unix socket.
 
     Signal supports text messages, attachments, and reactions. Conversation IDs are derived from Signal group or 1:1 conversation identifiers, so Curia maintains persistent context within each thread.
 
     **Voice notes** sent by a known sender are transcribed into ordinary messages (5 MB cap), using the same speech-to-text credentials as the Voice channel. Curia can also **answer Signal voice calls** for a live spoken conversation — off by default, and covered under [Signal calls](/channels/voice-setup#signal-calls).
 
-    **Required secret (vault):** `channel.signal.phone_number`
+    **Required secrets (vault):** `channel.signal.socket_path` (the signal-cli socket, as seen inside the Curia container), `channel.signal.phone_number` (Curia's own number). See the [Signal setup guide](/channels/signal-setup).
 
     **Trust level:** High — Signal identity is tied to a phone number verified by the Signal protocol. Use Signal for sensitive instructions, financial actions, or anything where you want maximum assurance.
   </Tab>
@@ -170,7 +174,7 @@ A compromised email adapter could flood inbound messages, but it cannot execute 
 
 <CardGroup cols={2}>
   <Card title="Email setup" icon="envelope" href="/channels/email-setup">
-    Connect your email via Nylas.
+    Connect Curia's own mailbox via Nylas.
   </Card>
   <Card title="Signal setup" icon="shield" href="/channels/signal-setup">
     Set up Signal messaging via signal-cli.

@@ -1,49 +1,47 @@
 ---
 title: "Talk to Curia by voice"
 sidebarTitle: "Voice"
-description: "Enable duplex spoken conversation with your Curia agent — from the web console over WebRTC/LiveKit, or by placing a native Signal voice call. Deepgram speech-to-text, Cartesia text-to-speech, barge-in, and live transcripts."
+description: "Reference for Curia's voice channel: LiveKit, Deepgram and Cartesia settings, running LiveKit on a server, Signal calls, and troubleshooting."
 ---
 
-Voice lets you talk to your Curia agent out loud — a live, two-way call instead of typing. Curia streams your speech to text, thinks and runs tools the same way it does in chat, and speaks its reply back sentence by sentence. You can interrupt it mid-sentence (barge-in) and it stops to listen, the way a real conversation works.
+Voice lets your principal talk to Curia out loud: a live, two-way call instead of typing. Curia streams the caller's speech to text, thinks and runs tools the same way it does in chat, and speaks its reply back sentence by sentence. The caller can interrupt it mid-sentence (barge-in) and it stops to listen, the way a real conversation works.
+
+<Note>
+  This page is the reference for the voice channel, written for the operator: whoever installs and runs Curia. To set voice up step by step, follow [4. Voice](/get-started/voice).
+</Note>
 
 There are two ways to place a call, and they share everything above the audio layer:
 
-- **From the web console** — WebRTC through a self-hosted LiveKit server. This is the base setup and the rest of this page walks through it.
-- **By Signal call** — anyone can place a native Signal voice call to Curia's Signal number. This is off by default, needs the console path working first, and is covered in [Signal calls](#signal-calls) below.
+- **From the web console:** WebRTC through a self-hosted LiveKit server. This is the base setup.
+- **By Signal call:** anyone can place a native Signal voice call to Curia's Signal number. This is off by default, needs the console path working first, and is covered in [Signal calls](#signal-calls) below.
 
-A console call runs inside an authenticated session, so it carries the same **high** trust as the CLI: the person on the call is you, the principal. A Signal call does not — the caller is whoever dialled, and Curia resolves them like any other Signal contact. See [Who can call, and what they can do](#who-can-call-and-what-they-can-do).
+A console call runs inside an authenticated console session, so it carries the same **high** trust as the CLI. Curia treats whoever is on a console call as the principal: during setup that's you, and after hand-over it's normally your principal. A Signal call does not get that trust automatically. The caller is whoever dialled, and Curia resolves them like any other Signal contact. See [Who can call, and what they can do](#who-can-call-and-what-they-can-do).
 
 <Warning>
   Enabling voice means **audio and transcripts leave the host** to three third parties: Deepgram (speech-to-text), Cartesia (text-to-speech), and your configured LLM provider. Speech-vendor keys never reach the browser, but treat these vendors' data-processing terms the way you would any external service before turning voice on.
 
-  This applies to **anyone who calls**, not just you. If you enable Signal calls, a caller's speech is transcribed by Deepgram the same way yours is — and Signal's own end-to-end encryption covers the call to Curia, not what Curia does with the audio after that.
+  This applies to **anyone who calls**, not just your principal. If you enable Signal calls, a caller's speech is transcribed by Deepgram the same way the principal's is, and Signal's own end-to-end encryption covers the call to Curia, not what Curia does with the audio after that.
 </Warning>
 
 ## How it works
 
 A call uses three services, wired together by Curia:
 
-- **LiveKit** — a self-hosted WebRTC server that carries the real-time audio between your browser and the host. Curia mints a short-lived (1-hour) join token per call; it never exposes admin credentials to the browser.
-- **Deepgram** — streaming speech-to-text: turns your spoken words into transcripts as you talk.
-- **Cartesia** — streaming text-to-speech: turns Curia's reply into spoken audio in the voice you choose.
+- **LiveKit:** a self-hosted WebRTC server that carries the real-time audio between the caller's browser and the host. Curia mints a short-lived (1-hour) join token per call and never exposes admin credentials to the browser.
+- **Deepgram:** streaming speech-to-text. It turns the caller's speech into transcripts as they talk.
+- **Cartesia:** streaming text-to-speech. It turns Curia's reply into spoken audio in the voice you chose.
 
-The reply is spoken from within the console session (like principal web chat), while any tools Curia calls still run through the normal execution layer and any external sends still go through the outbound gateway. Final transcripts are written to working memory, so the call shows up in your console chat history afterward.
+The reply is spoken from within the console session (like principal web chat), while any tools Curia calls still run through the normal execution layer and any external sends still go through the outbound gateway. Final transcripts are written to working memory, so the call shows up in the console chat history afterward.
 
-## Prerequisites
+## LiveKit
 
-- A Curia host reachable from the browser you run the console in.
-- A **LiveKit** server — either the bundled Docker Compose service (below) or your own deployment.
-- A **Deepgram** account and API key.
-- A **Cartesia** account and API key, plus a **voice id** to speak in.
-- Host firewall/NAT access for LiveKit's signaling and media ports.
-
-## Step 1 — Start LiveKit
-
-The root `docker-compose.yml` includes a `livekit` service behind the Compose `voice` profile, so a plain `docker compose up` never starts it — Postgres-only deploys boot normally.
+The install's `docker-compose.yml` includes a `livekit` service behind the Compose `voice` profile. The installer doesn't start it, and neither does a plain `docker compose up`, so installs without voice boot normally. Start it from the install directory:
 
 ```bash
 docker compose --profile voice up -d livekit
 ```
+
+To have `docker compose up` (and re-runs of the installer) start LiveKit along with the rest of the stack, add `COMPOSE_PROFILES=voice` to `.env`.
 
 LiveKit uses three ports. Open them on the host firewall and forward them through NAT if Curia sits behind a router:
 
@@ -51,86 +49,106 @@ LiveKit uses three ports. Open them on the host firewall and forward them throug
 |---|---|---|
 | HTTP/WebSocket signaling | `7880/tcp` | Browser-reachable; can be fronted by a TLS proxy |
 | WebRTC TCP fallback | `7881/tcp` | Needs direct exposure |
-| WebRTC UDP media | `7882/udp` | Needs direct exposure — cloud firewalls often allow TCP but silently drop UDP |
+| WebRTC UDP media | `7882/udp` | Needs direct exposure. Cloud firewalls often allow TCP but silently drop UDP |
+
+By default the service runs `livekit-server --dev`, which uses the well-known credentials `devkey` / `secret`. That is fine on a laptop at `localhost`.
 
 <Warning>
-  For local development the profiled service runs `livekit-server --dev`, which uses the well-known credentials `devkey` / `secret`. **Never expose `--dev` on a public interface** — anyone who can reach the ports could mint LiveKit tokens without Curia's auth. For any reachable deploy, run LiveKit with a real config (copy `docker/livekit.yaml`, replace the placeholder key/secret, and set `LIVEKIT_COMMAND="--config /etc/livekit.yaml"`) and store the same key/secret in the Curia vault.
+  **Never expose `--dev` on a public interface.** Anyone who can reach the ports could mint LiveKit tokens without Curia's auth. On a server, use your own key and secret as below.
 </Warning>
 
-## Step 2 — Get your provider keys
+### Run LiveKit on a server
+
+The install doesn't configure LiveKit for a server yet, so these steps are by hand. Run them in the install directory.
 
 <Steps>
-  <Step title="Deepgram API key">
-    Create a Deepgram account and generate an API key. This is `channel.voice.deepgram_api_key`.
+  <Step title="Create a LiveKit config with your own key">
+    Download [`docker/livekit.yaml`](https://github.com/josephfung/curia/blob/main/docker/livekit.yaml) from the Curia repository into a `docker/` folder in the install directory. It isn't part of the install bundle. Generate a key and secret, for example with `openssl rand -hex 16` and `openssl rand -base64 32`, and replace the placeholder line under `keys:` with `<key>: <secret>`. You'll enter the same pair in the console.
   </Step>
 
-  <Step title="Cartesia API key">
-    Create a Cartesia account and generate an API key. This is `channel.voice.cartesia_api_key`.
+  <Step title="Mount the config and point LiveKit at it">
+    Create `docker-compose.voice.yml` next to `docker-compose.yml`:
+
+    ```yaml
+    services:
+      livekit:
+        volumes:
+          - ./docker/livekit.yaml:/etc/livekit.yaml:ro
+    ```
+
+    Then, in `.env`, add the file to `COMPOSE_FILE` and set the LiveKit command:
+
+    ```env
+    COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml:docker-compose.voice.yml
+    LIVEKIT_COMMAND=--config /etc/livekit.yaml
+    COMPOSE_PROFILES=voice
+    ```
+
+    Keep whatever `COMPOSE_FILE` already lists (the domain install adds `docker-compose.tls.yml`) and append the new file. Then run `docker compose up -d`.
   </Step>
 
-  <Step title="Pick a Cartesia voice">
-    Browse voices at [play.cartesia.ai](https://play.cartesia.ai) and copy the **voice id** (a UUID) of the one you want Curia to speak in. This is `channel.voice.cartesia_voice_id`. It is **required** — Cartesia cannot synthesize a reply without it, so the channel stays disabled until it is set.
+  <Step title="Serve signaling over HTTPS">
+    A console served over HTTPS can only reach LiveKit over `wss://`. The bundled Caddy proxies only Curia, not LiveKit. One way is to route LiveKit's `/rtc` path on your domain to LiveKit, by adding a `handle` block to `deploy/Caddyfile`:
+
+    ```
+    {$DOMAIN} {
+    	handle /rtc* {
+    		reverse_proxy livekit:7880
+    	}
+    	handle {
+    		reverse_proxy curia:3000
+    	}
+    }
+    ```
+
+    Restart Caddy (`docker compose restart caddy`). The signaling URL is then `wss://<your-domain>`. The installer won't overwrite an existing `Caddyfile` when you re-run it.
+  </Step>
+
+  <Step title="Open the media ports">
+    Open `7881/tcp` and `7882/udp` to the internet on the host and any cloud firewall. Media can't go through the proxy.
   </Step>
 </Steps>
 
-## Step 3 — Store the values in the vault
+Curia talks to LiveKit's admin API over the Compose network at `channels.voice.livekit_management_url` (default `http://livekit:7880`). Don't point it at the public signaling URL.
 
-In the Curia console, go to **Settings → Channels → Voice** and enter all six values. They are stored in the [vault](/get-started/secrets-vault) and, unlike some channels, have **no environment-variable fallback** — voice credentials must live in the vault.
+## Credentials
 
-| Field | Vault key |
+Enter these in **Settings → Channels → Voice**. They are stored in the [vault](/get-started/secrets-vault) and have **no environment-variable fallback**: voice credentials must live in the vault.
+
+| Console field | Vault key |
 |---|---|
-| LiveKit WebSocket URL | `channel.voice.livekit_url` |
+| LiveKit signaling URL | `channel.voice.livekit_url` |
 | LiveKit API key | `channel.voice.livekit_api_key` |
 | LiveKit API secret | `channel.voice.livekit_api_secret` |
 | Deepgram API key | `channel.voice.deepgram_api_key` |
 | Cartesia API key | `channel.voice.cartesia_api_key` |
-| Cartesia voice id | `channel.voice.cartesia_voice_id` |
+| Cartesia voice ID | `channel.voice.cartesia_voice_id` |
 
 <Note>
-  The **LiveKit WebSocket URL** is the *browser-reachable* signaling endpoint, not LiveKit's internal address: `ws://<host>:7880` for private local testing, or `wss://<voice-host>` when you terminate TLS for signaling through a separate proxy. It must match your LiveKit server's key/secret exactly (with `--dev`, that's `devkey` / `secret`).
+  The **LiveKit signaling URL** is the *browser-reachable* signaling endpoint, not LiveKit's internal address: `ws://localhost:7880` for a laptop try-out, or `wss://<your-domain>` behind a TLS proxy. The key and secret must match your LiveKit server's exactly (with `--dev`, that's `devkey` / `secret`).
 </Note>
 
-## Step 4 — Enable and restart
+The **Cartesia voice ID** is the voice Curia speaks in: a UUID copied from [play.cartesia.ai](https://play.cartesia.ai). It is required. Cartesia can't synthesize a reply without it, so the channel stays disabled until it's set.
 
-Install and enable the Voice channel in the registry, then restart Curia so it reads the vault on startup:
+Curia reads these values at startup. After changing any of them, install and enable the Voice channel if you haven't, then restart (from the console's **System** page, or `docker compose restart curia`). A call already in progress keeps the old values.
 
-```bash
-docker compose restart curia
-```
+## Making a call
 
-Changing a vault key does not affect a call already in progress — it takes effect on the next call after restart.
-
-## Step 5 — Make a call
-
-Open the console chat. The **Call** button appears once Voice is enabled and the session API can mint LiveKit tokens.
-
-<Steps>
-  <Step title="Click Call and allow the microphone">
-    Your browser will ask for microphone permission. Microphone access requires a secure origin, so serve the console over **HTTPS** (and use `wss://` for LiveKit) on any non-localhost host.
-  </Step>
-
-  <Step title="Talk">
-    Speak naturally. Curia replies out loud, and you can interrupt it mid-sentence — it stops to listen.
-  </Step>
-
-  <Step title="Mute or hang up">
-    Use mute or hang up from the active-call bar. The final transcript is saved to your console chat history.
-  </Step>
-</Steps>
+Open the console chat. A **Voice** button (with a phone icon) appears once voice is enabled. Click it and allow the microphone. Browsers only allow the microphone on a secure origin, so serve the console over **HTTPS** (and use `wss://` for LiveKit) on any host other than `localhost`. Mute or hang up from the call bar. The final transcript is saved to the console chat history.
 
 You can call from the Curia app on your phone too. If you lock the phone or switch apps mid-call, the call pauses instead of dropping, and it ends after about 2 minutes away. See [Calling Curia from your phone](/channels/phone-app#calling-curia-from-your-phone).
 
 ## What Curia does on a call
 
 <AccordionGroup>
-  <Accordion title="It greets you first">
+  <Accordion title="It greets the caller first">
     When an inbound call connects, Curia opens the conversation rather than waiting in silence — a short greeting appropriate to the time of day. If something was sent on another channel just before the call, it acknowledges that in the same breath.
   </Accordion>
 
   <Accordion title="It waits a beat before answering">
-    When you stop talking, Curia waits briefly before it replies, so a pause mid-thought doesn't get answered as if you had finished. Deepgram first waits for 400 ms of silence, then Curia holds another 350 ms. If you start talking again inside that window, it is all one request. In practice a reply starts about two seconds after your last word.
+    When the caller stops talking, Curia waits briefly before it replies, so a pause mid-thought doesn't get answered as if they had finished. Deepgram first waits for 400 ms of silence, then Curia holds another 350 ms. If they start talking again inside that window, it is all one request. In practice a reply starts about two seconds after their last word.
 
-    If Curia cuts you off when you pause to think, raise the hold in `config/local.yaml`:
+    If Curia cuts callers off when they pause to think, raise the hold in `config/local.yaml`:
 
     ```yaml
     channels:
@@ -145,16 +163,16 @@ You can call from the Curia app on your phone too. If you lock the phone or swit
     When a request needs a tool, such as a calendar lookup, Curia says "One moment." once and then goes quiet until it has the answer, even if the work takes several steps. It talks about the work itself ("Let me check your calendar"), not about the assistants or tools doing it behind the scenes.
   </Accordion>
 
-  <Accordion title="You can interrupt it">
-    Start talking while Curia is speaking and it stops to listen. Detection takes about a second, because Curia waits for enough of your speech to rule out its own voice or background noise. On console calls, audio already queued is dropped as soon as you're detected. On Signal calls, up to about two seconds of queued audio can still play out before it goes quiet.
+  <Accordion title="The caller can interrupt it">
+    When the caller starts talking while Curia is speaking, it stops to listen. Detection takes about a second, because Curia waits for enough of their speech to rule out its own voice or background noise. On console calls, audio already queued is dropped as soon as they're detected. On Signal calls, up to about two seconds of queued audio can still play out before it goes quiet.
   </Accordion>
 
-  <Accordion title="It knows what just happened on your other channels">
-    Spoken turns read the same active outbound context the text channels write to. Call right after Curia emails someone and it already knows what went out; you do not have to re-establish the subject.
+  <Accordion title="It knows what just happened on other channels">
+    Spoken turns read the same active outbound context the text channels write to. Call right after Curia emails someone and it already knows what went out; the caller doesn't have to re-establish the subject.
   </Accordion>
 
   <Accordion title="It hands heavy work off instead of stalling the call">
-    Some asks take minutes, not seconds — research, a browser session, a multi-step delegation. Rather than leaving dead air while it works, Curia acknowledges the request, dispatches it to the async coordinator, and calls or messages you back when it is done. The call keeps moving.
+    Some asks take minutes, not seconds — research, a browser session, a multi-step delegation. Rather than leaving dead air while it works, Curia acknowledges the request, dispatches it to the async coordinator, and calls or messages the principal back when it is done. The call keeps moving.
   </Accordion>
 
   <Accordion title="It uses the same guardrails as the text agent">
@@ -168,7 +186,7 @@ You can call from the Curia app on your phone too. If you lock the phone or swit
 
 ## Signal calls
 
-Curia can answer inbound **native Signal voice calls**, running them through the same speech pipeline as console calls. The feature is **off by default** and needs deploy-side infrastructure beyond the console setup above.
+Curia can answer inbound **native Signal voice calls**, running them through the same speech pipeline as console calls. The feature is **off by default** and needs deploy-side infrastructure beyond the console setup above. The standard image install doesn't include it.
 
 <Note>
   This is newer than the console path. Treat it as experimental.
@@ -204,10 +222,10 @@ Whether Curia answers a stranger follows the same setting as Signal texts: `chan
 - A contact you have **blocked**.
 - A caller with **no phone number** on the call (Signal permits UUID-only callers). There is nothing stable to resolve or to attach a contact to later, so Curia declines rather than talk to someone untraceable.
 
-Callers are resolved against the **same Signal identity** used for text messages, so your own standing carries over — call from the phone number Curia already knows as yours and it treats you as the principal. A stranger is admitted at **unknown** trust, which means the call is answered but the caller stays outside the elevated-tool and cross-channel-context gates. They can talk to Curia; they cannot use it as a lever on your accounts.
+Callers are resolved against the **same Signal identity** used for text messages, so standing carries over: a call from the Signal number on the principal's contact is treated as the principal. A stranger is admitted at **unknown** trust, which means the call is answered but the caller stays outside the elevated-tool and cross-channel-context gates. They can talk to Curia; they cannot use it as a lever on the principal's accounts.
 
 <Warning>
-  With the default `allow`, your Signal number is a phone number the public can reach your assistant on. If that is not what you want, either set `channels.signal.unknown_sender: ignore` (accepting that strangers' texts are ignored too) or leave `SIGNAL_VOICE_CALLS_ENABLED` off. There is no calls-only allowlist in this version.
+  With the default `allow`, Curia's Signal number is a phone number the public can reach Curia on. If that is not what you want, either set `channels.signal.unknown_sender: ignore` (accepting that strangers' texts are ignored too) or leave `SIGNAL_VOICE_CALLS_ENABLED` off. There is no calls-only allowlist in this version.
 </Warning>
 
 Curia handles **one call at a time**. A second caller while a call is in progress gets a busy rejection.
@@ -227,7 +245,7 @@ Signal calls fail in a way messaging does not: the JSON-RPC socket can be perfec
 ## Troubleshooting
 
 <AccordionGroup>
-  <Accordion title="The Call button doesn't appear">
+  <Accordion title="The Voice button doesn't appear">
     Confirm Voice is installed **and** enabled in **Settings → Channels**, that all six vault keys are set (the Cartesia voice id is required), and that Curia was restarted after saving them.
   </Accordion>
 

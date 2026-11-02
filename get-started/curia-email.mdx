@@ -1,0 +1,98 @@
+---
+title: "Curia's own email"
+sidebarTitle: "2. Curia's own email"
+description: "Give Curia a dedicated mailbox, connected through Nylas, so it can send, receive and reply to email as itself."
+---
+
+## What this is for
+
+Curia needs an email address of its own, the way an assistant has their own inbox. People write to it, your principal forwards or CCs it, and Curia replies from it, signed as Curia.
+
+This page connects **Curia's** mailbox. It is not your principal's mailbox. Giving Curia access to your principal's email and calendar is a separate step: [5. Your principal's email and calendar](/get-started/principal-email-calendar).
+
+## What you'll need
+
+- **A new mailbox just for Curia,** such as `curia@yourcompany.com`, on Google Workspace, Gmail, Microsoft 365 or another provider Nylas supports. Don't reuse a person's inbox: Curia reads and acts on everything that arrives.
+- **A Nylas account.** Curia talks to email through [Nylas](https://nylas.com). Create the application in Nylas's **US** region: Curia uses Nylas's US API and doesn't support other regions yet.
+- **The console,** signed in as in [1. Install Curia](/get-started/installation).
+
+**Time:** about half an hour, plus however long it takes to create the mailbox.
+
+**Cost** (checked 2026-11-01):
+
+- Nylas Free: $0 for up to 5 connected accounts. Nylas describes it as "for proving it works" and doesn't say whether it covers production use.
+- Nylas Essentials: $15/month for up to 10 accounts.
+- Plus whatever your email provider charges for one more mailbox.
+
+Plan for at least two Nylas accounts: this one, and your principal's mailbox on page 5.
+
+## Steps
+
+<Steps>
+  <Step title="Create Curia's mailbox">
+    Create the mailbox with your email provider. Pick an address you're happy for your principal's contacts to see, because Curia's emails come from it.
+  </Step>
+
+  <Step title="Create a Nylas application and copy its API key">
+    Sign up at [nylas.com](https://www.nylas.com) and, in the Nylas dashboard, create an application in the **US** region. Copy its **API key**.
+  </Step>
+
+  <Step title="Connect Curia's mailbox to Nylas">
+    In the Nylas dashboard, open **Grants** and add a grant. Sign in as **Curia's mailbox** (not your principal's) when the provider asks. When it's done, copy the **grant ID**.
+  </Step>
+
+  <Step title="Open the email channel in the console">
+    In the Curia console, go to **Settings → Channels** and click the **email** row. If its state is **not installed**, click **Install**.
+  </Step>
+
+  <Step title="Enter the three credentials">
+    Under **Credentials**, enter each value and click **Save**:
+
+    | Field | What it is | Stored in the vault as |
+    |---|---|---|
+    | **Nylas API key** | Your Nylas application's API key | `channel.email.nylas_api_key` |
+    | **Nylas grant ID** | The grant for Curia's mailbox | `channel.email.nylas_grant_id` |
+    | **Mailbox address** | Curia's email address | `channel.email.nylas_self_email` |
+
+    Each row turns to **configured (vault)** when it's saved.
+  </Step>
+
+  <Step title="Add Curia's mailbox under Email accounts">
+    Further down the same panel, under **Email accounts**, fill in:
+
+    - **Account name:** a short name, such as `curia`.
+    - **Mailbox address:** Curia's address again.
+    - **Nylas grant ID:** the same grant ID again.
+
+    Click **Add account**.
+
+    <Note>
+      Yes, you enter the address and grant ID twice. The **Email accounts** entry is the mailbox Curia actually reads and sends from. The credential fields above unlock the **Enable** button and mark email as done for the setup agent. Today you need both.
+    </Note>
+  </Step>
+
+  <Step title="Enable the channel and restart Curia">
+    Click **Enable**. The button stays disabled until all three credentials are configured.
+
+    Enabling, credentials and new accounts all take effect on the next restart. From the folder where you ran the installer:
+
+    ```bash
+    docker compose restart curia
+    ```
+  </Step>
+</Steps>
+
+For more mailboxes, field details and troubleshooting, see the [email channel reference](/channels/email-setup).
+
+## Check it works
+
+- **Logs.** After the restart, run `docker compose logs curia | grep -i "email channel"`. You should see `Email channel: 1 account(s) configured`. If you see `email channel disabled` instead, the message says what's missing.
+- **Health.** `curl https://<your-domain>/api/health` shows `"email": "ok"`. `"skipped"` means the email channel didn't start. `"fail"` means it started but can't reach the mailbox: check the grant in the Nylas dashboard.
+- **Console.** On the dashboard, the **Setup ·** line no longer lists the email channel. The email row in **Settings → Channels** shows **enabled**.
+- **A real message.** Send a short email to Curia's address from your own mailbox. Curia checks every 30 seconds, so give it a minute.
+
+## What your principal will notice
+
+Nothing until Curia writes to them. When it does, the email comes from Curia's address, signed with the signature you set in the setup form.
+
+Tell your principal Curia's address. They can then CC Curia on threads or forward messages to it, and they'll recognise its emails.

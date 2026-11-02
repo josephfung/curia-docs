@@ -1,0 +1,116 @@
+---
+title: "Google Docs"
+sidebarTitle: "6. Google Docs"
+description: "Connect Curia's own Google account so it can create, edit and share Google Docs, Sheets and Drive files with your principal."
+---
+
+## What this is for
+
+Curia often hands work over as a document: a briefing, a draft plan, a research summary. This step gives Curia a Google account of its own with access to Google Drive, Docs and Sheets. Curia creates files there and shares them with your principal, who always gets edit access.
+
+This is **Curia's** Google account, not your principal's. Curia only sees your principal's files if they share them with it.
+
+## What you'll need
+
+- **A Google account for Curia.** If Curia's mailbox from [2. Curia's own email](/get-started/curia-email) is on Gmail or Google Workspace, use that account.
+- **A Google account of your own** to create a Google Cloud project. Use your account, not Curia's.
+- **A computer with a web browser,** and [`uv`](https://docs.astral.sh/uv/) installed on it, for a one-time sign-in as Curia. This step also needs a copy of Curia's source code (see step 5).
+- **Shell access to the Curia host,** to copy the sign-in token across.
+
+**Time:** about 45 minutes.
+
+**Cost:** nothing beyond Curia's Google account itself.
+
+## Steps
+
+<Steps>
+  <Step title="Create a Google Cloud project">
+    Sign in to [console.cloud.google.com](https://console.cloud.google.com) with **your own** account and create a project, for example `curia-workspace`.
+
+    Under **APIs & Services → Library**, enable:
+
+    - Google Drive API
+    - Google Docs API
+    - Google Sheets API
+
+    Don't enable the Calendar or Gmail APIs. Curia reaches mail and calendar through Nylas, and doesn't use them here.
+  </Step>
+
+  <Step title="Set up the consent screen and publish it">
+    Under **APIs & Services → OAuth consent screen**:
+
+    - **If Curia's account is in a Google Workspace organisation you manage,** create the project inside that organisation and choose **Internal**. Only accounts in your organisation can sign in, and there's no review.
+    - **Otherwise,** choose **External**. Add the Drive, Docs and Sheets scopes, then **publish the app** so its status reads **In production**. Publishing doesn't list your app anywhere. Google may show an "unverified app" warning when Curia's account signs in; you can continue past it.
+
+    <Warning>
+      Don't leave an External app in **Testing**. Google expires Testing sign-ins after 7 days, and Curia loses access to Drive every week.
+    </Warning>
+  </Step>
+
+  <Step title="Create an OAuth client">
+    Under **APIs & Services → Credentials**, choose **Create credentials → OAuth client ID**. Set the application type to **Desktop app** and give it a name, such as `curia`.
+
+    Copy the **client ID** and **client secret**.
+  </Step>
+
+  <Step title="Enter the credentials in the console">
+    In the console, go to **Settings → MCP Skills** and open **google-workspace**. Under **Credentials**, enter:
+
+    | Field | Value |
+    |---|---|
+    | Google OAuth client ID | The client ID from step 3 |
+    | Google OAuth client secret | The client secret from step 3 |
+    | Curia Google account email | Curia's Google address |
+
+    Then click **Enable**. The values are stored in the encrypted [vault](/get-started/secrets-vault).
+  </Step>
+
+  <Step title="Sign in as Curia's Google account">
+    Today this sign-in runs a script from Curia's source code, on a computer with a browser. You don't need Node.js or a full development setup, only `git` and `uv`.
+
+    ```bash
+    git clone https://github.com/josephfung/curia.git
+    cd curia
+    GOOGLE_OAUTH_CLIENT_ID=<client ID> \
+    GOOGLE_OAUTH_CLIENT_SECRET=<client secret> \
+    CURIA_GOOGLE_EMAIL=<Curia's Google address> \
+      uv run --with mcp scripts/gdrive-auth.py
+    ```
+
+    A browser window opens. Sign in as **Curia's** Google account, not your own, and approve access. When the script finishes, the token is saved to `~/.google_workspace_mcp/credentials/<Curia's Google address>.json`.
+  </Step>
+
+  <Step title="Copy the token to the Curia host">
+    Copy the token file to the server (for example with `scp`). Then, from the directory you installed Curia into, write it into Curia's token volume:
+
+    ```bash
+    docker compose exec -T curia sh -c \
+      'mkdir -p /tmp/.google_workspace_mcp/credentials; cat > "/tmp/.google_workspace_mcp/credentials/<Curia's Google address>.json"' \
+      < "<Curia's Google address>.json"
+    ```
+
+    The volume keeps the token across restarts and upgrades, and Curia refreshes it on its own from then on.
+  </Step>
+
+  <Step title="Restart Curia">
+    Curia connects to Google when it starts. Restart from the console's **System** page, or run:
+
+    ```bash
+    docker compose restart curia
+    ```
+  </Step>
+</Steps>
+
+## Check it works
+
+1. In the logs (`docker compose logs curia`), look for `MCP server tools registered` with `"server":"google-workspace"` and a `registered` count above zero. A count of zero means the sign-in token is missing: repeat steps 5 and 6.
+2. Open `/api/health` on your Curia address. `checks.mcp.google_workspace` should read `ok`.
+3. In the console chat, ask Curia to create a Google Doc called "Curia test". It should reply with a link that opens.
+
+If Drive calls fail with `403`, the file isn't shared with Curia's account. If they fail with `401`, the token was revoked or expired: repeat steps 5 and 6.
+
+## What your principal will notice
+
+- Curia sends them links to Google Docs, Sheets and Drive files it has made. The files live in Curia's Drive, and your principal always gets edit access.
+- Shares come from Curia's Google address, so that's the name they'll see in Google's sharing emails.
+- To let Curia read or work on one of their own files or folders, they share it with Curia's Google address as an **Editor**, the same way they'd share with a colleague.

@@ -1,126 +1,128 @@
 ---
 title: "Connect Signal for encrypted messaging with Curia"
 sidebarTitle: "Signal"
-description: "Connect a phone number to Curia via signal-cli for end-to-end encrypted messaging with your agents — Curia's highest-trust communication channel."
+description: "Give Curia its own Signal number through signal-cli, then link your principal's Signal number so Curia knows it's them. Curia's highest-trust messaging channel."
 ---
 
-Signal gives you a private, encrypted channel to your Curia instance. Because Signal uses strong phone-number-based identity, messages you send via Signal carry the highest trust level in Curia's security model — enabling actions that lower-trust channels like email cannot authorize. If you want to send financial instructions, approve sensitive actions, or interact with Curia when you're away from a terminal, Signal is the right channel.
+Signal gives your principal a private, end-to-end encrypted way to message Curia from their phone. Because Signal ties identity to a verified phone number, messages from your principal on Signal carry the highest trust level in Curia's security model. That allows actions that lower-trust channels like email can't authorize.
 
-<Warning>
-  `SIGNAL_SOCKET_PATH` is managed by Docker Compose and is set automatically when the `signal-cli` container starts. Do not set it in your `.env` file. The only credential you configure is the Signal phone number, which is stored in the [vault](/get-started/secrets-vault) as `channel.signal.phone_number`.
-</Warning>
+Two phone numbers are involved. Keep them apart:
 
-## Prerequisites
+- **Curia's number.** A number of its own that you register with signal-cli. Curia sends and receives from it. Your principal messages this number.
+- **Your principal's number.** Their own Signal account on their own phone. You link it to your principal's contact in Curia, so Curia knows who's messaging.
 
-- Docker and Docker Compose (Curia's `docker-compose.yml` includes the `signal-cli` container)
-- A phone number to register with Signal — this will be the number you message from to reach Curia, and the number Curia's Signal identity is registered under
+<Note>
+  Choosing between Signal and SMS? See [3. Reach your principal](/get-started/reach-your-principal).
+</Note>
 
-## Step 1 — Bootstrap signal-cli
+## What you'll need
 
-Before Curia can use Signal, you need to register a phone number with `signal-cli` and seed the `signal-data` Docker volume with the resulting credentials.
+- **A phone number for Curia** that can receive a text or a voice call for Signal's verification code. Don't use a number that already has Signal on a phone: registering it with signal-cli signs that phone out of Signal.
+- **[signal-cli](https://github.com/AsamK/signal-cli), run by you.** It isn't part of Curia's install: the compose files from the installer run Postgres, Curia and LiveKit (plus Caddy for HTTPS), not signal-cli. signal-cli must run on the same host as Curia, because Curia connects to it over a Unix socket.
+- **Your principal's Signal number,** in E.164 format (for example `+14165550123`).
 
-<Steps>
-  <Step title="Register your phone number">
-    Run the registration command inside the `signal-cli` container. Replace `+12223334444` with your number in [E.164 format](https://www.twilio.com/docs/glossary/what-e164):
+**Cost** (checked 2026-11-01): Signal is free. Curia's number costs whatever your carrier charges for it.
 
-    ```bash
-    docker compose run --rm signal-cli signal-cli \
-      -a +12223334444 register
-    ```
+## Step 1 — Register Curia's number with signal-cli
 
-    Signal will send a verification code to your phone via SMS or voice call.
-  </Step>
+Register **Curia's** number, not your principal's. Replace `+12223334444` with it, in [E.164 format](https://www.twilio.com/docs/glossary/what-e164):
 
-  <Step title="Verify the code">
-    Once you receive the code, submit it:
+```bash
+signal-cli -a +12223334444 register
+```
 
-    ```bash
-    docker compose run --rm signal-cli signal-cli \
-      -a +12223334444 verify <code>
-    ```
+Signal sends a verification code to that number by text. To get a voice call instead, add `--voice`. If Signal asks for a captcha, follow signal-cli's registration instructions. Then submit the code:
 
-    On success, `signal-cli` writes account credentials to the volume.
-  </Step>
+```bash
+signal-cli -a +12223334444 verify <code>
+```
 
-  <Step title="Confirm the volume is populated">
-    ```bash
-    docker compose run --rm signal-cli ls /home/signal-cli/.local/share/signal-cli/data/
-    ```
+Curia uses a number registered this way. It doesn't support linking signal-cli as a secondary device of a phone's Signal account.
 
-    You should see a file or directory named after your phone number. If the directory is empty, the registration step did not complete successfully — repeat it.
-  </Step>
-</Steps>
+## Step 2 — Run signal-cli as a daemon and share its socket
 
-## Step 2 — Add the phone number to the vault
+Start signal-cli in daemon mode with a JSON-RPC Unix socket:
 
-In the Curia console, go to **Settings → Channels → Signal** and enter the E.164 number you registered in Step 1 (e.g. `+12223334444`). It is stored under the vault key `channel.signal.phone_number`.
+```bash
+signal-cli -a +12223334444 daemon --socket /var/run/signal-cli/socket
+```
 
-## Step 3 — Apply the change
+Keep it running (for example as a system service or its own container), then make the socket reachable from inside the Curia container:
 
-Restart Curia so it picks up the new secret:
+- **Mount the socket's folder into the `curia` service,** for example through a Compose override file. If your `.env` sets `COMPOSE_FILE` (the HTTPS install does), add your override file to that list, or Compose won't load it.
+- **Let Curia write to the socket.** The Curia container runs as user and group `1001`. Connecting to a Unix socket needs write permission on it.
+
+Note the socket's path **as seen from inside the Curia container**. You enter it in the next step.
+
+## Step 3 — Enter Curia's Signal details in the console
+
+In the console, go to **Settings → Channels** and click the **signal** row. Click **Install** if it isn't installed yet. Then, under **Credentials**, save:
+
+| Field | Whose value | Vault key |
+|---|---|---|
+| **signal-cli socket path** | The socket path inside the Curia container, such as `/var/run/signal-cli/socket` | `channel.signal.socket_path` |
+| **Phone number (E.164)** | **Curia's** number from Step 1 | `channel.signal.phone_number` |
+
+Both are required. Click **Enable**, then restart Curia from the folder where you ran the installer:
 
 ```bash
 docker compose restart curia
 ```
 
+Saved credentials and enabling both take effect on the next restart.
+
 <Note>
-  `restart` re-runs Curia's startup so it re-reads the vault — that's all this step needs, and it leaves the container and its volumes untouched. If instead you set the phone number via `SIGNAL_PHONE_NUMBER` in `.env`, use `docker compose up -d curia` — a plain restart won't pick up changed env vars.
+  Older installs may set `SIGNAL_SOCKET_PATH` and `SIGNAL_PHONE_NUMBER` in `.env`. Curia still reads them as fallbacks, and the console shows them as **configured (env)**. A value saved in the console wins.
 </Note>
 
-The Signal channel activates when `channel.signal.phone_number` is in the vault and the `signal-data` volume is populated. `docker compose logs curia` will show the Signal adapter initializing.
+## Step 4 — Link your principal's Signal number
 
-## Sending your first message
+This is the step people miss. Without it, Curia treats messages from your principal's phone as coming from a stranger, and messages Curia sends to your principal can be held back by its outbound filter.
 
-Open Signal on your phone and send a message to the number you registered. Curia will respond via the same Signal conversation.
+1. In the console, open **Contacts** and select your principal.
+2. Under **Channel identities**, choose the channel **signal**.
+3. Enter **your principal's** Signal number in E.164 format as the **Identifier**. Add a label if you like.
+4. Click **Add identity**.
 
-Because Signal carries `high` trust, you can use it to:
+Numbers you add here are saved as verified and take effect straight away, with no restart. Never enter Curia's own number here.
 
-- Approve sensitive or financial actions that email cannot authorize
-- Get urgent notifications when Curia flags something in your inbox
-- Send instructions to Curia securely when away from your desk
+## Check it works
+
+- **Logs.** After the restart, `docker compose logs curia | grep -i signal` shows the Signal adapter starting. If you see `Signal socket path or phone number not configured`, a value from Step 3 is missing.
+- **Health.** `curl https://<your-domain>/api/health` shows `"signal": "ok"`. `"fail"` means Curia can't reach signal-cli over the socket. `"skipped"` means the channel didn't start.
+- **Console.** The signal row in **Settings → Channels** shows **enabled**, and your principal's contact lists a verified **signal** identity.
+- **A real message.** Send a message to Curia's number from your own Signal account. Curia answers in the same conversation. If you aren't the principal, Curia treats you as an unknown sender and answers with care, and that's expected.
+
+## What your principal will notice
+
+Nothing until Curia messages them. Curia's first message arrives from a number they don't know, so Signal shows it as a message request they need to accept. Give them Curia's number to save as a contact first.
+
+Once it's set up, your principal can use Signal to:
+
+- approve sensitive or financial actions that email can't authorize;
+- get urgent notifications when Curia flags something;
+- send Curia instructions securely when away from their desk.
 
 <Info>
-  Trust levels determine which actions Curia can take on a sender's behalf. Signal's `high` trust level is equivalent to CLI access — Curia treats Signal messages with the same confidence it treats local terminal sessions.
+  Trust levels decide which actions Curia takes on a sender's behalf. Signal carries `high` trust, the same as the console.
 </Info>
 
 ## Voice notes
 
-Send Curia a Signal voice note and it transcribes it into an ordinary message — no separate setup beyond having speech-to-text credentials configured (the same Deepgram key the [Voice channel](/channels/voice-setup) uses).
+Your principal can send Curia a Signal voice note and it's transcribed into an ordinary message. There's no separate setup beyond speech-to-text credentials (the same Deepgram key the [Voice channel](/channels/voice-setup) uses).
 
 - Audio attachments are downloaded through signal-cli and transcribed, then handled exactly like a typed message. The transcript is tagged so you can tell it came from audio.
 - In a 1:1 conversation, transcription only runs for **senders Curia already knows**.
-- Downloads are capped at **5 MB**. Longer recordings are not transcribed.
-- With no speech-to-text credentials configured, audio-only messages are simply ignored. Text keeps working.
+- Downloads are capped at **5 MB**. Longer recordings aren't transcribed.
+- With no speech-to-text credentials configured, audio-only messages are ignored. Text keeps working.
 
 ## Voice calls
 
-You can also **call** Curia's Signal number and hold a live spoken conversation. This is off by default and needs additional deploy-side infrastructure — see [Signal calls](/channels/voice-setup#signal-calls) on the Voice page.
+People can also **call** Curia's Signal number and hold a live spoken conversation. This is off by default and needs extra infrastructure around signal-cli. See [Signal calls](/channels/voice-setup#signal-calls) on the Voice page.
 
 <Warning>
-  By default Curia picks up for strangers too, at unknown trust — calls follow the same `unknown_sender` setting as Signal texts, which ships as `allow`. That is a different exposure from Signal messaging, where you control who has your number. Read the [policy section](/channels/voice-setup#who-can-call-and-what-they-can-do) before enabling it.
+  By default Curia picks up for strangers too, at unknown trust: calls follow the same `unknown_sender` setting as Signal texts, which ships as `allow`. That's a different exposure from Signal messaging. Read the [policy section](/channels/voice-setup#who-can-call-and-what-they-can-do) before enabling it.
 </Warning>
-
-## Console credential entry
-
-Once signal-cli is running and your phone number is registered, you can enter the connection details in Curia's console instead of setting environment variables.
-
-<Steps>
-  <Step title="Open Settings → Channels">
-    In the Curia console, go to **Settings → Channels** and find the **Signal** channel.
-  </Step>
-
-  <Step title="Enter your phone number">
-    - **Phone number:** Your registered Signal number in E.164 format (e.g. `+12223334444`). This is the only field you need — the socket path is managed automatically, and entering the phone number alone activates the Signal channel.
-  </Step>
-
-  <Step title="Confirm with the setup wizard">
-    Ask the setup wizard to verify your Signal channel. It checks live status and tells you whether the channel is ready.
-  </Step>
-</Steps>
-
-<Note>
-  Device linking (the QR-scan step to link a secondary device) is a separate manual step not currently guided by the setup wizard. See [Step 2 — Bootstrap signal-cli](#step-2-bootstrap-signal-cli) above for instructions.
-</Note>
 
 ## Troubleshooting
 
@@ -128,32 +130,21 @@ Once signal-cli is running and your phone number is registered, you can enter th
   <Accordion title="Signal adapter not starting">
     Check that:
 
-    1. `channel.signal.phone_number` is in the vault (check Settings → Channels → Signal in the console)
-    2. The `signal-data` Docker volume is populated (see Step 1, Step 3 above)
-    3. The `signal-cli` container is running: `docker compose ps`
+    1. Both credentials show **configured** under **Settings → Channels → signal**.
+    2. The signal row shows **enabled**, not just **installed**.
+    3. You restarted Curia after your last change.
+    4. signal-cli is running in daemon mode and the socket exists at the path you entered, inside the Curia container: `docker compose exec curia ls -l /var/run/signal-cli/socket` (use your path).
+  </Accordion>
 
-    Both conditions must be true for the adapter to activate.
+  <Accordion title="Health shows signal as fail">
+    Curia started the channel but can't talk to signal-cli. Check that the daemon is running, that the socket's folder is mounted into the Curia container, and that user `1001` can write to the socket. A permission error in `docker compose logs curia` (`EACCES`) points at the last one.
   </Accordion>
 
   <Accordion title="Messages not delivered">
-    Confirm the `signal-cli` container is healthy and connected to Signal's infrastructure:
-
-    ```bash
-    docker compose logs signal-cli
-    ```
-
-    If you see connection errors, the Signal registration may have expired or the credentials in the volume may be stale. Re-run the bootstrap steps to re-register.
+    Check signal-cli's own logs. If you see connection or authorization errors, the registration may have expired. Repeat Step 1 to re-register Curia's number.
   </Accordion>
 
-  <Accordion title="Curia doesn't recognize me as a trusted sender">
-    The Signal adapter assigns `high` trust to all messages by phone number. However, Curia also checks whether you're a known contact. If your number hasn't been confirmed as the CEO's number, your messages may be held for review.
-
-    From the CLI, tell Curia who you are:
-
-    ```
-    > The Signal number +12223334444 belongs to me (the CEO).
-    ```
-
-    Curia will confirm your number as a verified identity and grant appropriate access.
+  <Accordion title="Curia doesn't recognize my principal">
+    Open **Contacts →** your principal and check that **Channel identities** lists a **signal** identity with your principal's number, in E.164 format and marked verified. If it's missing, follow Step 4.
   </Accordion>
 </AccordionGroup>

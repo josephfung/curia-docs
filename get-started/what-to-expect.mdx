@@ -1,0 +1,106 @@
+---
+title: "What to expect"
+description: "Who does what to get Curia running, how long it takes, what it costs, and what you'll need before you start."
+---
+
+Curia works for one executive, the **principal**. Getting it running takes two phases, and they can be done by different people. This page covers who does each phase, how long it takes, what it costs, what you'll need, and how you'll know you're done.
+
+## Two phases, two people
+
+| | Setup | Onboarding |
+|---|---|---|
+| **Who** | The **operator**: whoever installs and runs Curia. That might be an EA, IT, a technical friend, or the principal. | The **principal**: the executive Curia works for. |
+| **What** | Install Curia, then connect its email, messaging, voice and Google access. | Get to know Curia: tell it how to work, then start using it. |
+| **Where** | The installer, the Curia console, and the setup assistant in console chat. | Conversations with Curia by message, email or voice. |
+
+The Setup pages are written to the operator. They say whose mailbox or phone number each value belongs to: Curia's own, or the principal's.
+
+**Setting Curia up for yourself?** Then you're both the operator and the principal. Do Setup first, then start using Curia as the principal. Where a page says "tell your principal", you can skip that step.
+
+## How long it takes
+
+- **Install: about 5 minutes.** One script, run on a machine with Docker.
+- **Connect Curia: about 1–2 hours.** Work through it at your own pace. It can stretch over a few days if you're waiting on an account, a phone number or someone else's sign-off.
+
+## What you'll need
+
+Gather these before you start. You don't need them all at once: each Setup page lists what it needs.
+
+- **A machine with Docker and Docker Compose.** A small server works.
+- **An Anthropic API key.** The installer asks for one. Other model providers (OpenRouter, Amazon Bedrock) need config changes after install. See the [configuration reference](/references/configuration).
+- **A domain, or another HTTPS route to the server.** Telnyx needs a public URL to deliver texts, and browsers only allow the microphone for voice calls over HTTPS (or on the server itself). The installer offers a local option, but use it only to try Curia out.
+- **A dedicated mailbox for Curia and a Nylas account.** Curia sends and receives email from its own address, through Nylas.
+- **A phone number for Curia, so it can message the principal.** Either a number registered with Signal (you run `signal-cli` yourself), or a Telnyx number for SMS.
+- **Voice keys.** LiveKit comes bundled with Curia. You also need a Deepgram key (speech-to-text) and a Cartesia key (Curia's spoken voice).
+- **Access to the principal's email and calendar.** Today this is a Nylas grant for the principal's mailbox, set up by hand. Google accounts only, for now.
+- **A Google account for Curia**, plus a Google Cloud OAuth client, so Curia can create and share Google Docs.
+- **An embeddings source.** Either an OpenAI API key or your own embeddings server. Without one, Curia's memory and the setup assistant don't work.
+- **Optional: a Tavily key** for web search.
+
+## What it costs
+
+Prices for the third-party services Curia uses, checked on the vendors' sites on 2026-11-01. They change, so check before you sign up.
+
+| Service | What it's for | Price (checked 2026-11-01) |
+|---|---|---|
+| Anthropic | The language model | Pay as you go. Depends on how much Curia does. |
+| Nylas | Curia's mailbox, and access to the principal's | Free: $0 for 5 accounts, described as "for proving it works" (production use isn't stated). Essentials: $15/month for 10 accounts. |
+| Signal | Messaging the principal | Free |
+| Telnyx | Messaging the principal by SMS (instead of Signal) | $0.004 per message part, plus carrier fees. Number and 10DLC registration fees vary. |
+| Deepgram | Speech-to-text for voice calls | $200 free credit. Nova-3 streaming: $0.0077/minute. |
+| Cartesia | Curia's spoken voice | Free: 20K credits (1 credit per character), which appears to lack a commercial licence. Pro: $5/month for 100K credits. |
+| OpenAI embeddings | Curia's memory (`text-embedding-3-small`) | $0.02 per 1M tokens |
+| Tavily | Web search (optional) | Free: 1,000 credits/month, no card needed |
+
+LiveKit runs on your own server, so it adds no fee. You can also run your own embeddings server instead of paying OpenAI.
+
+## The Setup steps
+
+Work through these in order. Each page says what it's for, what you'll need, the steps, how to check it works, and what your principal will notice.
+
+<Steps>
+  <Step title="Install Curia">
+    Run the installer and open the console. [Install Curia](/get-started/installation)
+  </Step>
+  <Step title="Curia's own email">
+    Give Curia its own mailbox through Nylas. [Curia's own email](/get-started/curia-email)
+  </Step>
+  <Step title="Reach your principal">
+    Connect Signal or SMS, and link the principal's number. [Reach your principal](/get-started/reach-your-principal)
+  </Step>
+  <Step title="Voice">
+    Turn on voice calls and choose Curia's voice. [Voice](/get-started/voice)
+  </Step>
+  <Step title="Your principal's email and calendar">
+    Give Curia access to the principal's mailbox and calendar. [Your principal's email and calendar](/get-started/principal-email-calendar)
+  </Step>
+  <Step title="Google Docs">
+    Connect Curia's Google account. [Google Docs](/get-started/google-docs)
+  </Step>
+  <Step title="Search and memory">
+    Turn on embeddings (needed) and web search (optional). [Search and memory](/get-started/search-and-memory)
+  </Step>
+  <Step title="Check your setup">
+    Confirm every item works, then hand over. [Check your setup](/get-started/check-your-setup)
+  </Step>
+</Steps>
+
+## What your principal experiences
+
+Here's what the principal's first days look like today:
+
+1. **The `/setup` form.** After install, the console opens a short form. It asks for the principal's name, timezone, email and working hours, Curia's name and signature, and how Curia should sound and how much it should do on its own. The form talks to whoever fills it in as the principal. If you're setting Curia up for someone else, fill it in with them, or from their answers.
+2. **The setup assistant in chat.** The form then opens console chat. Curia offers a few quick wins: capturing preferences, a regular digest, pronouns, and a tour of what it can do. These questions are about the principal too.
+3. **Using Curia.** From then on, the principal messages Curia on Signal or SMS, emails it, or talks to it. Voice calls happen in console chat, which also opens in a phone's browser.
+
+<Note>
+  **Coming soon.** A guided onboarding, where Curia invites the principal to a first conversation by voice or chat and takes it from there. A phone app is coming too. Until then, Signal or SMS is how Curia messages the principal.
+</Note>
+
+## How you'll know you're done
+
+Setup is done when every item on the checklist passes. The last Setup page walks you through each check, then explains how to hand Curia over to your principal.
+
+<Card title="Check your setup" icon="list-check" href="/get-started/check-your-setup">
+  The finish line: a check for every item, then handing over to your principal.
+</Card>

@@ -4,12 +4,21 @@ sidebarTitle: "SMS"
 description: "Add two-way SMS as a first-party Curia channel on a dedicated Telnyx office DID — inbound via signed webhook, outbound via the gateway, all on Curia's unified contact and trust model."
 ---
 
-SMS lets your Curia agent text people the way an assistant with an office line would: send a message to the principal or a third party, and field replies back on the same number. It rides a **dedicated Telnyx number** (a DID) that belongs to the office, not a ported personal or consumer-app number.
+SMS lets Curia text people the way an assistant with an office line would: send a message to your principal or a third party, and field replies on the same number. It rides a **dedicated Telnyx number** (a DID) that belongs to Curia's office, not a ported personal or consumer-app number.
+
+Two phone numbers are involved. Keep them apart:
+
+- **The office number.** Curia's own Telnyx number. Curia texts from it, and your principal texts it.
+- **Your principal's mobile.** Their own phone. You link it to your principal's contact in Curia, so Curia knows who's texting.
+
+<Note>
+  Choosing between SMS and Signal? See [3. Reach your principal](/get-started/reach-your-principal).
+</Note>
 
 Inbound texts arrive as a signed webhook from Telnyx; outbound sends go through Curia's outbound gateway to the Telnyx Messages API. Conversations are 1:1 text only in v1 (no MMS or group messaging).
 
 <Info>
-  Trust rides the **sender**, not the channel. SMS is a `medium`-trust channel *floor* — carrier From headers are spoofable and SMS is not end-to-end encrypted, so it must not match Signal's `high`. Once your mobile number is linked to your principal contact as a verified `sms` identity, your texts carry principal-tier trust. For high-autonomy approvals when your SMS identity isn't linked yet, prefer Signal or the CLI.
+  Trust rides the **sender**, not the channel. SMS is a `medium`-trust channel *floor* — carrier From headers are spoofable and SMS is not end-to-end encrypted, so it must not match Signal's `high`. Once your principal's mobile is linked to their contact as a verified `sms` identity, their texts carry principal-tier trust. For approvals that need higher assurance, Signal or the console is the better channel.
 </Info>
 
 ## Prerequisites
@@ -50,19 +59,19 @@ Inbound texts arrive as a signed webhook from Telnyx; outbound sends go through 
 
 ## Step 2 — Store the credentials in the vault
 
-In the Curia console, go to **Settings → Channels → SMS** and enter the three values. They're stored in the [vault](/get-started/secrets-vault):
+In the Curia console, go to **Settings → Channels** and click the **sms** row. Click **Install** if it isn't installed yet, then save the three values under **Credentials**. They're stored in the [vault](/get-started/secrets-vault):
 
 | Field | Vault key |
 |---|---|
 | Telnyx API key | `channel.sms.api_key` |
-| Office DID (E.164) | `channel.sms.from_number` |
+| Office DID (E.164): Curia's office number | `channel.sms.from_number` |
 | Telnyx webhook public key | `channel.sms.webhook_public_key` |
 
 <Note>
   SMS credentials are **vault-only** — there is no environment-variable fallback. Set all three in the console before enabling the channel.
 </Note>
 
-Then install and enable the SMS channel in the registry and restart Curia so the adapter starts and installs the webhook handler:
+Then click **Enable** and restart Curia, from the folder where you ran the installer, so the adapter starts and installs the webhook handler:
 
 ```bash
 docker compose restart curia
@@ -72,19 +81,28 @@ docker compose restart curia
   `restart` re-runs Curia's startup so it re-reads the vault and registry — it leaves the container and its volumes untouched. Until the adapter is started, the webhook endpoint returns `503` so Telnyx retries after you enable and restart.
 </Note>
 
-## Step 3 — Link your mobile to the principal
+## Step 3 — Link your principal's mobile
 
-<Steps>
-  <Step title="Add your mobile as a verified sms identity">
-    On **Contacts → your principal**, add your **personal mobile** (E.164) as an `sms` channel identity and mark it **verified**. This is what principal detection and the Gate C carve-out use to recognize the office texting you.
+This is the step people miss. Without it, Curia treats texts from your principal as coming from a stranger, and won't recognize texts it sends to your principal as going to them.
 
-    This `sms` transport identity is distinct from a CRM `phone` field — the CRM number is profile/reach-CEO data, the `sms` identity is the messaging transport. Never use the **office DID** as the principal's personal identity.
-  </Step>
+1. In the console, open **Contacts** and select your principal.
+2. Under **Channel identities**, choose the channel **sms**.
+3. Enter **your principal's** mobile number in E.164 format as the **Identifier**.
+4. Click **Add identity**.
 
-  <Step title="Send a first text">
-    Text the office DID from your mobile, or ask Curia to text you. Replies thread back on the same number via context bridging (SMS is non-threaded).
-  </Step>
-</Steps>
+Numbers you add here are saved as verified and take effect straight away, with no restart.
+
+The `sms` identity is separate from the contact's `phone` channel: `phone` is a number on file, while `sms` is the number Curia texts and recognizes. Never enter the **office number** here.
+
+## Check it works
+
+- **Health.** `curl https://<your-domain>/api/health` shows `"sms": "ok"` once the adapter has started and installed its webhook handler. `"skipped"` means the channel didn't start.
+- **Console.** The sms row in **Settings → Channels** shows **enabled**, and your principal's contact lists a verified **sms** identity.
+- **A real text.** Text the office number from your own phone. Curia replies on the same number. If you aren't the principal, Curia treats you as an unknown sender and answers with care, and that's expected. SMS has no threads, so Curia uses [context bridging](/channels/how-channels-work#context-bridging-on-non-threaded-channels) to keep track of the conversation.
+
+## What your principal will notice
+
+Nothing until Curia texts them. Curia's texts come from the office number. Give your principal that number to save as a contact, so they know who's texting.
 
 <Note>
   Unknown senders who text the office number are auto-created as `tier=unknown` contacts, and their `sms` identity is **not** auto-verified (carrier From is spoofable) — the same low-trust constraints as an unknown emailer until you elevate or link them.
@@ -98,7 +116,7 @@ Inbound `STOP` — or a natural-language "please stop texting me" — reaches th
 
 ## Cost
 
-US steady-state runs roughly **~$3–5/mo** after a one-time ~$20 10DLC registration (number rent + Low-Volume Mixed campaign + usage). International sending is billed on top. Canadian DIDs skip 10DLC but carry their own pricing and regulatory trade-offs.
+Checked 2026-11-01: Telnyx charges $0.004 per SMS message part, plus carrier fees. The number's monthly rent and any 10DLC registration fees vary by country and number type; check Telnyx's pricing for yours.
 
 ## Non-goals (v1)
 
@@ -129,7 +147,7 @@ US steady-state runs roughly **~$3–5/mo** after a one-time ~$20 10DLC registra
     A 40300 from Telnyx means that number texted `STOP` and is suppressed at the carrier. This is authoritative — the recipient must text `START` to resume before Curia can message them again.
   </Accordion>
 
-  <Accordion title="Curia treats me as an unknown sender">
-    Link your mobile number to your principal contact as a verified `sms` identity (Step 3). The CRM `phone` field alone does not grant principal-tier trust on SMS.
+  <Accordion title="Curia treats my principal as an unknown sender">
+    Link your principal's mobile to their contact as an `sms` identity (Step 3). A `phone` identity alone doesn't grant principal-tier trust on SMS.
   </Accordion>
 </AccordionGroup>
