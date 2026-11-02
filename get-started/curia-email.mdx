@@ -45,34 +45,22 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
     In the Curia console, go to **Settings → Channels** and click the **email** row. If its state is **not installed**, click **Install**.
   </Step>
 
-  <Step title="Enter the three credentials">
-    Under **Credentials**, enter each value and click **Save**:
-
-    | Field | What it is | Stored in the vault as |
-    |---|---|---|
-    | **Nylas API key** | Your Nylas application's API key | `channel.email.nylas_api_key` |
-    | **Nylas grant ID** | The grant for Curia's mailbox | `channel.email.nylas_grant_id` |
-    | **Mailbox address** | Curia's email address | `channel.email.nylas_self_email` |
-
-    Each row turns to **configured (vault)** when it's saved.
+  <Step title="Enter the API key">
+    Under **Credentials**, enter your **Nylas API key** and click **Save**. It's stored in the vault as `channel.email.nylas_api_key`, and the row turns to **configured (vault)**.
   </Step>
 
   <Step title="Add Curia's mailbox under Email accounts">
     Further down the same panel, under **Email accounts**, fill in:
 
     - **Account name:** a short name, such as `curia`.
-    - **Mailbox address:** Curia's address again.
-    - **Nylas grant ID:** the same grant ID again.
+    - **Mailbox address:** Curia's email address.
+    - **Nylas grant ID:** the grant ID from step 3.
 
-    Click **Add account**.
-
-    <Note>
-      Yes, you enter the address and grant ID twice. The **Email accounts** entry is the mailbox Curia actually reads and sends from. The credential fields above unlock the **Enable** button and mark email as done for the setup agent. Today you need both.
-    </Note>
+    Click **Add account**. This is the mailbox Curia reads and sends from.
   </Step>
 
   <Step title="Enable the channel and restart Curia">
-    Click **Enable**. The button stays disabled until all three credentials are configured.
+    Click **Enable**. The button stays disabled until the API key is saved and at least one enabled email account has a grant.
 
     Enabling, credentials and new accounts all take effect on the next restart. From the folder where you ran the installer:
 

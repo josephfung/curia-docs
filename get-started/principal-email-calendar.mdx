@@ -16,7 +16,6 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
 
 - **Curia's own email working,** from page 2. This step uses the same Nylas application.
 - **Your principal, or their Google sign-in.** Connecting the mailbox means signing in to their Google account, so do it with them.
-- **Shell access to the Curia host,** to store the grant. There's no console field for it yet.
 
 **Time:** about 20 minutes, plus finding a moment with your principal.
 
@@ -31,31 +30,15 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
     Copy the new **grant ID**.
   </Step>
 
-  <Step title="Store the grant in the vault">
-    From the directory you installed Curia into, run:
+  <Step title="Save the grant in the console">
+    In the console, go to **Settings → Channels**, click the **email** row, and scroll to **Principal's mailbox**. Enter each value and click **Save**:
 
-    ```bash
-    docker compose run --rm \
-      -e SEED_VAULT_ONLY=ceo_nylas_grant_id,ceo_self_email,nylas_api_key,nylas_self_email \
-      -e CEO_NYLAS_GRANT_ID=<principal's grant ID> \
-      -e CEO_SELF_EMAIL=<principal's email address> \
-      -e NYLAS_API_KEY=<your Nylas API key> \
-      -e NYLAS_SELF_EMAIL=<Curia's email address> \
-      curia ./node_modules/.bin/tsx scripts/seed-vault.ts
-    ```
+    | Field | Value | Stored in the vault as |
+    |---|---|---|
+    | **Nylas grant ID** | The grant ID from the previous step: your principal's mailbox | `ceo_nylas_grant_id` |
+    | **Mailbox address** | Your principal's email address | `ceo_self_email` |
 
-    What each value is:
-
-    | Vault key | Value |
-    |---|---|
-    | `ceo_nylas_grant_id` | The grant ID from the previous step: your principal's mailbox |
-    | `ceo_self_email` | Your principal's email address |
-    | `nylas_api_key` | The same Nylas API key you entered for Curia's email |
-    | `nylas_self_email` | Curia's own address, so Curia skips its own messages in your principal's inbox |
-
-    The inbox tools read the Nylas key and Curia's address under these older names, not the names the console stores them under, so they have to be stored again here.
-
-    From a source checkout, run `SEED_VAULT_ONLY=… CEO_NYLAS_GRANT_ID=… pnpm run seed-vault` with the same values instead.
+    Each row turns to **configured** when it's saved. The inbox tools use the Nylas API key you entered for Curia's email, and skip messages from Curia's own email accounts, so there's nothing else to enter.
   </Step>
 
   <Step title="Turn on the inbox and calendar specialists">

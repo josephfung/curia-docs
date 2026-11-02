@@ -16,17 +16,17 @@ This channel is for mailboxes that belong to Curia. Access to your principal's o
 
 Everything is entered in the console under **Settings → Channels → email**. Nothing goes in `.env`.
 
-**Credentials** (one set for the whole channel):
+**Credentials** (one for the whole channel):
 
 | Field | Whose value | Vault key |
 |---|---|---|
 | **Nylas API key** | Your Nylas application's | `channel.email.nylas_api_key` |
-| **Nylas grant ID** | Curia's first mailbox | `channel.email.nylas_grant_id` |
-| **Mailbox address** | Curia's first mailbox | `channel.email.nylas_self_email` |
 
-All three must be configured before **Enable** becomes available, and the setup agent checks for the same three keys.
+**Email accounts** (one entry per Curia mailbox): an account name, the mailbox address and its Nylas grant ID. Each entry's grant is stored in the vault as `channel.email.<name>.nylas_grant_id`. These entries are the mailboxes Curia reads and sends from.
 
-**Email accounts** (one entry per Curia mailbox): an account name, the mailbox address and its Nylas grant ID. Each entry's grant is stored in the vault as `channel.email.<name>.nylas_grant_id`. These entries are the mailboxes Curia actually reads and sends from. If there are none, the channel doesn't start, even with all three credentials saved.
+**Enable** becomes available once the API key is saved and at least one enabled account has a grant. The setup assistant marks email done when the same check passes and the channel is enabled.
+
+**Principal's mailbox** (your principal's own mailbox, not Curia's): its grant ID and address, stored as `ceo_nylas_grant_id` and `ceo_self_email`. Calendar and the inbox tools use it. See [5. Your principal's email and calendar](/get-started/principal-email-calendar).
 
 Saved credentials, enabling the channel and adding or removing accounts all take effect on the next restart:
 
@@ -35,7 +35,7 @@ docker compose restart curia
 ```
 
 <Note>
-  Older installs may have `NYLAS_API_KEY`, `NYLAS_GRANT_ID` and `NYLAS_SELF_EMAIL` in `.env`. Curia still reads them as fallbacks, but a value saved in the console wins. A grant ID in `.env` does not create an email account: add the account in the console.
+  Older installs may have `NYLAS_API_KEY` in `.env`. Curia still reads it as a fallback, but a value saved in the console wins. `NYLAS_GRANT_ID` and `NYLAS_SELF_EMAIL` are no longer read: add each mailbox under **Email accounts** instead.
 </Note>
 
 ## More than one mailbox
