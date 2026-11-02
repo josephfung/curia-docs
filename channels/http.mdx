@@ -27,7 +27,7 @@ For full endpoint documentation, including the console's jobs, tasks, contacts, 
 
 Console routes, including chat, authenticate with the `curia_session` cookie set when you sign in to the console, or with the `x-web-bootstrap-secret` header carrying `web_app_bootstrap_secret` from the [vault](/get-started/secrets-vault).
 
-A console session lasts **90 days from its last use**, and every request you make starts the 90 days again. Sessions are stored in the database, so restarting or updating Curia doesn't sign anyone out. **Settings → Devices** lists every signed-in browser and phone, and lets you rename them, sign one out, or sign out all the others. You can also pair a phone from there without typing the access key; see [Use Curia on your phone](/channels/phone-app).
+A console session lasts **90 days from its last use**, and every request you make starts the 90 days again. Sessions are stored in the database, so restarting or updating Curia doesn't sign anyone out. **Settings → System → Devices** lists every signed-in browser and phone, and lets you rename them, sign one out, or sign out all the others. You can also pair a phone from there without typing the access key; see [Use Curia on your phone](/channels/phone-app). To log out, or to switch between light and dark, click your name at the bottom of the sidebar.
 
 Routes that do not authenticate themselves, such as `/api/agents/status`, require a Bearer token in the `Authorization` header:
 

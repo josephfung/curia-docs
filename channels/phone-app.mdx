@@ -18,7 +18,7 @@ You don't install anything from an app store, and you never type your access key
 
 <Steps>
   <Step title="Start pairing on your computer">
-    In the console, open **Settings → Devices** and choose **Pair a phone**.
+    In the console, open **Settings → System → Devices** and choose **Pair a phone** under **Add a phone**.
 
     Curia uses the address you're signed in on. If that address can't work from a phone (a `localhost` or LAN address, for example), the console asks for **Phone address**: the address your phone should use to reach Curia. It remembers what you type in that browser.
   </Step>
@@ -36,7 +36,7 @@ You don't install anything from an app store, and you never type your access key
     Add Curia to the home screen from the same browser that opened the pairing link, because that is where the sign-in is stored.
   </Step>
   <Step title="Turn on notifications">
-    Open Curia from the home screen and tap **Turn on notifications**, then allow them when the phone asks. On an iPhone this button appears only in the installed app, not in Safari.
+    Open Curia from the home screen and tap **Turn on for this phone**, then allow them when the phone asks. On an iPhone this button appears only in the installed app, not in Safari. Later, the same switch is under your name at the bottom of the menu: **Devices & notifications**.
   </Step>
 </Steps>
 
@@ -54,7 +54,7 @@ If you set Curia up for someone else, they don't need to be at your computer. Se
 
 <Steps>
   <Step title="Create the link">
-    In the console, open **Settings → Devices** and choose **Create invitation link** under **Invite your principal**. Choose **Copy link**. The console shows the link only this once.
+    In the console, open **Settings → System → Devices** and choose **Create invitation link** under **Invite your principal**. Choose **Copy link**. The console shows the link only this once.
   </Step>
   <Step title="Send it yourself">
     Send the link the way you normally reach them: a text, a chat message, or in person. Curia doesn't send it for you. Ask them to open it on their phone in **Safari** on an iPhone or **Chrome** on Android, not inside another app's browser.
@@ -74,7 +74,7 @@ The panel shows whether the link is **waiting**, **redeemed** (with the phone's 
 
 Your phone stays signed in for **90 days after you last used it**. Each time you use the app, the 90 days start again, and restarts or updates of Curia don't sign you out.
 
-To sign a phone out, open **Settings → Devices** on any signed-in device. From there you can:
+To sign a phone out, open **Settings → System → Devices** on any signed-in device, under **Signed-in devices**. From there you can:
 
 - rename a device;
 - sign one out;
@@ -97,7 +97,7 @@ Once notifications are on, Curia can reach you on your phone in two ways:
 
 You aren't notified about a message you're already looking at. If the chat is open on your computer or your phone, the message just appears there.
 
-A notification shows **Curia** and the first 100 characters or so of the message. Tap it to open the chat. If you'd rather not show message text on your lock screen, turn on **Hide previews** in **Settings → Devices**. Notifications then say "New message from Curia".
+A notification shows **Curia** and the first 100 characters or so of the message. Tap it to open the chat. If you'd rather not show message text on your lock screen, turn on **Hide message text in notifications** in **Settings → System → Devices**. It applies to every device. Notifications then say "New message from Curia".
 
 ### When Curia uses the app instead of another channel
 
@@ -117,7 +117,7 @@ If Curia can't reach your phone, for example because the app was deleted or its 
 
 If the notification service rejects Curia itself, the console shows a notice with the service's reason. That's a setup problem, not a problem with your phone, and it affects every phone until it's fixed. The usual cause is that Curia's address isn't an `https://` address, so check your Curia address first.
 
-To stop notifications on one phone, turn them off from **Settings → Devices** on that phone, or sign the phone out.
+To stop notifications on one phone, open **Settings → System → Devices** on that phone and choose **Turn off** under **Notifications on this device**, or sign the phone out.
 
 ## Calling Curia from your phone
 
@@ -140,7 +140,7 @@ If [voice](/channels/voice-setup) is set up, the call button works in the instal
 
 After Curia is updated, the app shows **Curia was updated · Reload**. Tap **Reload** when you're ready, or **Later** to hide the banner until you next open the app. Curia never reloads in the middle of a conversation on its own.
 
-If the app can't reach Curia, for example because the phone is offline or Curia is restarting, it shows **Can't reach your Curia** with your Curia address and a **Try again** button.
+If the app can't reach Curia, for example because the phone is offline or Curia is restarting, it shows **Can't reach your Curia** and says why: the device is offline, or it's online but can't reach your Curia address (for example, Curia is only reachable on your home network or a VPN). It has a **Try again** button, and it reconnects by itself when the device comes back online.
 
 ## Addresses that can't install the app
 
