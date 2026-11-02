@@ -76,10 +76,13 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
   <Tab title="HTTP / web console">
     The HTTP server hosts the web console. Console chat runs on the `web` channel through `/api/chat`, authenticated by your console session (or the `x-web-bootstrap-secret` header):
 
+    - `GET /api/chat/conversation` — the shared web thread every device uses
     - `POST /api/chat/messages` — send a message; the reply arrives on the stream
-    - `GET /api/chat/stream` — SSE stream of agent replies and tool activity
-    - `GET /api/chat/history` — page through a conversation
+    - `GET /api/chat/stream` — SSE stream of your messages, agent replies and tool activity
+    - `GET /api/chat/history` — page through the shared thread
     - `GET /api/health` — health check for uptime monitors and load balancers
+
+    Every browser and phone you sign in on shows the same conversation. The console also installs on a phone as an app, and Curia can send it notifications: see [Use Curia on your phone](/channels/phone-app).
 
     The old bearer-token message routes (`/api/messages`) were removed. See the [HTTP channel](/channels/http) page for details.
 

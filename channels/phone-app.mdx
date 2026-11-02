@@ -1,0 +1,152 @@
+---
+title: "Use Curia on your phone"
+sidebarTitle: "Phone app"
+description: "Install the Curia console on your phone's home screen, pair it from your computer with a QR code, get notifications when Curia needs you, and take voice calls on the go."
+---
+
+The Curia console installs on your phone as an app. It is the same console you use on your computer, added to the home screen, so it opens full screen without the browser's address bar. Once it's installed, Curia can send you notifications, and you can call it by voice from wherever you are.
+
+You don't install anything from an app store, and you never type your access key on the phone. You pair the phone from the console on your computer by scanning a QR code.
+
+## What you need
+
+- **Curia on an `https://` address with a real hostname**, such as `https://office.example.com`. Phones install apps and allow notifications only from a secure, public address. See [Addresses that can't install the app](#addresses-that-cant-install-the-app).
+- **A phone running a current browser:** Safari on iOS 16.4 or later, or Chrome on Android.
+- **Your computer, signed in to the console.**
+
+## Pair your phone
+
+<Steps>
+  <Step title="Start pairing on your computer">
+    In the console, open **Settings → Devices** and choose **Pair a phone**.
+
+    Curia uses the address you're signed in on. If that address can't work from a phone (a `localhost` or LAN address, for example), the console asks for **Phone address**: the address your phone should use to reach Curia. It remembers what you type in that browser.
+  </Step>
+  <Step title="Scan the QR code">
+    Point your phone's camera at the QR code and open the link. Your phone signs in on its own, and the computer shows **Paired ✓** with your phone's name.
+
+    If the camera can't open the link, go to `/pair` on your Curia address and type the 8-character code shown next to the QR code (it looks like `XXXX-XXXX`).
+  </Step>
+  <Step title="Install the app">
+    The phone shows install instructions after pairing:
+
+    - **iPhone and iPad:** in Safari, tap the **Share** button, tap **Add to Home Screen**, then tap **Add**.
+    - **Android:** tap **Install Curia**. If that button doesn't appear, open the browser menu and choose **Install app**.
+
+    Add Curia to the home screen from the same browser that opened the pairing link, because that is where the sign-in is stored.
+  </Step>
+  <Step title="Turn on notifications">
+    Open Curia from the home screen and tap **Turn on notifications**, then allow them when the phone asks. On an iPhone this button appears only in the installed app, not in Safari.
+  </Step>
+</Steps>
+
+Once a phone has notifications on, the setup wizard's optional **Phone app** task is done. Any signed-in device with notifications turned on counts, including a phone you signed in to with the access key.
+
+<Note>
+  Pairing codes last **10 minutes**, and each one works **once**. After your phone scans the QR code, the typed code stays valid for at most 2 more minutes. If a code expires, choose **Create a new code**.
+</Note>
+
+If the installed app opens on a pairing screen instead of your chat, it isn't signed in. This can happen when the home-screen app doesn't share Safari's sign-in. Type the code from your computer to finish. The sign-in page also has a **Pair with a code from your computer** link.
+
+## Staying signed in
+
+Your phone stays signed in for **90 days after you last used it**. Each time you use the app, the 90 days start again, and restarts or updates of Curia don't sign you out.
+
+To sign a phone out, open **Settings → Devices** on any signed-in device. From there you can:
+
+- rename a device;
+- sign one out;
+- choose **Sign out all other devices**.
+
+Signing a phone out also turns off its notifications.
+
+## One conversation on every device
+
+Your phone, your computer and every other browser you sign in on show the **same conversation** with Curia. Something you send from your phone appears on your computer, and Curia's reply shows up wherever you have the chat open.
+
+When the app comes back to the foreground, it catches up on anything that arrived while it was in the background.
+
+## Notifications
+
+Once notifications are on, Curia can reach you on your phone in two ways:
+
+- **Replies to you.** When Curia answers something you asked and you don't have the chat open on any device, your phone gets a notification.
+- **Messages Curia starts.** Curia can message you in the app first, for example to flag something urgent or to ask for an approval. The message goes into your chat, and your phone gets a notification.
+
+You aren't notified about a message you're already looking at. If the chat is open on your computer or your phone, the message just appears there.
+
+A notification shows **Curia** and the first 100 characters or so of the message. Tap it to open the chat. If you'd rather not show message text on your lock screen, turn on **Hide previews** in **Settings → Devices**. Notifications then say "New message from Curia".
+
+### When Curia uses the app instead of another channel
+
+When Curia needs to reach you and you haven't said how, it tries your channels in this order, using only the ones you've set up:
+
+1. Signal
+2. SMS
+3. The phone app
+4. Slack
+5. Email
+
+Your standing preferences override this order, and so does asking Curia to use a particular channel. For example, you might tell it to "Text me for anything urgent".
+
+### If your phone stops receiving notifications
+
+If Curia can't reach your phone, for example because the app was deleted or its notification subscription expired, it sends the message on your next channel instead. The console then shows a notice that the phone stopped receiving notifications. Open the Curia app on that phone to reconnect it.
+
+If the notification service rejects Curia itself, the console shows a notice with the service's reason. That's a setup problem, not a problem with your phone, and it affects every phone until it's fixed. The usual cause is that Curia's address isn't an `https://` address, so check your Curia address first.
+
+To stop notifications on one phone, turn them off from **Settings → Devices** on that phone, or sign the phone out.
+
+## Calling Curia from your phone
+
+If [voice](/channels/voice-setup) is set up, the call button works in the installed app just as it does on your computer. Phones handle a call differently when you leave the app:
+
+- **Locking the phone or switching apps doesn't drop the call.** The phone mutes your microphone, and the call stays connected.
+- **Curia stops talking while you're away.** It pauses about 5 seconds after you leave the app. A question it hadn't started answering yet is answered when you come back. A reply it had partly spoken isn't replayed, and anything it had already started doing isn't done twice.
+- **You'll see where you left off.** When you come back, the call bar shows **Paused while Curia is in the background** until your microphone comes back on.
+- **A long pause ends the call.** If you're away for about **2 minutes**, Curia hangs up. When you return, the call bar says **Call ended while Curia was in the background**.
+- **Swiping the app closed ends the call** within a few seconds.
+- **The Mute button is separate.** Muting yourself doesn't pause Curia, and it doesn't start the 2-minute timer, so Curia can keep talking while you listen. If you leave the app while you're muted, the call isn't paused or ended for you.
+
+**Hang up** sits in the call bar above the message box, in the installed app as well as in the browser.
+
+<Note>
+  The pause depends on your phone keeping Curia running in the background for a few seconds. If you're away for less than about 5 seconds, Curia may keep talking.
+</Note>
+
+## When Curia is updated
+
+After Curia is updated, the app shows **Curia was updated · Reload**. Tap **Reload** when you're ready, or **Later** to hide the banner until you next open the app. Curia never reloads in the middle of a conversation on its own.
+
+If the app can't reach Curia, for example because the phone is offline or Curia is restarting, it shows **Can't reach your Curia** with your Curia address and a **Try again** button.
+
+## Addresses that can't install the app
+
+The console warns you before showing a QR code if your phone address can't install the app. It also warns on the phone after pairing. The address can't install the app if it:
+
+- starts with `http://`;
+- is `localhost`;
+- is an IP address, such as `192.168.1.20`;
+- is a single word with no dots, such as `curia`;
+- ends in a private or reserved name: `.local`, `.lan`, `.home`, `.home.arpa`, `.internal`, `.intranet`, `.corp`, `.localdomain`, `.localhost`, `.test`, `.example` or `.invalid`.
+
+On such an address, Curia still opens in your phone's browser, and pairing still signs the phone in. You won't get a home-screen app or notifications, and you'll get messages only while the chat is open. To get the full app, put Curia behind HTTPS on a real hostname. See [Deployment](/get-started/deployment).
+
+These are the messages you might see:
+
+| Message | What it means |
+|---|---|
+| This address can't install the phone app. Notifications and the home-screen icon need HTTPS on a real hostname. Curia still opens in the phone's browser. | The address is one of the kinds listed above. |
+| This phone can open Curia, but it can't install the app or receive notifications from this address. | The phone's browser won't run the app from this address. |
+| Add Curia to your Home Screen to get notifications. | You're in Safari on an iPhone. Notifications work once Curia is installed. |
+| This phone can install Curia, but it can't receive notifications. Messages still show in the chat while the app is open. | The phone's browser doesn't support notifications. |
+| Too many attempts. Wait a few minutes and try again. | Too many pairing codes were tried. Wait, then try again. |
+
+<CardGroup cols={2}>
+  <Card title="Voice" icon="microphone" href="/channels/voice-setup">
+    Set up voice calls from the console.
+  </Card>
+  <Card title="HTTP channel" icon="globe" href="/channels/http">
+    The console's chat, session and device endpoints.
+  </Card>
+</CardGroup>
