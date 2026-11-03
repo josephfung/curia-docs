@@ -28,7 +28,7 @@ Channels are how messages get in and out of Curia. Whether you send a Signal mes
 
     **Email validation:** Before processing, the email adapter checks SPF, DKIM, and DMARC results. Only the header your own mail provider adds on receipt counts — a sender can write their own `Authentication-Results` header claiming a pass, and Curia ignores it. Messages that fail validation are tagged `sender_verified: false` in their metadata — the Coordinator uses this signal when deciding whether to act on consequential requests.
 
-    **Required secrets (vault):** `channel.email.nylas_api_key`, `channel.email.nylas_grant_id`, `channel.email.nylas_self_email`, plus at least one email account added in the console (its grant is stored as `channel.email.<name>.nylas_grant_id`). See the [email reference](/channels/email-setup#where-the-values-go).
+    **Required secrets (vault):** `channel.email.nylas_api_key`, plus at least one email account added in the console (its grant is stored as `channel.email.<name>.nylas_grant_id`). See the [email reference](/channels/email-setup#where-the-values-go).
 
     **Trust level:** Low — email From headers are trivially spoofable, and even with SPF/DKIM validation, email is the least trustworthy channel.
   </Tab>
