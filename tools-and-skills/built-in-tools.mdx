@@ -165,7 +165,7 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 
 | Tool | action_risk | Description |
 |---|---|---|
-| `web-search` | none | Search the web via Tavily. Requires `tavily_api_key` in the vault — declared in `install.requires_secrets`, so the registry will not enable the tool until the key is provisioned. |
+| `web-search` | none | Search the web via Tavily. Enabled by default and works with no key, in Tavily's keyless mode (free, capped per hour). An optional `tavily_api_key` in the vault, declared in `install.optional_secrets`, raises the limit. When keyless search hits the cap, it returns an error saying search is temporarily limited and when it should work again. See [Tavily](/integrations/tavily). |
 | `web-fetch` | none | Fetch and extract content from a URL. Refuses Google Docs, Sheets, and Drive links and points to the Google Workspace tools instead |
 | `web-browser` | medium | Interact with JavaScript-rendered pages via a Patchright-driven browser with a human-behavior layer (curved mouse paths, paced typing, post-load dwell) to reduce bot-detection blocking. Refuses Google Docs, Sheets, and Drive links, like `web-fetch` |
 

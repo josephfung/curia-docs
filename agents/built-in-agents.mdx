@@ -148,7 +148,9 @@ A specialist agent that owns the first-conversation experience after a new insta
 
 **When it runs:**
 - Auto-triggered on the first chat message after the form wizard at `/setup` completes. The chat view sends a one-shot kickoff message that the Coordinator routes here.
-- On demand when the principal asks "help me set up Nylas / Signal / Tavily" or similar. For channel credentials (email, Signal) it hands off to the console (Settings → Channels) and confirms via `setup-status`; for one-key secrets (Tavily) it mints a one-time secure capture link via `system-secret-capture-request` so the key goes straight to the vault without the agent ever seeing it.
+- On demand when the principal asks "help me set up Nylas / Signal" or "add my Tavily key" or similar. For channel credentials (email, Signal) it hands off to the console (Settings → Channels) and confirms via `setup-status`; for one-key secrets (Tavily) it mints a one-time secure capture link via `system-secret-capture-request` so the key goes straight to the vault without the agent ever seeing it.
+
+Web search works without a Tavily key, so the wizard doesn't ask for one during setup. `setup-status` shows web research as done and lists the key as an optional upgrade. The wizard offers it only when asked, or after search reports that it is limited.
 - On "what can you do?" — returns a plain-language capability summary grouped by category.
 
 **First-conversation flow:**

@@ -82,7 +82,9 @@ Before you start, install the following:
 
 ## Adding channels and capabilities
 
-Email, semantic search, web research, and Signal are added the same way as on the image install — add the credential to the [vault](/get-started/secrets-vault) via the console, then recreate the container. Follow the [Setup pages](/get-started/what-to-expect).
+Email, semantic search, and Signal are added the same way as on the image install — add the credential to the [vault](/get-started/secrets-vault) via the console, then recreate the container. Follow the [Setup pages](/get-started/what-to-expect).
+
+Web research works with no key, capped at a few dozen searches an hour. To raise the limit, seed a free [Tavily](/integrations/tavily) key with `TAVILY_API_KEY=tvly-... pnpm run seed-vault`. It's used from the next search, no restart. A `TAVILY_API_KEY` environment variable also works as a fallback in development; leave it unset in production and keep the key in the vault.
 
 The only difference is the recreate command: because the source build uses the development overlay, include it when recreating so Compose rebuilds from your checkout rather than pulling the image:
 

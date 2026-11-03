@@ -1,20 +1,20 @@
 ---
 title: "Search and memory"
 sidebarTitle: "7. Search and memory"
-description: "Add an embedding source so Curia's memory and setup assistant work, and optionally a Tavily key for live web search."
+description: "Add an embedding source so Curia's memory and setup assistant work, and optionally a Tavily key to raise web search limits."
 ---
 
 ## What this is for
 
-Two capabilities depend on outside services, and the installer sets up neither:
+Two capabilities depend on outside services:
 
 - **Embeddings (needed).** Curia's memory, the knowledge graph of people, organisations and facts, needs an embedding model. Without one, memory is off, and so are things built on it: the setup assistant can't check what you've set up, working hours from setup aren't saved, and the sensitivity classifier that flags confidential content is off. Treat this as required.
-- **Web search (optional).** A [Tavily](https://tavily.com) key lets Curia search the web for research and news.
+- **Web search (works out of the box).** Curia searches the web through [Tavily](https://tavily.com) for research and news. With no key, searches are free but capped at a few dozen an hour. A free Tavily key raises the limit.
 
 ## What you'll need
 
 - **An embedding source.** Either an [OpenAI](https://platform.openai.com) API key with billing set up, or your own OpenAI-compatible embedding server, such as [Ollama](https://ollama.com) running an embedding model.
-- **Optionally, a Tavily account.**
+- **Optionally, a Tavily account,** if you want more searches than the keyless limit allows.
 - **Shell access to the Curia host,** to store the OpenAI key. There's no console field for it yet.
 
 **Time:** about 15 minutes.
@@ -23,7 +23,7 @@ Two capabilities depend on outside services, and the installer sets up neither:
 
 - OpenAI `text-embedding-3-small`: $0.02 per million tokens.
 - Your own embedding server: no fee, but it runs on your hardware.
-- Tavily: 1,000 free credits a month, no card needed.
+- Tavily: free without a key (capped per hour). A free key adds 1,000 credits a month, no card needed.
 
 <Note>
   The embedding-server option is newer than the latest release (v0.44.0, 2026-10-16). It reaches the default `latest` image with the next release. Until then, use OpenAI.
@@ -45,14 +45,8 @@ Two capabilities depend on outside services, and the installer sets up neither:
     Two background tools build memory from conversations, and they stay off on a new install even after you add embeddings. In the console, go to **Tools**, then install and enable `extract-facts` and `extract-relationships`.
   </Step>
 
-  <Step title="Optional: add a Tavily key for web search">
-    Sign up at [tavily.com](https://tavily.com) and copy your API key (it starts with `tvly-`). In the console, go to **Tools**, open `web-search`, and save the key in its `tavily_api_key` field.
-
-    Or ask the setup assistant to set up web research: it sends a one-time link that saves the key to the same place. Either way, web search turns on after the restart below.
-  </Step>
-
   <Step title="Restart Curia">
-    Curia picks up the embedding source, the newly enabled tools and the Tavily key when it starts. Web search is turned on automatically at the first start after the key is saved. Restart from the console's **Settings → System → About** page, or run:
+    Curia picks up the embedding source and the newly enabled tools when it starts. Restart from the console's **Settings → System → About** page, or run:
 
     ```bash
     docker compose restart curia
@@ -60,16 +54,27 @@ Two capabilities depend on outside services, and the installer sets up neither:
 
     If you changed `.env` for your own embedding server, run `docker compose up -d curia` instead, so the container picks up the new values.
   </Step>
+
+  <Step title="Optional: add a Tavily key for more searches">
+    Web search is already on. Add a key only if you expect more than a few dozen searches an hour, or if Curia reports that search is temporarily limited.
+
+    Sign up at [tavily.com](https://tavily.com) and copy your API key (it starts with `tvly-`). Then either:
+
+    - In the console, go to **Settings → Tools → web-search → Optional secrets** and save the key in `tavily_api_key`.
+    - Or ask Curia in chat to "add my Tavily key". The setup assistant sends a one-time secure link that saves the key to the same place.
+
+    The key is used from the next search. No restart needed.
+  </Step>
 </Steps>
 
 ## Check it works
 
 1. In the logs (`docker compose logs curia`), look for `Entity memory initialized with knowledge graph`. A warning ending in `knowledge graph unavailable` means there's still no usable embedding source, and names what's missing.
 2. In the console chat, tell Curia a harmless fact, such as the name of a colleague and their role, then later ask about it.
-3. For web search, ask something only a live search can answer, such as today's news on a topic. Curia's daily health check also logs `Health canary result` with `"canary":"tavily"` and `"status":"ok"` once the key works.
+3. For web search, ask something only a live search can answer, such as today's news on a topic. If you added a Tavily key, Curia's daily health check logs `Health canary result` with `"canary":"tavily"` and `"status":"ok"` once the key works. Without a key, it reports `skipped`.
 
 ## What your principal will notice
 
 - **With memory on,** Curia remembers people, organisations and decisions across conversations and channels. It builds up gradually over weeks rather than all at once.
-- **With web search on,** Curia can answer questions about current events and research topics with up-to-date sources.
+- **Web search,** on by default, lets Curia answer questions about current events and research topics with up-to-date sources. Without a Tavily key, heavy use can hit the hourly cap. Curia then says search is temporarily limited and when it should work again.
 - **Without memory,** Curia still answers, but doesn't build up what it knows about people and facts from one conversation to the next.

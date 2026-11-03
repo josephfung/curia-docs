@@ -146,7 +146,7 @@ health:
 | `nylas_calendar` | Lists calendars via the principal's calendar grant | Calendar not configured |
 | `signal` | Pings the Signal-cli socket | Signal not configured |
 | `google_workspace` | Checks that the credential file is readable and the refresh token has not expired | Google Workspace MCP server not registered |
-| `tavily` | Checks that the Tavily API key is present | Key not configured |
+| `tavily` | With a key set, calls Tavily's usage endpoint (no search credits spent); fails on an invalid key | No key set. Search runs keyless, and the canary reports `skipped` with "keyless mode (no API key set)" rather than spend a free search |
 
 <Note>
   LLM canaries make no billed API calls. They read the outcome of the most recent real call to that tier, recorded by the telemetry layer. An idle tier — key configured, no recent calls, no errors — is always reported as `ok`. The canary only fails if the most recent recorded call was an error.
