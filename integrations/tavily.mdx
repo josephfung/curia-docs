@@ -33,7 +33,7 @@ Pick one. Either way, Curia uses the key from the next search, with no restart.
 - **Console:** go to **Settings → Tools → web-search → Optional secrets** and save the key in `tavily_api_key`. Once a key is set, use **Replace** to change it.
 - **Chat:** ask Curia to "add my Tavily key". The setup assistant sends a one-time secure link that saves the key to the vault as `tavily_api_key`. Curia never sees the value.
 
-If you saved a key through the setup assistant's link on an earlier version, Curia copies it to `tavily_api_key` the next time it starts.
+If you saved a key through the setup assistant's link on an earlier version, Curia moves it to `tavily_api_key` the next time it starts. If you later delete the key to go back to keyless search, it stays deleted.
 
 ## If something goes wrong
 
