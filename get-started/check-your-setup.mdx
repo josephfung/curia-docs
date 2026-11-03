@@ -140,8 +140,8 @@ docker compose restart curia
     You want `Entity memory initialized with knowledge graph`. If you see `No embedding endpoint: set EMBEDDING_BASE_URL and EMBEDDING_MODEL, or seed openai_api_key in the vault`, memory is off, and so is most of the setup assistant. Details: [Search and memory](/get-started/search-and-memory).
   </Step>
 
-  <Step title="Optional: web search works">
-    If you added a Tavily key, ask Curia in console chat to search the web for something recent. A daily check also tests the key; look for a `Health canary result` log line with `"canary":"tavily"`.
+  <Step title="Web search works">
+    Ask Curia in console chat to search the web for something recent. Web search works without a Tavily key, capped at a few dozen searches an hour. If you added a key, a daily check also tests it; look for a `Health canary result` log line with `"canary":"tavily"` and `"status":"ok"`. Without a key, that check reports `skipped`.
   </Step>
 </Steps>
 

@@ -67,6 +67,7 @@ The manifest describes what the tool does, what it needs, and how risky it is. C
 | `permissions` | Yes | Declared capability requirements (use `[]` if none) |
 | `timeout` | No | Per-invocation timeout in milliseconds (default: 30000) |
 | `install.requires_secrets` | No | Vault keys that must exist before the tool can be installed or enabled |
+| `install.optional_secrets` | No | Vault keys that improve the tool but never block it, each mapped to a one-line note shown in the console |
 
 The [tool manifest schema](/references/tool-manifest-schema) reference covers every field, including the optional `capabilities`, `allowed_callers`, and `entity_enrichment` blocks.
 
@@ -159,6 +160,8 @@ If your tool should not be usable until its credential is configured, also decla
 "secrets": ["slack_bot_token"],
 "install": { "requires_secrets": ["slack_bot_token"] }
 ```
+
+If the tool works without the key and the key only improves it, declare the key in `install.optional_secrets` instead, mapped to a one-line note on what it adds. The tool installs and enables without it, and the console lists the key under **Optional secrets** with your note. Keep the key in `secrets` too, so the handler can read it when it's set. The bundled `web-search` tool is an example: see the [tool manifest schema](/references/tool-manifest-schema#install).
 
 <Warning>
   Tools must never throw. All error paths must return `{ success: false, error: '...' }` rather than throwing an exception. If an uncaught exception reaches the execution layer, it is caught and wrapped as a generic error — but this prevents proper error messaging to the LLM.

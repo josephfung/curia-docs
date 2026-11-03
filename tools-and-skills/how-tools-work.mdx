@@ -66,6 +66,7 @@ Every native tool includes a `tool.json` manifest that the execution layer valid
 | `secrets` | Vault secret keys this tool may request via `ctx.secret()` |
 | `timeout` | Per-invocation timeout in milliseconds (default: 30,000) |
 | `install.requires_secrets` | Optional. Vault keys that must exist before the tool can be installed or enabled (see [Tool lifecycle](#tool-lifecycle-install-and-enable)) |
+| `install.optional_secrets` | Optional. Vault keys that improve the tool but never block install or enable, each with a one-line note shown in the console |
 
 The [tool manifest schema](/references/tool-manifest-schema) reference documents every field, including the optional `capabilities`, `allowed_callers`, and `entity_enrichment` blocks.
 
@@ -109,7 +110,11 @@ The execution layer validates that the calling tool's manifest declared the requ
 
 Tools and skills live in a [DB-backed registry](/core-concepts/registry). A tool present on disk is not automatically active — it must be **installed** and **enabled** before agents can call it, and only enabled tools are loaded at startup. This gives you a single place to turn capabilities on and off, and a gate for required credentials.
 
-When a tool declares `install.requires_secrets`, the registry refuses to install or enable it until every listed vault key is present. The bundled `web-search` tool declares `tavily_api_key`, so it stays disabled until you provision a Tavily key. Enable and disable capabilities from the Settings registry in the console; changes take effect on restart.
+When a tool declares `install.requires_secrets`, the registry refuses to install or enable it until every listed vault key is present. For example, a hypothetical tool that declares `acme_api_key` stays disabled until that key is in the vault. No bundled tool uses this gate today.
+
+Keys in `install.optional_secrets` never gate the tool. The bundled `web-search` tool declares `tavily_api_key` this way: it is enabled by default and runs keyless, and a key raises its limits. The console lists optional secrets under **Optional secrets** on the tool's page.
+
+Enable and disable capabilities from the Settings registry in the console; changes take effect on restart.
 
 ## Discovery and activation
 

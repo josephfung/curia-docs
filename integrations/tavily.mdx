@@ -1,10 +1,18 @@
 ---
-title: "Connect Tavily for live web search"
+title: "Tavily web search"
 sidebarTitle: "Tavily"
-description: "Get a Tavily API key and enter it so Curia can run real-time web searches for research tasks and news."
+description: "Web search works out of the box. Add a free Tavily API key to raise the search limit."
 ---
 
-Curia's web research capability is powered by [Tavily](https://tavily.com) — a search API built for AI agents. Once connected, Curia can answer research questions, summarize news, and fact-check in real time.
+Curia's web research capability is powered by [Tavily](https://tavily.com) — a search API built for AI agents. Curia uses it to answer research questions, summarize news, and fact-check in real time.
+
+## Works without a key
+
+Web search is on from the first start. You don't need a Tavily account.
+
+Without a key, Curia uses Tavily's keyless mode. Results are the same and there's no charge, but Tavily caps keyless searches per server, at a few dozen an hour. When Curia hits the cap, it tells you search is temporarily limited, roughly when it will work again, and how to add a key. It doesn't report "no results".
+
+A free Tavily key (1,000 credits a month, no card needed) raises the limit. Add one if Curia does a lot of research, or if you see the limit message.
 
 ## Get a Tavily API key
 
@@ -18,14 +26,22 @@ Curia's web research capability is powered by [Tavily](https://tavily.com) — a
   </Step>
 </Steps>
 
-## Enter the key in the console
+## Add the key
 
-In the console, go to **Tools**, open `web-search`, and save the key in its `tavily_api_key` field. Then restart Curia; web search is turned on at the first start after the key is saved. See [Search and memory](/get-started/search-and-memory) for the full steps.
+Pick one. Either way, Curia uses the key from the next search, with no restart.
 
-You can also ask the setup assistant to set up web research. It sends a one-time link that saves the key as `tavily_api_key`, the same place. Restart Curia afterwards.
+- **Console:** go to **Settings → Tools → web-search → Optional secrets** and save the key in `tavily_api_key`. Once a key is set, use **Replace** to change it.
+- **Chat:** ask Curia to "add my Tavily key". The setup assistant sends a one-time secure link that saves the key to the vault as `tavily_api_key`. Curia never sees the value.
 
-If you saved the key through the setup assistant's link on an earlier version, Curia moves it to `tavily_api_key` the next time it starts.
+If you saved a key through the setup assistant's link on an earlier version, Curia moves it to `tavily_api_key` the next time it starts. If you later delete the key to go back to keyless search, it stays deleted.
+
+## If something goes wrong
+
+- **"Invalid key"**: Tavily rejected the key. Replace it in the console. Curia doesn't fall back to keyless search while a bad key is set.
+- **"Usage limit used up"**: your Tavily account has spent its credits for the month. Wait for the reset, or upgrade the Tavily plan.
 
 ## Verify it is working
 
-Ask Curia something that requires a live search, for example: "What's the latest news on [topic]?" A successful response with current information confirms the connection is working.
+Ask Curia something that requires a live search, for example: "What's the latest news on [topic]?" A successful response with current information confirms search is working.
+
+With a key set, Curia's daily health check also tests it without spending credits. Look for a `Health canary result` log line with `"canary":"tavily"` and `"status":"ok"`. See [Health monitoring](/get-started/health-monitoring).

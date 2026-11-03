@@ -35,7 +35,7 @@ Gather these before you start. You don't need them all at once: each Setup page 
 - **Access to the principal's email and calendar.** Today this is a Nylas grant for the principal's mailbox, set up by hand. Google accounts only, for now.
 - **A Google account for Curia**, plus a Google Cloud OAuth client, so Curia can create and share Google Docs.
 - **An embeddings source.** Either an OpenAI API key or your own embeddings server. Without one, Curia's memory and the setup assistant don't work.
-- **Optional: a Tavily key** for web search.
+- **Optional: a Tavily key.** Web search works without one, but is capped at a few dozen searches an hour. A free key raises the limit.
 
 ## What it costs
 
@@ -50,7 +50,7 @@ Prices for the third-party services Curia uses, checked on the vendors' sites on
 | Deepgram | Speech-to-text for voice calls | $200 free credit. Nova-3 streaming: $0.0077/minute. |
 | Cartesia | Curia's spoken voice | Free: 20K credits (1 credit per character), which appears to lack a commercial licence. Pro: $5/month for 100K credits. |
 | OpenAI embeddings | Curia's memory (`text-embedding-3-small`) | $0.02 per 1M tokens |
-| Tavily | Web search (optional) | Free: 1,000 credits/month, no card needed |
+| Tavily | Web search. Works without a key; a key raises the limit. | Without a key: free, capped per hour. Free key: 1,000 credits/month, no card needed. |
 
 LiveKit runs on your own server, so it adds no fee. You can also run your own embeddings server instead of paying OpenAI.
 
@@ -78,7 +78,7 @@ Work through these in order. Each page says what it's for, what you'll need, the
     Connect Curia's Google account. [Google Docs](/get-started/google-docs)
   </Step>
   <Step title="Search and memory">
-    Turn on embeddings (needed) and web search (optional). [Search and memory](/get-started/search-and-memory)
+    Turn on embeddings (needed), and optionally add a Tavily key for more web searches. [Search and memory](/get-started/search-and-memory)
   </Step>
   <Step title="Check your setup">
     Confirm every item works, then hand over. [Check your setup](/get-started/check-your-setup)

@@ -23,10 +23,12 @@ An item present on disk is not automatically active. A new skill you add, for ex
 
 A tool or channel can declare credentials it cannot run without. The registry refuses to install or enable it until those secrets are present in the [vault](/get-started/secrets-vault):
 
-- **Tools** declare `install.requires_secrets` in their manifest. The bundled `web-search` tool declares `tavily_api_key`, so it stays disabled until you provision a Tavily key. The knowledge-graph relationship tools (`query-relationships`, `delete-relationship`) declare no secret. They depend on entity memory, and they fail when it is off.
+- **Tools** declare `install.requires_secrets` in their manifest. A hypothetical tool that declares `acme_api_key` there stays disabled until that key is in the vault. No bundled tool uses this gate today. The knowledge-graph relationship tools (`query-relationships`, `delete-relationship`) declare no secret. They depend on entity memory, and they fail when it is off.
 - **Channels** declare required credential fields in the catalog. Email and Signal cannot be enabled until their vault keys (`channel.email.*`, `channel.signal.*`) resolve.
 
 This means a half-configured capability fails closed — it cannot be switched on until it would actually work.
+
+A tool can also declare **optional secrets** in `install.optional_secrets`: keys that improve it but never block install or enable. The bundled `web-search` tool works this way. It is enabled by default and runs without a key, and a `tavily_api_key` raises its search limits. See [Tavily](/integrations/tavily).
 
 ## Channels: always-on vs. toggleable
 
@@ -34,7 +36,7 @@ Channels behave like skills and agents, with one safeguard: the **HTTP and CLI c
 
 ## Managing from the console
 
-- **Tools, skills, and agents** — the **Tools** page lists everything registered, with its installed/enabled state. Required-secret gates are surfaced inline so you can see what a disabled item is waiting on.
+- **Tools, skills, and agents** — the **Tools** page lists everything registered, with its installed/enabled state. Required-secret gates are surfaced inline so you can see what a disabled item is waiting on. Optional secrets appear under **Optional secrets** on the tool's page, marked "not set" until you add one.
 - **Channels** — the Channels page lists each channel, its credential fields, and its enabled state. Enter credentials there (they are written to the vault) and enable the channel.
 
 ### Bundles and their tools

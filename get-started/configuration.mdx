@@ -65,7 +65,7 @@ TIMEZONE=America/Toronto
 
 ### What goes in the vault
 
-These secrets are stored in the encrypted vault, never in `.env`. The installer seeds the core credentials automatically. For channel-specific secrets (Nylas, Signal, Tavily), see each channel's setup guide. See [Secrets vault](/get-started/secrets-vault) for how to add or update vault entries manually.
+These secrets are stored in the encrypted vault, never in `.env`. The installer seeds the core credentials automatically. For channel-specific secrets (Nylas, Signal), see each channel's setup guide. For the optional Tavily key, see [Tavily](/integrations/tavily). See [Secrets vault](/get-started/secrets-vault) for how to add or update vault entries manually.
 
 | Vault key | Notes |
 |---|---|
@@ -75,6 +75,7 @@ These secrets are stored in the encrypted vault, never in `.env`. The installer 
 | `openrouter_api_key` | Optional. Enables multi-model routing via [OpenRouter](https://openrouter.ai). |
 | `api_token` | Bearer token for all HTTP API requests. Generated and seeded by the installer. |
 | `web_app_bootstrap_secret` | Secret for logging in to the console. Generated and shown once by the installer. |
+| `tavily_api_key` | Optional. Raises web search limits. Without it, `web-search` runs keyless: free, but capped per hour. |
 
 ## Next steps
 

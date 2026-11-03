@@ -35,7 +35,8 @@ A **tool** is Curia's invocation atom; a **skill** is a bundle of tools plus a `
     "default": "caller | agent"
   },
   "install": {
-    "requires_secrets": ["string"]
+    "requires_secrets": ["string"],
+    "optional_secrets": { "secret_key": "string" }
   }
 }
 ```
@@ -91,7 +92,7 @@ Array of permission names this tool requires. Validated at load time.
 
 Array of vault secret keys this tool needs access to via `ctx.secret()`. Secrets are resolved from the [encrypted vault](/get-started/secrets-vault) (with an env-var fallback applied at bootstrap). Only secrets declared here are accessible — the tool cannot read arbitrary secrets or environment variables. Keys are lowercase snake_case (e.g. `tavily_api_key`, `nylas_api_key`).
 
-This is the *runtime* allowlist — what the handler may read while executing. To require that a secret be **present before the tool can be installed or enabled**, declare it in [`install.requires_secrets`](#install) instead (a tool commonly declares the same key in both).
+This is the *runtime* allowlist — what the handler may read while executing. To require that a secret be **present before the tool can be installed or enabled**, also declare it in [`install.requires_secrets`](#install). To show a secret in the console as an optional upgrade, also declare it in [`install.optional_secrets`](#install). Either way, the key must still be listed here for the handler to read it.
 
 ### `timeout`
 
@@ -176,14 +177,28 @@ Optional. Declares install-time requirements that the registry enforces before a
 | Field | Description |
 |---|---|
 | `requires_secrets` | Array of vault secret keys that must already exist in the [vault](/get-started/secrets-vault) before the tool can be installed or enabled. The registry rejects the install/enable until every listed key is present. |
+| `optional_secrets` | Object mapping a vault secret key to a one-line note on what it adds. Optional secrets never block install or enable. The console lists them under **Optional secrets** on the tool's page with the note, marked "not set" rather than "missing", and the vault write API and the setup assistant's capture link accept them. |
 
 ```json
 "install": {
-  "requires_secrets": ["tavily_api_key"]
+  "requires_secrets": ["acme_api_key"]
 }
 ```
 
-This is distinct from the runtime [`secrets`](#secrets) allowlist: `secrets` controls what the handler may read while executing; `install.requires_secrets` is a precondition gate checked at install/enable time. The `web-search` tool is the canonical example — it declares `tavily_api_key` here so it cannot be enabled until you have provisioned a Tavily key.
+`install.requires_secrets` is distinct from the runtime [`secrets`](#secrets) allowlist: `secrets` controls what the handler may read while executing; `install.requires_secrets` is a precondition gate checked at install/enable time. In this hypothetical example, a tool that cannot do anything without an Acme API key declares `acme_api_key` here, so it cannot be enabled until the key is in the vault. No bundled tool uses `requires_secrets` today.
+
+Use `optional_secrets` when the tool works without the key and the key only improves it. The bundled `web-search` tool is the example: it runs keyless by default, and a Tavily key raises its limits.
+
+```json
+"secrets": ["tavily_api_key"],
+"install": {
+  "optional_secrets": {
+    "tavily_api_key": "Raises search limits. Without it, search runs keyless: free, but capped per hour. Free key at tavily.com."
+  }
+}
+```
+
+The install fields don't grant read access: a handler can read a key only if it also appears in the top-level `secrets` array. List it there too whenever the handler reads it.
 
 ## Example
 
