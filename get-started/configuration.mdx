@@ -45,7 +45,9 @@ intentDrift:
 | `SECRET_ENCRYPTION_KEY` | Yes | Base64-encoded 32-byte AES-256 master key that encrypts the vault. Generate with `openssl rand -base64 32`; The installer fills it in. **Back this up — losing it makes the vault unrecoverable.** |
 | `TIMEZONE` | No | IANA timezone (e.g. `America/Toronto`). Used to resolve relative dates in agent prompts. |
 | `HTTP_PORT` / `POSTGRES_PORT` | No | Host ports for the app and Postgres. Defaults `3000` / `5432`. |
-| `POSTGRES_BIND` | No | Host address Postgres is published on. Default `127.0.0.1` (this server only). Set it to `0.0.0.0` only to opt in to remote access. |
+| `POSTGRES_BIND` | No | Host address Postgres is published on. Default `127.0.0.1` (this server only). Set `0.0.0.0` (IPv4) or `::` (IPv4 and IPv6) only to opt in to remote access. |
+| `HTTP_BIND` | No | Host address port 3000 is published on. Empty publishes on every interface. The installer sets `127.0.0.1` for the local and HTTPS topologies. |
+| `LIVEKIT_HTTP_BIND` | No | Host address LiveKit signaling (7880) is published on. Default `127.0.0.1`. Open it only when browsers reach 7880 directly, and never with `--dev` credentials. |
 | `NYLAS_POLL_INTERVAL_MS` | No | Email poll interval in ms (default `30000`). Non-secret. |
 | `APP_ORIGIN` | No | Public base URL of the deployment (e.g. `https://curia.example.com`). Used to build magic-link URLs such as secret-capture links. Falls back to `http://localhost:<HTTP_PORT>` in development. |
 | `EMBEDDING_BASE_URL` | No | Base URL of an OpenAI-compatible `/embeddings` server, e.g. `http://embed.local:8080/v1`. Replaces OpenAI as the knowledge graph's embedding source. See [Use your own embedding server](/integrations/embeddings-endpoint). |

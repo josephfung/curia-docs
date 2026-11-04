@@ -43,11 +43,11 @@ docker compose --profile voice up -d livekit
 
 To have `docker compose up` (and re-runs of the installer) start LiveKit along with the rest of the stack, add `COMPOSE_PROFILES=voice` to `.env`.
 
-LiveKit uses three ports. Open them on the host firewall and forward them through NAT if Curia sits behind a router:
+LiveKit uses three ports. Open the two media ports on the host firewall and forward them through NAT if Curia sits behind a router:
 
 | Purpose | Port | Notes |
 |---|---|---|
-| HTTP/WebSocket signaling | `7880/tcp` | Browser-reachable; can be fronted by a TLS proxy |
+| HTTP/WebSocket signaling | `7880/tcp` | Published on `127.0.0.1` only by default. A server routes it through Caddy (below). To expose it directly, set `LIVEKIT_HTTP_BIND` in `.env` |
 | WebRTC TCP fallback | `7881/tcp` | Needs direct exposure |
 | WebRTC UDP media | `7882/udp` | Needs direct exposure. Cloud firewalls often allow TCP but silently drop UDP |
 
