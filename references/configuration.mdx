@@ -491,6 +491,20 @@ The autonomy score is stored in Postgres and controlled via natural-language com
 
 The score defaults to **75 (Approval Required)** on first deployment. Changes take effect immediately without a restart. See [Autonomy](/core-concepts/autonomy) for the full band reference and [Autonomy engine](/security/autonomy-engine) for the governance mechanics.
 
+### Gating
+
+Chooses what decides when Curia asks you first.
+
+```yaml
+autonomy:
+  gating: band   # default; or tier
+```
+
+- `band` (the default): the autonomy score decides. Before an outside send goes out, the escalation judge reviews it. It checks whether an outsider is steering Curia, whether the message speaks or commits for you, and whether its claims about you are backed by something Curia looked up. Unsupported claims go back for a rewrite. At 80 and above Curia acts and tells you in the digest. Below 80 it asks before speaking or committing for you.
+- `tier`: the older policy. A contact's tier decides which actions need approval and what a recipient may be told. Set it in `local.yaml` to keep the previous behavior. It will be removed in a later release.
+
+`band` needs the escalation judge (`escalation.judge.enabled: true`, the default); startup fails otherwise. Curia logs the gating in use at startup.
+
 ### Approval expiry
 
 Sets how often Curia marks [expired approval requests](/security/approval-workflow#expiry) and emails you about high and critical ones.
