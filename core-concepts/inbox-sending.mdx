@@ -17,7 +17,7 @@ This needs your mailbox connected. See [Your principal's email and calendar](/ge
 | `routine` | Also its own acknowledgements, thanks and logistics replies, such as "got it" or a confirmed time. |
 | `all` | Also replies that make a commitment the thread already supports. |
 
-A reply that deals with money or a contract is never sent on its own at any level. It stays a draft for you.
+A reply that deals with money or a contract is never sent on its own at any level. Nor is one that contains bank or card details, such as an account number or a card number, even in the message it quotes. It stays a draft for you.
 
 A missing or unreadable setting counts as `on_request`. Curia never widens its own permission by mistake.
 
@@ -36,12 +36,14 @@ Curia saves your choice, applies it from the next send, and tells you which leve
 Under `routine` and `all`, Curia sends a reply only when all of these hold. If any one fails, the reply stays a draft.
 
 - Curia wrote the draft during the same piece of work, and nobody has changed it since.
-- It is a reply on an existing thread.
+- It is a reply on an existing thread, to the latest message on that thread. A reply to an older message stays a draft.
 - Everyone on the reply is genuinely on the thread, and at least one of them is outside your own addresses. A name that only appears in a Cc line of someone else's message does not count, and neither does an unverified sender's address.
 - It goes to no more than five people.
-- The thread is not a mailing list, and the reply has no attachments.
+- The thread is not a mailing list, and the reply has no attachments. Any sign of a list on the thread counts, not only a list ID, and so does mail that a list or bulk sender sent.
 - Curia has not already replied, or held a reply, on that thread in the last 24 hours.
-- The work did not start from a message sent by someone outside.
+- Curia has sent fewer than 10 replies on its own in the last 24 hours, across all threads.
+- The work started from Curia's own inbox check, not from a message sent by someone outside or anything Curia can't trace.
+- Any message the reply quotes is one everyone on the reply received.
 - Curia's autonomy score is high enough. See [Autonomy](/core-concepts/autonomy): `routine` replies need a score of 80, and commitments need 90.
 - It passes Curia's send review, which checks that the reply is needed, supported by the thread, and not steered by the sender.
 - It shares nothing new. If the reply passes on information that is not already in the thread messages every recipient received, Curia holds it. Curia does not pass on new information without you.
@@ -56,6 +58,7 @@ Each reply Curia handles on its own produces one item in your digest.
 |---|---|
 | **Sent for you from your mailbox: …** | Curia sent the reply. It names the message. |
 | **Left as a draft in your mailbox: …** | Curia did not send it. The item gives the reason, and the draft is waiting in your Drafts folder to review, edit and send. |
+| **Not sent from your mailbox: …** | Curia did not send it because the draft was gone from your Drafts folder or could not be read. |
 | **Tried to send for you from your mailbox: …** | Curia sent the reply but did not get confirmation. It may or may not have gone out. Check your Sent folder before sending it again. |
 
 When you ask Curia to send a draft in conversation, it tells you the result there and files no digest item. Under `off` and `on_request`, Curia leaves drafts alone on its own and files nothing.
