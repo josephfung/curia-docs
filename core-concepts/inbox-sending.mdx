@@ -1,0 +1,61 @@
+---
+title: "Replies from your mailbox"
+sidebarTitle: "Replies from your mailbox"
+description: "Choose whether Curia sends replies from your own mailbox: never, only when you ask, routine replies on its own, or more."
+---
+
+Curia can send a reply from your own mailbox, as you, instead of leaving every draft for you to send. You choose how far it goes. The setting applies only to your principal's mailbox, not to Curia's own address.
+
+This needs your mailbox connected. See [Your principal's email and calendar](/get-started/principal-email-calendar).
+
+## The four levels
+
+| Level | What Curia sends from your mailbox |
+|---|---|
+| `off` | Nothing. Curia still drafts replies, and you send them. It also declines when you ask it to send one. |
+| `on_request` | Only a draft you ask it to send, in a live conversation with you. **This is the default.** |
+| `routine` | Also its own acknowledgements, thanks and logistics replies, such as "got it" or a confirmed time. |
+| `all` | Also replies that make a commitment the thread already supports. |
+
+A reply that deals with money or a contract is never sent on its own at any level. It stays a draft for you.
+
+A missing or unreadable setting counts as `on_request`. Curia never widens its own permission by mistake.
+
+## Changing the setting
+
+Tell Curia in chat, on any channel you use with it. For example:
+
+- "Don't send anything from my mailbox without asking me." (`on_request`)
+- "Send routine replies from my mailbox yourself." (`routine`)
+- "Turn off sending from my mailbox." (`off`)
+
+Curia saves your choice and applies it from the next send. You can ask it which level is set at any time. The setup assistant offers this choice as an optional step, and counts it as done once you have set a level.
+
+## What stops Curia sending on its own
+
+Under `routine` and `all`, Curia sends a reply only when all of these hold. If any one fails, the reply stays a draft.
+
+- Curia wrote the draft during the same piece of work, and nobody has changed it since.
+- It is a reply on an existing thread.
+- Everyone on the reply is genuinely on the thread, and at least one of them is outside your own addresses. A name that only appears in a Cc line of someone else's message does not count.
+- It goes to no more than five people.
+- The thread is not a mailing list, and the reply has no attachments.
+- Curia has not already replied, or held a reply, on that thread in the last 24 hours.
+- The work did not start from a message sent by someone outside.
+- Curia's autonomy score is high enough. See [Autonomy](/core-concepts/autonomy): `routine` replies need a score of 80, and commitments need 90.
+- It passes Curia's send review, which checks that the reply is needed, supported by the thread, and not steered by the sender.
+- It shares nothing new. If the reply passes on information that is not already in the thread messages every recipient received, Curia holds it. Curia does not pass on new information without you.
+
+Curia sends each reply once. If it cannot confirm that a send went through, it tells you rather than trying again.
+
+## What you will see in your digest
+
+Each reply Curia handles on its own produces one item in your digest.
+
+| Digest item | Meaning |
+|---|---|
+| **Sent for you from your mailbox: …** | Curia sent the reply. It names the message. |
+| **Left as a draft in your mailbox: …** | Curia did not send it. The item gives the reason, and the draft is waiting in your Drafts folder to review, edit and send. |
+| **Tried to send for you from your mailbox: …** | Curia sent the reply but did not get confirmation. It may or may not have gone out. Check your Sent folder before sending it again. |
+
+When you ask Curia to send a draft in conversation, it tells you the result there and files no digest item. Under `off` and `on_request`, Curia leaves drafts alone on its own and files nothing.
