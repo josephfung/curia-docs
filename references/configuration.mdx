@@ -95,22 +95,30 @@ skillOutput:
 
 ## Web browser
 
-Controls the headless browser the `web-browser` tool drives (Patchright, a stealth-hardened Playwright fork). Sessions are pooled and swept on a timer so logins can persist across calls without leaking idle browser processes.
+Controls the browser the `web-browser` tool drives (Patchright, a stealth-hardened Playwright fork). Sessions are pooled and swept on a timer so logins can persist across calls without leaking idle tabs.
+
+With the shipped `docker-compose.yml`, the browser runs in its own container and is configured with environment variables, not here: see [Web browser](/integrations/web-browser). Only the session settings below apply to it.
 
 ```yaml
 # config/local.yaml
 browser:
   sessionTtlMs: 1800000    # how long a session stays alive after its last action (30 min)
   sweepIntervalMs: 120000  # how often expired sessions are swept (2 min)
+  settleCapMs: 35000       # longest wait for a page to finish redirecting before reading it (max 90000)
+  # The rest apply only when Curia launches Chromium itself (running from source,
+  # or an image without the browser container):
   profileDir: ""           # persistent profile dir; empty → ${HOME}/.curia/browser-profile
-  channel: ""              # "chrome" for real Chrome (must be in the image); empty → bundled Patchright Chromium
+  channel: ""              # "chrome" for real Chrome (must be installed); empty → Patchright's Chromium
   proxy: ""                # optional egress proxy: full URL or host:port; empty → direct egress
   locale: "en-US"          # context locale (BCP 47)
+  languages: []            # ordered navigator.languages, e.g. [en-CA, en-US, en]; empty → [locale]
 ```
 
-Mount `profileDir` on a volume in production so browser logins survive container restarts.
+When Curia launches Chromium itself, mount `profileDir` on a volume so browser logins survive restarts.
 
-Set `proxy` to route browser traffic through an egress proxy — a full URL or bare `host:port`, with optional credentials (e.g. `http://user:pass@browser-proxy:8888`). Empty means direct egress. Routing the browser through a residential exit avoids the datacenter-IP signal that trips bot detection on some sites; a WebRTC-leak guard keeps the real IP from leaking around the proxy. The session TTL defaults to 30 minutes so a long multi-page form isn't evicted mid-flow between agent turns.
+Set `proxy` to route browser traffic through an egress proxy: a full URL or bare `host:port`, with optional credentials (e.g. `http://user:pass@browser-proxy:8888`). Empty means direct egress. Routing the browser through a residential exit avoids the datacenter-IP signal that trips bot detection on some sites; a WebRTC-leak guard keeps the real IP from leaking around the proxy. With the browser container, use `BROWSER_PROXY` instead: Curia refuses to start the browser when `proxy` is set, rather than let it connect directly.
+
+The session TTL defaults to 30 minutes so a long multi-page form isn't evicted mid-flow between agent turns.
 
 ## Security rules
 

@@ -171,6 +171,7 @@
             "group": "Integrations",
             "pages": [
               "integrations/tavily",
+              "integrations/web-browser",
               "integrations/openai-embeddings",
               "integrations/embeddings-endpoint"
             ]
