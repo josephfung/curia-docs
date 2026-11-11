@@ -1,0 +1,60 @@
+---
+title: "Web browser"
+sidebarTitle: "Web browser"
+description: "Curia's browser for pages that need JavaScript, sign-ins or forms. It runs in its own container and needs no setup."
+---
+
+Curia reads most pages with `web-fetch`. Pages that need JavaScript, a sign-in or a form need a real browser, and that is what the `web-browser` tool drives: Chromium, through [Patchright](https://github.com/Kaliiiiiiiiii-Vinyzu/patchright), a Playwright fork that removes the automation signals sites look for.
+
+## Works out of the box
+
+The shipped `docker-compose.yml` runs the browser as its own service, `browser`, from the `ghcr.io/josephfung/curia-browser` image. `docker compose up` starts it with everything else, on amd64 and arm64. There is no key to add and nothing to configure.
+
+Sign-ins stay signed in: the browser's profile lives in the `browser_profile` volume, so cookies survive restarts and upgrades.
+
+## What to expect from sites
+
+Ordinary sites work, and so do most sign-ins and forms. Sites with strong bot protection may still block the browser, especially when Curia runs on a cloud server: those sites distrust datacenter IP addresses whatever the browser does. If a site you need keeps blocking Curia, route the browser through a residential connection with `BROWSER_PROXY` (below).
+
+## Why it runs in its own container
+
+The browser loads pages from anywhere, so it is kept apart from the rest of Curia:
+
+- it gets none of Curia's settings or secrets;
+- it cannot reach Curia's database;
+- it runs as a non-root user with Chrome's own sandbox on;
+- only Curia can talk to it, and its control port is never published on your server.
+
+Curia starts even when the browser container is down. While it is down, the health check reports `browser: fail` and the browser task in the setup assistant shows as not done. Curia reconnects on its own as soon as the container is back, including after a crash.
+
+## Settings
+
+Set these in `.env` next to `docker-compose.yml`, then run `docker compose up -d browser`. The browser container reads only these:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `TIMEZONE` | `America/Toronto` | Curia's timezone, also used by the browser. |
+| `BROWSER_LOCALE` | `en-US` | The browser's language, e.g. `en-CA`. |
+| `BROWSER_LANGUAGES` | | More languages, in order, e.g. `en-US,en`. |
+| `BROWSER_PROXY` | | Send browser traffic through a proxy: `http://host:port` or `socks5://host:port`. |
+
+`BROWSER_PROXY` cannot include a username or password, because Chrome cannot send them from its launch settings. Use a proxy that lets your server in without them, for example one that allows its IP address. A proxy value in any other shape stops the browser container rather than letting it connect directly.
+
+Match the language and proxy to where you are. A browser that says it is in Toronto while connecting from a German data centre looks suspicious to sites that check.
+
+## Verify it is working
+
+```bash
+docker compose ps browser      # should say "healthy"
+docker compose logs browser    # Chrome's own log
+```
+
+Then ask Curia to open a page that needs JavaScript. If the browser isn't reachable, the tool's error names the container and these commands.
+
+## Upgrading from an older install
+
+Installs from before the browser container keep their existing `docker-compose.yml`. To add the browser, copy the `browser` service, the `browser` network, the `browser_profile` volume and the `BROWSER_CDP_URL` line under `curia` from the current release's `docker-compose.yml`, and save the release's `seccomp-chrome.json` as `docker/seccomp-chrome.json` beside it. Then run `docker compose up -d`.
+
+## Running from source
+
+Without the container (`pnpm dev`), Curia starts Chromium itself. Install it once with `pnpm exec patchright install chromium`. See [Configuration](/references/configuration#web-browser) for the settings that apply then.
