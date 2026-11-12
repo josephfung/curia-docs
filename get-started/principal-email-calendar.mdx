@@ -1,44 +1,51 @@
 ---
 title: "Your principal's email and calendar"
 sidebarTitle: "5. Your principal's email and calendar"
-description: "Give Curia delegated access to your principal's Google mailbox and calendar, so it can triage their inbox, draft replies and manage their schedule."
+description: "Give Curia delegated access to your principal's Google mailboxes and calendars, such as a personal Gmail and a work Google Workspace account, so it can triage their inboxes, draft replies and manage their schedule."
 ---
 
 ## What this is for
 
 Much of an assistant's work happens in the executive's own inbox and calendar. Delegated access lets Curia work there as your principal: triage their unread mail, draft replies for them to send, and read and update their calendar. Without it, Curia has no calendar at all, and its inbox triage is off.
 
-This is your **principal's** mailbox, not Curia's. Curia's own address is set up in [2. Curia's own email](/get-started/curia-email). Don't add the principal's mailbox there: email accounts in that list are mailboxes Curia owns and answers from.
+Your principal can connect **more than one account**, for example a personal Gmail and a work Google Workspace account. Curia then triages both inboxes, drafts and sends from the right account, puts meetings on the right calendar, and checks availability across every calendar.
+
+These are your **principal's** mailboxes, not Curia's. Curia's own address is set up in [2. Curia's own email](/get-started/curia-email). Don't add the principal's mailboxes there: email accounts in that list are mailboxes Curia owns and answers from.
 
 Only **Google** accounts (Gmail or Google Workspace) are supported for the principal today. The inbox tools use Gmail's search syntax and labels.
 
 ## What you'll need
 
 - **Curia's own email working,** from page 2. This step uses the same Nylas application.
-- **Your principal, or their Google sign-in.** Connecting the mailbox means signing in to their Google account, so do it with them.
+- **Your principal, or their Google sign-in,** for each account. Connecting a mailbox means signing in to that Google account, so do it with them.
 
-**Time:** about 20 minutes, plus finding a moment with your principal.
+**Time:** about 20 minutes for the first account, plus finding a moment with your principal. Each extra account takes about 5 minutes.
 
-**Cost** (checked 2026-11-01): the principal's mailbox is one more connected account on your Nylas plan. Nylas Free covers up to 5 accounts (Nylas describes it as "for proving it works" and doesn't say whether it covers production use). Essentials is $15/month for up to 10.
+**Cost** (checked 2026-11-01): each principal mailbox is one more connected account on your Nylas plan. Nylas Free covers up to 5 accounts (Nylas describes it as "for proving it works" and doesn't say whether it covers production use). Essentials is $15/month for up to 10.
 
 ## Steps
 
 <Steps>
-  <Step title="Connect your principal's Google account to Nylas">
+  <Step title="Connect each of your principal's Google accounts to Nylas">
     In the Nylas dashboard, open the same application you used for Curia's mailbox. Go to **Grants** and add a grant, the same way you connected Curia's mailbox, but sign in as your **principal's** Google account. Allow access to both mail and calendar.
 
-    Copy the new **grant ID**.
+    Copy the new **grant ID**. Repeat for each account your principal wants Curia to work in.
   </Step>
 
-  <Step title="Save the grant in the console">
-    In the console, go to **Settings → Channels**, click the **email** row, and scroll to **Principal's mailbox**. Enter each value and click **Save**:
+  <Step title="Add each mailbox in the console">
+    In the console, go to **Settings → Channels**, click the **email** row, and scroll to **Principal's mailboxes**. For each account, enter:
 
-    | Field | Value | Stored in the vault as |
-    |---|---|---|
-    | **Nylas grant ID** | The grant ID from the previous step: your principal's mailbox | `ceo_nylas_grant_id` |
-    | **Mailbox address** | Your principal's email address | `ceo_self_email` |
+    | Field | Value |
+    |---|---|
+    | **Mailbox id** | A short, permanent name such as `work` or `personal` (lowercase letters, digits and hyphens). It can't be changed or reused later. |
+    | **Label** | How Curia names the account to your principal, such as `Work`. You can rename it any time. |
+    | **Grant ID** | The grant ID from the previous step |
 
-    Each row turns to **configured** when it's saved. The inbox tools use the Nylas API key you entered for Curia's email, and skip messages from Curia's own email accounts, so there's nothing else to enter.
+    Click **Test** first: it shows the address and provider Nylas reports for that grant, so you can check it's the right account. Then click **Add mailbox**.
+
+    Curia reads the address from the grant itself, so there's no address to type. It refuses a grant that isn't a Google account, that's already connected, or that belongs to one of Curia's own email accounts. The grant is stored in the vault as `principal.mailbox.<id>.nylas_grant_id`.
+
+    If you add more than one, click **Make default** on the one Curia should list first. Being the default doesn't decide where mail is sent from: Curia picks the account from the message, draft or meeting it's working on.
   </Step>
 
   <Step title="Turn on the inbox and calendar specialists">
@@ -49,7 +56,7 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
   </Step>
 
   <Step title="Restart Curia">
-    Curia reads the grant, and the agent and tool changes, only when it starts. Restart from the console's **Settings → System → About** page, or run:
+    Curia reads the agent and tool changes only when it starts. Restart from the console's **Settings → System → About** page, or run:
 
     ```bash
     docker compose restart curia
@@ -58,30 +65,51 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
 </Steps>
 
 <Note>
-  **Coming soon:** your principal will connect their own mailbox by signing in from a link Curia sends, with no grant ID to copy and no restart.
+  **Upgrading from a single mailbox?** There's nothing to do. On its first start after the upgrade, Curia moves the existing principal mailbox into the list as the default, named after its address's domain (for example `gmail`). Rename it in the console if you like.
+</Note>
+
+<Note>
+  **Coming soon:** your principal will connect their own mailboxes by signing in from a link Curia sends, with no grant ID to copy.
 </Note>
 
 ## Check it works
 
-1. In the logs (`docker compose logs curia`), look for `Nylas calendar client initialized (bound to the principal's Nylas grant)`. If you see `Calendar disabled — ceo_nylas_grant_id is not configured`, the grant isn't in the vault.
-2. Open `/api/health` on your Curia address. `checks.nylas_calendar` should read `ok`. It reads `skipped` when there's no grant.
-3. In the console chat, ask "What's on my calendar tomorrow?" and check the answer against the real calendar.
+1. In the console's **Principal's mailboxes** list, click **Test** on each mailbox. It should show the right address.
+2. Open `/api/health` on your Curia address. There's one check per mailbox, named `principal_mailbox:<id>`, and each should read `ok`. The check runs once a day; if a mailbox's access stops working, Curia alerts your principal once and suggests removing it.
+3. In the console chat, ask "What's on my calendar tomorrow?" and check the answer against the real calendars.
 
 Console chat counts as your principal, so keep test questions to reading, not changing.
 
 ## What your principal will notice
 
-**In their inbox**, every hour from 6am to 11pm:
+**In their inboxes**, every hour from 6am to 11pm by default:
 
 - Curia works through unread mail. Messages it has dealt with are marked read or archived.
-- Replies appear as **drafts** in their Drafts folder for them to review and send.
+- Replies appear as **drafts** in the Drafts folder of the account the message arrived in, for them to review and send.
 - Some messages get labels, such as `⏳ In Progress` while Curia waits on something, or `⚠️ Stuck` when it needs them.
 - Anything urgent reaches them on another channel, such as Signal.
+- A message sent to both of their addresses is handled once, not twice.
 
-**On their calendar:**
+Your principal can give each inbox its own schedule just by asking, for example "check my work email every 30 minutes on weekdays, and my personal email once a day at 6pm". A newly added mailbox starts with mail that arrives after it was connected, so an old backlog isn't worked through unless they ask ("go through the last week of my work email").
 
-- Curia answers scheduling questions from their real calendar.
+**When Curia writes new mail or books a meeting**, it chooses the account from who it's for, the topic, past mail and your principal's standing preferences (such as "meetings always go on my work calendar"). It mentions the account only when the choice was a judgement call, and asks when it can't tell. A draft in the wrong account can be moved by asking ("move that to my personal account").
+
+**On their calendars:**
+
+- Curia answers scheduling questions from all of their calendars together. Your principal can tell Curia which events don't count as busy, for example "the cleaner's visits on my personal calendar don't block me".
 - While it negotiates a time, it may place tentative events titled `HOLD (TBC): …`. It clears stale holds every night.
-- It can accept invitations and create events as them. At the default autonomy level (75), creating an event waits for their approval first.
+- It can accept invitations, answering from the account the invitation arrived in, and create events as them. At the default autonomy level (75), creating an event waits for their approval first.
 
 Changes appear as made by their own account, because Curia acts as them.
+
+## Removing a mailbox
+
+If your principal leaves a job or stops using an account, click **Remove** next to it in the console. The confirmation screen asks:
+
+- **Is this address still yours?** Choose **No** if it now belongs to an old employer. Curia then stops treating mail from that address as your principal's.
+- **A new primary email**, if the removed address was the one Curia uses to reach your principal. Curia won't keep sending its notices to an address they no longer read.
+- **What to do with inbox rules** that applied only to that mailbox: delete them, or move them to another mailbox.
+
+A removed mailbox's id is never reused, so nothing from the old account attaches to a new one, even one labelled the same. Its calendar is shown as removed rather than failing.
+
+To switch jobs, add the new account, make it the default, then remove the old one.
