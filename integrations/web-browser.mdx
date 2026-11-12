@@ -53,7 +53,11 @@ Then ask Curia to open a page that needs JavaScript. If the browser isn't reacha
 
 ## Upgrading from an older install
 
-Installs from before the browser container keep their existing `docker-compose.yml`. To add the browser, copy the `browser` service, the `browser` network, the `browser_profile` volume and the `BROWSER_CDP_URL` line under `curia` from the current release's `docker-compose.yml`, and save the release's `seccomp-chrome.json` as `docker/seccomp-chrome.json` beside it. Then run `docker compose up -d`.
+Installs from before the browser container keep their existing `docker-compose.yml`: `install.sh` never replaces it, and prints a note when it has no `browser` service. To add the browser:
+
+1. From the current release's `docker-compose.yml`, copy the `browser` service, the `browser` network, the `browser_profile` volume and the `BROWSER_CDP_URL` line under `curia`.
+2. Under `curia`, list both networks: `networks: [default, browser]`. Declaring the `browser` network doesn't join `curia` to it, and without it Curia can't reach the browser. `default` keeps its connection to Postgres.
+3. Re-run `install.sh`, which fetches `docker/seccomp-chrome.json` once your `docker-compose.yml` refers to it, and starts the stack. Or save the release's `seccomp-chrome.json` there yourself and run `docker compose up -d`.
 
 ## Running from source
 
