@@ -46,6 +46,8 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
     Curia reads the address from the grant itself, so there's no address to type. It refuses a grant that isn't a Google account, that's already connected, or that belongs to one of Curia's own email accounts. The grant is stored in the vault as `principal.mailbox.<id>.nylas_grant_id`.
 
     If you add more than one, click **Make default** on the one Curia should list first. Being the default doesn't decide where mail is sent from: Curia picks the account from the message, draft or meeting it's working on.
+
+    If an account's access stops working (a changed password, or access revoked in Google), reconnect it in Nylas, then click **Replace grant** on that mailbox and paste the new grant ID. It must be for the same address.
   </Step>
 
   <Step title="Turn on the inbox and calendar specialists">
@@ -56,7 +58,7 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
   </Step>
 
   <Step title="Restart Curia">
-    Curia reads the agent and tool changes only when it starts. Restart from the console's **Settings → System → About** page, or run:
+    Curia reads the agent and tool changes, and the calendars of newly added mailboxes, only when it starts. Restart from the console's **Settings → System → About** page, or run:
 
     ```bash
     docker compose restart curia
@@ -75,7 +77,7 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
 ## Check it works
 
 1. In the console's **Principal's mailboxes** list, click **Test** on each mailbox. It should show the right address.
-2. Open `/api/health` on your Curia address. There's one check per mailbox, named `principal_mailbox:<id>`, and each should read `ok`. The check runs once a day; if a mailbox's access stops working, Curia alerts your principal once and suggests removing it.
+2. Open `/api/health` on your Curia address. There's one check per mailbox, named `principal_mailbox:<id>`, and each should read `ok`. The check runs once a day; if a mailbox's access stops working, Curia alerts your principal once. Replace its grant, or remove the mailbox if the account is gone.
 3. In the console chat, ask "What's on my calendar tomorrow?" and check the answer against the real calendars.
 
 Console chat counts as your principal, so keep test questions to reading, not changing.
