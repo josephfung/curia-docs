@@ -33,7 +33,11 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
   </Step>
 
   <Step title="Add each mailbox in the console">
-    In the console, go to **Settings → Channels**, click the **email** row, and scroll to **Principal's mailboxes**. For each account, enter:
+    In the console, go to **Settings → Personality → Email & Calendar**. This page is only for your principal's own mail and calendars; Curia's own email accounts stay under **Settings → Channels → Email**.
+
+    If the page shows **Finish setting up the email channel first**, the Nylas API key from page 2 isn't saved yet. Save it under **Settings → Channels → Email** and come back. Until then, the page lists any mailboxes already connected but can't add or change them.
+
+    For each account, enter:
 
     | Field | Value |
     |---|---|
@@ -47,6 +51,8 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
 
     If you add more than one, click **Make default** on the one Curia should list first. Being the default doesn't decide where mail is sent from: Curia picks the account from the message, draft or meeting it's working on.
 
+    Adding a mailbox also connects its calendar, so Curia can read and book on it straight away. Mailbox changes apply at once, with no restart.
+
     If an account's access stops working (a changed password, or access revoked in Google), reconnect it in Nylas, then click **Replace grant** on that mailbox and paste the new grant ID. It must be for the same address.
   </Step>
 
@@ -58,7 +64,7 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
   </Step>
 
   <Step title="Restart Curia">
-    Curia reads the agent and tool changes, and the calendars of newly added mailboxes, only when it starts. Restart from the console's **Settings → System → About** page, or run:
+    Curia reads the agent and tool changes from the previous step only when it starts. Adding or removing a mailbox later doesn't need a restart. Restart from the console's **Settings → System → About** page, or run:
 
     ```bash
     docker compose restart curia
@@ -76,7 +82,7 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
 
 ## Check it works
 
-1. In the console's **Principal's mailboxes** list, click **Test** on each mailbox. It should show the right address.
+1. On **Settings → Personality → Email & Calendar**, each mailbox should be listed with the right address.
 2. Open `/api/health` on your Curia address. There's one check per mailbox, named `principal_mailbox:<id>`, and each should read `ok`. The check runs once a day; if a mailbox's access stops working, Curia alerts your principal once. Replace its grant, or remove the mailbox if the account is gone.
 3. In the console chat, ask "What's on my calendar tomorrow?" and check the answer against the real calendars.
 
@@ -112,6 +118,6 @@ If your principal leaves a job or stops using an account, click **Remove** next 
 - **A new primary email**, if the removed address was the one Curia uses to reach your principal. Curia won't keep sending its notices to an address they no longer read.
 - **What to do with inbox rules** that applied only to that mailbox: delete them, or move them to another mailbox.
 
-A removed mailbox's id is never reused, so nothing from the old account attaches to a new one, even one labelled the same. Its calendar is shown as removed rather than failing.
+The confirmation screen also lists the calendars that go through that mailbox: removing it disconnects them. A removed mailbox's id is never reused, so nothing from the old account attaches to a new one, even one labelled the same. Its calendars are shown as removed rather than failing.
 
 To switch jobs, add the new account, make it the default, then remove the old one.

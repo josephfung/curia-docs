@@ -113,10 +113,10 @@ docker compose restart curia
   <Step title="The principal's calendar is connected">
     In `/api/health`, `nylas_calendar` reads `ok`.
 
-    - `skipped` means Curia has no grant for the principal's mailbox and calendar yet (`ceo_nylas_grant_id`). Calendar features stay off until it's set and Curia restarts.
-    - `fail` means the grant is set, but Curia couldn't list the principal's calendars with it.
+    - `skipped` means no principal mailbox is connected yet. Add one under **Settings → Personality → Email & Calendar**; no restart is needed.
+    - `fail` means Curia couldn't list the default mailbox's calendars.
 
-    This item needs the principal's mailbox grant. Details: [Your principal's email and calendar](/get-started/principal-email-calendar).
+    Each connected mailbox also has its own check, `principal_mailbox:<id>`, which should read `ok`. Details: [Your principal's email and calendar](/get-started/principal-email-calendar).
   </Step>
 
   <Step title="Google Docs works">
