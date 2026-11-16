@@ -77,12 +77,14 @@ interface KgNode {
   type: NodeType;                      // person, organization, project, etc.
   label: string;                       // display name
   properties: Record<string, unknown>; // arbitrary key-value data
-  embedding?: number[];                // vector for semantic search; width set by the model's profile
-  embeddingModel?: string;             // model that produced the embedding; set whenever embedding is
+  embedding?: number[];                // vector for semantic search; width set by the active model's profile
+  embeddingModel?: string;             // stamp of the model that produced the embedding; set whenever embedding is
   temporal: TemporalMetadata;
   sensitivity: Sensitivity;
 }
 ```
+
+The width of `embedding` depends on the embedding model's profile, not on a fixed constant: 384 for the bundled `all-MiniLM-L6-v2`, 1,536 for `text-embedding-3-small` and the built-in `Qwen3-Embedding-4B` profile, at most 2,000 for any profile. `embeddingModel` holds the model's stamp: its name, plus a short hash of the weight file for the bundled model (`all-MiniLM-L6-v2#weights:<hash>`) and of the `document` prefix when the profile has one. Search and deduplication compare only vectors with the active stamp. See [Embedding models](/integrations/embeddings-endpoint).
 
 ## Edge schema
 
@@ -125,6 +127,7 @@ Before creating a new fact, the memory validator checks:
 | Check | Outcome |
 |---|---|
 | **Deduplication** (cosine similarity at or above the embedding model's fact-merging threshold) | Updates `lastConfirmedAt` and merges properties instead of creating a duplicate |
+| **Identifier guard** (the two labels carry different order numbers, ids or phone numbers) | Never merged, whatever the similarity |
 | **Contradiction** (conflicting fact exists) | Higher confidence wins; lower is archived with previous values preserved |
 | **Equal confidence conflict** | Flagged for CEO review via alert channel |
 | **Write rate limit** (50 per task) | Excess writes dropped with audit log warning |

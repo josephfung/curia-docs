@@ -108,6 +108,8 @@ Agents writing to memory pass through validation gates designed to prevent pollu
 
 Because these nodes are identity, not learned knowledge, they are exempt from decay: a contact's node is never archived for going quiet, and never surfaced for re-confirmation. The facts attached to it still decay normally. Deleting a contact archives their node, which frees the name for reuse.
 
+**Identifier guard** — before a fuzzy match resolves to an existing entity, and before a new fact merges into an existing one, the system compares identifiers in the two labels: order numbers, invoice and ticket numbers, phone numbers, message ids. Two labels carrying different identifiers are never treated as the same, however close their embeddings are. This holds for every embedding model.
+
 **Contradiction detection** — if a new fact contradicts an existing one (for example, "the CEO lives in Toronto" when "the CEO lives in Kitchener" already exists), the system compares confidence scores:
 
 - New fact has lower confidence → write rejected, conflict logged
@@ -118,7 +120,7 @@ Because these nodes are identity, not learned knowledge, they are exempt from de
 
 ## Semantic search
 
-Key facts and node descriptions are embedded by the configured embedding model and stored in a pgvector HNSW index. The model is OpenAI's `text-embedding-3-small` or any [OpenAI-compatible embedding server](/integrations/embeddings-endpoint), and its profile sets the vector width. This powers natural-language queries across the knowledge graph even when exact keywords don't match:
+Key facts and node descriptions are embedded by the configured embedding model and stored in a pgvector HNSW index. By default that is `all-MiniLM-L6-v2`, a small English model bundled in the Curia image and run inside Curia, so labels never leave your server. You can swap it for a larger model on your own server, or for OpenAI's `text-embedding-3-small` (see [Embedding models](/integrations/embeddings-endpoint)). The model's profile sets the vector width: 384 for the bundled model, 1,536 for `text-embedding-3-small`. This powers natural-language queries across the knowledge graph even when exact keywords don't match:
 
 ```
 find everything related to fundraising
@@ -135,7 +137,7 @@ investors who attended the Series A close
 Semantic search matches nodes whose embeddings are similar to your query — even when the exact words don't appear in any node labels. Embeddings are generated when a node or fact is created, and regenerated when its properties change significantly.
 
 <Note>
-  Semantic search and entity memory require an embedding source: `openai_api_key` in the vault, or your own server set with `EMBEDDING_BASE_URL` and `EMBEDDING_MODEL`. Without one, the knowledge graph is off. See [OpenAI embeddings](/integrations/openai-embeddings) and [Use your own embedding server](/integrations/embeddings-endpoint).
+  Semantic search and entity memory work out of the box on the bundled model. If the knowledge graph is off (a model switch in progress, a model with no profile, a re-embed that hasn't run), `/api/health` reports `knowledge_graph: "fail"` and `details.knowledge_graph` says why. See [Embedding models](/integrations/embeddings-endpoint).
 </Note>
 
 ## The knowledge graph browser

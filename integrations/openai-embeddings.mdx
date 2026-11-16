@@ -1,12 +1,16 @@
 ---
-title: "Enable semantic memory with OpenAI embeddings"
+title: "Use OpenAI embeddings"
 sidebarTitle: "OpenAI embeddings"
-description: "Add an OpenAI API key to turn on knowledge-graph entity memory — Curia remembers people, projects, and context across conversations."
+description: "Run the knowledge graph on OpenAI's text-embedding-3-small instead of the bundled model, or move an older install off the deprecated implicit OpenAI default."
 ---
 
-Curia's knowledge graph needs an embedding model to build semantic memory: relationships between people, projects, and topics that persist across conversations. OpenAI's `text-embedding-3-small` is one option. You can also [use your own embedding server](/integrations/embeddings-endpoint) instead.
+Curia's knowledge graph runs on an embedding model [bundled in the image](/integrations/embeddings-endpoint), with no key needed. OpenAI's `text-embedding-3-small` is one alternative. Curia treats OpenAI like any other embedding server: you set its address and model in `.env`, and its key in the vault.
 
-Embeddings are optional, but without an embedding source the knowledge graph is off. Entity memory, semantic search and the features that depend on them are unavailable until you add one.
+Choose OpenAI if you'd rather use a hosted model than the bundled one. Every knowledge-graph label, sensitive facts included, is then sent to OpenAI, and each embedding is billed.
+
+<Note>
+  This page describes releases after v0.44.0. On v0.44.0, OpenAI is configured with `openai_api_key` alone; see [Search and memory](/get-started/search-and-memory).
+</Note>
 
 ## Get an OpenAI API key
 
@@ -24,35 +28,49 @@ Embeddings are optional, but without an embedding source the knowledge graph is 
   </Step>
 </Steps>
 
-## Add the key to the vault
+## Point Curia at OpenAI
 
 <Steps>
-  <Step title="Store the key as openai_api_key">
+  <Step title="Set OpenAI as the endpoint in .env">
+    ```env
+    EMBEDDING_BASE_URL=https://api.openai.com/v1
+    EMBEDDING_MODEL=text-embedding-3-small
+    ```
+  </Step>
+
+  <Step title="Store the key as embedding_api_key">
     ```bash
     docker compose run --rm \
-      -e SEED_VAULT_ONLY=openai_api_key \
-      -e OPENAI_API_KEY=sk-... \
+      -e SEED_VAULT_ONLY=embedding_api_key \
+      -e EMBEDDING_API_KEY=sk-... \
       curia ./node_modules/.bin/tsx scripts/seed-vault.ts
     ```
 
-    From a source checkout, run `SEED_VAULT_ONLY=openai_api_key OPENAI_API_KEY=sk-... pnpm run seed-vault` instead.
+    From a source checkout, run `SEED_VAULT_ONLY=embedding_api_key EMBEDDING_API_KEY=sk-... pnpm run seed-vault` instead.
   </Step>
 
-  <Step title="Restart Curia">
+  <Step title="Start Curia with the new settings">
     ```bash
-    docker compose restart curia
+    docker compose up -d curia
     ```
 
-    Curia reads the vault at startup, so the key takes effect after the restart.
+    On a fresh install, or one whose knowledge graph holds no vectors yet, that's all. If the graph already holds vectors from the bundled model or another one, re-embed it before starting Curia: see [Switch models](/integrations/embeddings-endpoint#switch-models).
   </Step>
 </Steps>
 
-Leave `EMBEDDING_BASE_URL` unset in `.env`. When it is unset, Curia uses OpenAI and the `openai_api_key` vault entry.
+The boot log line `Entity memory initialized with knowledge graph` then shows `"embeddingSource":"endpoint"` and `"embeddingModel":"text-embedding-3-small"`.
+
+## Older installs: the implicit OpenAI default
+
+Before the bundled model, an install with no `EMBEDDING_BASE_URL` and an `openai_api_key` in the vault used OpenAI automatically. Such an install keeps working after the upgrade, because its knowledge graph holds `text-embedding-3-small` vectors and Curia never switches an install's model on its own.
+
+That path is **deprecated** and a later release removes it. While it applies, Curia logs a deprecation warning at boot, and `/api/health` reports `knowledge_graph: ok` with `details.knowledge_graph: "implicit_openai_deprecated"`. Before the removal, pick one:
+
+- **Keep OpenAI.** Follow [Point Curia at OpenAI](#point-curia-at-openai) above, using the same OpenAI key. No re-embed is needed: the stored vectors already come from `text-embedding-3-small`. The warning stops after the restart.
+- **Switch to the bundled model.** Set `EMBEDDING_MODEL=all-MiniLM-L6-v2` and re-embed. See [Switch models](/integrations/embeddings-endpoint#switch-models).
+
+`openai_api_key` stays in use for image generation either way.
 
 ## What changes after connecting
 
 Curia begins building entity nodes for people you mention, projects you discuss, and topics that recur. Over time this creates a network of relationships that informs research, drafting, and scheduling. The change is gradual — you won't notice it immediately, but it compounds over weeks of use.
-
-## Switch to another model later
-
-If you move from OpenAI to your own server after the knowledge graph has stored vectors, you need to re-embed the graph once. See [Change models](/integrations/embeddings-endpoint#change-models).

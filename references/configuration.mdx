@@ -348,9 +348,9 @@ Before archiving a node, the decay pass checks whether it is **important** — e
 
 ## Embedding profiles
 
-A profile tells Curia how to use one embedding model: the vector width to store, a text prefix for each kind of input, and the similarity thresholds for merging facts and matching names. The endpoint itself is set in `.env` with `EMBEDDING_BASE_URL` and `EMBEDDING_MODEL`. See [Use your own embedding server](/integrations/embeddings-endpoint).
+A profile tells Curia how to use one embedding model: the vector width to store, a text prefix for each kind of input, and the similarity thresholds for merging facts and matching names. The endpoint itself is set in `.env` with `EMBEDDING_BASE_URL` and `EMBEDDING_MODEL`. With neither set, Curia runs its bundled model, `all-MiniLM-L6-v2`. See [Embedding models](/integrations/embeddings-endpoint).
 
-Curia ships profiles for a few models, listed in [`src/memory/embedding-profiles.ts`](https://github.com/josephfung/curia/blob/main/src/memory/embedding-profiles.ts). Add a profile for another model in `config/local.yaml`, keyed by the exact `EMBEDDING_MODEL` value:
+Curia ships profiles for `all-MiniLM-L6-v2` (the bundled model), `text-embedding-3-small` and `Qwen3-Embedding-4B`, in [`src/memory/embedding-profiles.ts`](https://github.com/josephfung/curia/blob/main/src/memory/embedding-profiles.ts). Add a profile for another model in `config/local.yaml`, keyed by the exact `EMBEDDING_MODEL` value:
 
 ```yaml
 # config/local.yaml
@@ -377,9 +377,9 @@ embedding:
 | `thresholds.fuzzy_resolve` | Score at or above which a name resolves to an existing entity. |
 | `thresholds.fuzzy_ambiguity_floor` | Score at or above which an entity is offered as an ambiguous candidate. Must be below `fuzzy_resolve`. |
 
-A malformed profile fails boot, and the error names the key. A model with no profile keeps the knowledge graph off. Thresholds copied from another model can merge distinct people and facts, so calibrate them for each model. From a source checkout, `pnpm embedding-eval` scores an endpoint against a labelled test set and suggests thresholds.
+A malformed profile fails boot, and the error names the key. A model with no profile keeps the knowledge graph off. Thresholds copied from another model can merge distinct people and facts, so calibrate them for each model. From a source checkout, `pnpm embedding-eval` scores an endpoint against a labelled test set and suggests thresholds; see [Calibrate a profile](/integrations/embeddings-endpoint#calibrate-a-profile). To retune the bundled model's thresholds, add a profile keyed `all-MiniLM-L6-v2` with `base: all-MiniLM-L6-v2` and the `thresholds` you want; it keeps the bundled width, so no re-embed is needed.
 
-Changing `dimensions` or `prefixes.document` on a knowledge graph that already holds vectors counts as a model change. Stored vectors keep the prefix they were embedded with. Curia keeps the knowledge graph off until you re-embed it. See [Change models](/integrations/embeddings-endpoint#change-models).
+Changing `dimensions` or `prefixes.document` on a knowledge graph that already holds vectors counts as a model change. Stored vectors keep the prefix they were embedded with. Curia keeps the knowledge graph off until you re-embed it. See [Switch models](/integrations/embeddings-endpoint#switch-models).
 
 ## Autonomy auto-scoring
 
