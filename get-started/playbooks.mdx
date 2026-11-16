@@ -25,7 +25,7 @@ You've installed Curia, signed in to the console with your bootstrap secret, and
     Then it asks what you'd most like help with and starts that setup.
 
     <Note>
-      The setup assistant checks progress against Curia's memory, so it needs an embedding source. Without one it can't tell what you've set up. See [Search and memory](/get-started/search-and-memory).
+      The setup assistant checks progress against Curia's memory, which runs on the bundled embedding model out of the box. If memory is off, `/api/health` reports `knowledge_graph: "fail"` and the assistant can't tell what you've set up. See [Search and memory](/get-started/search-and-memory).
     </Note>
   </Step>
 

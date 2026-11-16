@@ -103,6 +103,20 @@ Both `ok` and `degraded` return `200`. Your uptime monitor should watch for `503
     <ResponseField name="checks.principal_mailbox_triage" type="string" required>
       The inbox triage heartbeat for the principal's mailboxes. `"fail"` when no heartbeat tick has succeeded for a while, a mailbox's unread check keeps failing, triage of a mailbox has stopped making progress, sent-mail observation is failing, or the inbox drain was suspended after repeated failures (resume it in the console). `"skipped"` when the CEO Inbox agent isn't running.
     </ResponseField>
+
+    <ResponseField name="checks.knowledge_graph" type="string" required>
+      Whether Curia's memory (the knowledge graph) is on. `"fail"` when it is off, for any reason; `details.knowledge_graph` says why. `"skipped"` in setup mode, before the setup form is saved. Not a live probe: it is decided at boot and updated by the daily embeddings canary.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="details" type="object">
+  Optional. Machine-readable reasons behind a check, keyed by check name, present only when there's something to say. A reason can accompany an `"ok"` check, such as a deprecation notice. It sits outside `checks`, so a monitor that treats every `checks` entry as pass/fail never sees it.
+
+  <Expandable title="details fields">
+    <ResponseField name="details.knowledge_graph" type="string">
+      Why the knowledge graph is off, or a warning while it's on. See [Knowledge graph reasons](#knowledge-graph-reasons).
+    </ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -125,7 +139,8 @@ Both `ok` and `degraded` return `200`. Your uptime monitor should watch for `503
     "voice":          "skipped",
     "signal_voice":   "skipped",
     "scheduler":      "ok",
-    "principal_mailbox_triage": "ok"
+    "principal_mailbox_triage": "ok",
+    "knowledge_graph": "ok"
   }
 }
 ```
@@ -153,7 +168,8 @@ The example below is a real failure shape worth recognising: `signal` and `voice
     "voice":          "ok",
     "signal_voice":   "fail",
     "scheduler":      "ok",
-    "principal_mailbox_triage": "ok"
+    "principal_mailbox_triage": "ok",
+    "knowledge_graph": "ok"
   }
 }
 ```
@@ -179,7 +195,8 @@ A critical service (database or bus) is unreachable. Curia cannot process agent 
     "voice":          "skipped",
     "signal_voice":   "skipped",
     "scheduler":      "fail",
-    "principal_mailbox_triage": "skipped"
+    "principal_mailbox_triage": "skipped",
+    "knowledge_graph": "ok"
   }
 }
 ```
@@ -199,9 +216,33 @@ A critical service (database or bus) is unreachable. Curia cannot process agent 
 
 **Critical (down on failure, 503):** `db`, `bus`
 
-**Non-critical (degraded on failure, 200):** `email`, `signal`, `browser`, `mcp.*`, `nylas_calendar`, `slack`, `sms`, `voice`, `signal_voice`, `scheduler`, `principal_mailbox_triage`
+**Non-critical (degraded on failure, 200):** `email`, `signal`, `browser`, `mcp.*`, `nylas_calendar`, `slack`, `sms`, `voice`, `signal_voice`, `scheduler`, `principal_mailbox_triage`, `knowledge_graph`
 
 The rationale: a crashed Signal socket or a stale scheduler should raise a warning, not page as a full outage when email and the database are healthy.
+
+## Knowledge graph reasons
+
+`details.knowledge_graph` takes one of these values. The boot log states the same reason in words and names the fix. The console shows the `knowledge_graph` check but not the reason, so read it here or in the log.
+
+| Reason | `checks.knowledge_graph` | Meaning and fix |
+|---|---|---|
+| `no_model` | `fail` | `EMBEDDING_BASE_URL` is set but `EMBEDDING_MODEL` is not. Set it. |
+| `no_profile` | `fail` | The model has no profile. Add one under `embedding.profiles`. |
+| `non_bundled_model_without_base_url` | `fail` | `EMBEDDING_MODEL` names a model other than the bundled one, and no `EMBEDDING_BASE_URL` is set. Set the base URL, or unset the model. |
+| `stored_model_without_endpoint` | `fail` | The knowledge graph holds another model's vectors, and no server is configured for it. Restore its settings, or [switch to the bundled model](/integrations/embeddings-endpoint#switch-models). |
+| `implicit_openai_without_key` | `fail` | The knowledge graph holds OpenAI vectors from the old implicit default, and the vault has no `openai_api_key`. [Configure OpenAI explicitly](/integrations/openai-embeddings), or switch to the bundled model. |
+| `bundled_weights_missing` | `fail` | The bundled model's files are missing. In the image this means a broken build; from a source checkout, run `pnpm fetch:embedder`. |
+| `bundled_load_failed` | `fail` | The bundled model's files are there but would not load. |
+| `width_mismatch` | `fail` | The stored vectors' width doesn't match the model's profile. [Re-embed](/integrations/embeddings-endpoint#switch-models). |
+| `model_mismatch` | `fail` | The stored vectors come from another model. [Re-embed](/integrations/embeddings-endpoint#switch-models). |
+| `reembed_in_progress` | `fail` | A re-embed is running, or one was interrupted. Let it finish (or run it again), then start Curia. |
+| `schema_check_failed` | `fail` | The boot check of the vector column failed. See the boot log. |
+| `weights_changed` | `fail` | The embedding server now serves different weights under the same model name. Re-embed with `--force`; see [Weight changes](/integrations/embeddings-endpoint#weight-changes-behind-a-model-name). |
+| `implicit_openai_deprecated` | `ok` | Memory runs on OpenAI through the deprecated implicit default. [Configure OpenAI explicitly](/integrations/openai-embeddings#older-installs-the-implicit-openai-default) or switch to the bundled model. |
+| `weights_shifted` | `ok` | The server's weights shifted under the same name, for example re-quantised. Re-embed with `--force` when convenient. |
+| `drift_unchecked` | `ok` | Curia couldn't reach the embedding server to check its weights. The daily canary retries. |
+
+A `fail` here turns the overall status `degraded`, including while you re-embed on purpose.
 
 ## How deep each probe goes
 

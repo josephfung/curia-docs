@@ -1,38 +1,52 @@
 ---
 title: "Search and memory"
 sidebarTitle: "7. Search and memory"
-description: "Add an embedding source so Curia's memory and setup assistant work, and optionally a Tavily key to raise web search limits."
+description: "Turn on fact extraction so Curia builds its memory, optionally swap the bundled embedding model, and optionally add a Tavily key to raise web search limits."
 ---
 
 ## What this is for
 
-Two capabilities depend on outside services:
+Two capabilities this page covers:
 
-- **Embeddings (needed).** Curia's memory, the knowledge graph of people, organisations and facts, needs an embedding model. Without one, memory is off, and so are things built on it: the setup assistant can't check what you've set up, working hours from setup aren't saved, and the sensitivity classifier that flags confidential content is off. Treat this as required.
+- **Memory (works out of the box).** Curia's memory, the knowledge graph of people, organisations and facts, runs on an embedding model bundled in the Curia image. It needs no key and sends nothing off your server. The setup assistant, working hours from setup and the sensitivity classifier that flags confidential content all depend on it. What's left for you is to turn on the tools that build memory from conversations, and optionally to [swap the model](/integrations/embeddings-endpoint) for a larger one or OpenAI.
 - **Web search (works out of the box).** Curia searches the web through [Tavily](https://tavily.com) for research and news. With no key, searches are free but capped at a few dozen an hour. A free Tavily key raises the limit.
 
 ## What you'll need
 
-- **An embedding source.** Either an [OpenAI](https://platform.openai.com) API key with billing set up, or your own OpenAI-compatible embedding server, such as [Ollama](https://ollama.com) running an embedding model.
+- **Nothing, for memory with the bundled model.**
+- **Optionally, another embedding model:** your own OpenAI-compatible embedding server, such as [Ollama](https://ollama.com) running an embedding model, or an [OpenAI](https://platform.openai.com) API key with billing set up. Worth it mainly for languages other than English, since the bundled model is English-only.
 - **Optionally, a Tavily account,** if you want more searches than the keyless limit allows.
-- **Shell access to the Curia host,** to store the OpenAI key. There's no console field for it yet.
+- **Shell access to the Curia host,** only if you swap the embedding model. There's no console field for it yet.
 
-**Time:** about 15 minutes.
+**Time:** about 5 minutes, or 15 if you swap the embedding model.
 
 **Cost** (checked 2026-11-01):
 
-- OpenAI `text-embedding-3-small`: $0.02 per million tokens.
+- The bundled embedding model: no fee. It runs inside Curia.
+- OpenAI `text-embedding-3-small`, if you choose it: $0.02 per million tokens.
 - Your own embedding server: no fee, but it runs on your hardware.
 - Tavily: free without a key (capped per hour). A free key adds 1,000 credits a month, no card needed.
+
+<Note>
+  The bundled embedding model is newer than the latest release (v0.45.0, 2026-11-17), and reaches the default `latest` image with a later release. On v0.45.0, memory needs an embedding source: your own [embedding server](/integrations/embeddings-endpoint), or an OpenAI key stored in the vault as `openai_api_key`:
+
+  ```bash
+  docker compose run --rm -e SEED_VAULT_ONLY=openai_api_key -e OPENAI_API_KEY=sk-... \
+    curia ./node_modules/.bin/tsx scripts/seed-vault.ts
+  docker compose restart curia
+  ```
+
+  After you upgrade, an install on that OpenAI key keeps OpenAI through a deprecated default; [OpenAI embeddings](/integrations/openai-embeddings#older-installs-the-implicit-openai-default) explains how to move off it.
+</Note>
 
 ## Steps
 
 <Steps>
-  <Step title="Add an embedding source">
-    Pick one:
+  <Step title="Optional: choose a different embedding model">
+    Skip this to keep the bundled model. To use another one:
 
-    - **OpenAI:** store your key in the vault as `openai_api_key` and restart. The command is on [OpenAI embeddings](/integrations/openai-embeddings).
-    - **Your own server:** set `EMBEDDING_BASE_URL` and `EMBEDDING_MODEL` in `.env`, add a key if the server needs one, and recreate the container. The steps are on [Use your own embedding server](/integrations/embeddings-endpoint).
+    - **Your own server:** set `EMBEDDING_BASE_URL` and `EMBEDDING_MODEL` in `.env`, add a key if the server needs one, and recreate the container. The steps are on [Embedding models](/integrations/embeddings-endpoint).
+    - **OpenAI:** set OpenAI's address and model in `.env` and its key in the vault. The steps are on [OpenAI embeddings](/integrations/openai-embeddings).
 
     Choose before Curia stores much in memory. Switching models later means re-embedding the whole graph once.
   </Step>
@@ -42,7 +56,7 @@ Two capabilities depend on outside services:
   </Step>
 
   <Step title="Restart Curia">
-    Curia picks up the embedding source and the newly enabled tools when it starts. Restart from the console's **Settings → System → About** page, or run:
+    Curia picks up the newly enabled tools, and any embedding change, when it starts. Restart from the console's **Settings → System → About** page, or run:
 
     ```bash
     docker compose restart curia
@@ -65,7 +79,7 @@ Two capabilities depend on outside services:
 
 ## Check it works
 
-1. In the logs (`docker compose logs curia`), look for `Entity memory initialized with knowledge graph`. A warning ending in `knowledge graph unavailable` means there's still no usable embedding source, and names what's missing.
+1. Call `/api/health`: `checks.knowledge_graph` should read `"ok"`. In the logs (`docker compose logs curia`), look for `Entity memory initialized with knowledge graph`; its `embeddingSource` is `bundled` unless you swapped the model. If the check reads `"fail"`, `details.knowledge_graph` names the reason, and a log line ending in `knowledge graph unavailable` says what to do. See [Embedding models](/integrations/embeddings-endpoint#see-which-model-is-active).
 2. In the console chat, tell Curia a harmless fact, such as the name of a colleague and their role, then later ask about it.
 3. For web search, ask something only a live search can answer, such as today's news on a topic. If you added a Tavily key, Curia's daily health check logs `Health canary result` with `"canary":"tavily"` and `"status":"ok"` once the key works. Without a key, it reports `skipped`.
 

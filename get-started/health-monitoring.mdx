@@ -32,12 +32,13 @@ The response includes a top-level `status` field and a `checks` object with per-
     "voice":        "skipped",
     "signal_voice": "skipped",
     "scheduler":    "ok",
-    "principal_mailbox_triage": "ok"
+    "principal_mailbox_triage": "ok",
+    "knowledge_graph": "ok"
   }
 }
 ```
 
-`"skipped"` means a service is not configured — it is excluded from the overall status. See the [API reference](/references/http-api-health) for the full response schema.
+`"skipped"` means a service is not configured — it is excluded from the overall status. An optional `details` object can sit beside `checks` with the reason behind a check; today only `knowledge_graph` uses it. See the [API reference](/references/http-api-health) for the full response schema.
 
 ### The three status values
 
@@ -66,6 +67,7 @@ The key distinction: both `ok` and `degraded` return `200`. A `degraded` instanc
 | `nylas_calendar` | The calendars of every connected principal mailbox, separately from email. One failing mailbox fails it | No principal mailbox connected |
 | `scheduler` | The scheduler ticked within its watchdog window | Never |
 | `principal_mailbox_triage` | The inbox triage heartbeat: recent ticks, unread checks, mailboxes that stopped making progress, and a suspended drain | The CEO Inbox agent isn't running |
+| `knowledge_graph` | Whether Curia's memory (the knowledge graph) is on. `fail` when it's off; `details.knowledge_graph` says why. See [Knowledge graph reasons](/references/http-api-health#knowledge-graph-reasons) | Setup mode, before the setup form is saved |
 
 <Note>
   **Three voice-adjacent checks, on purpose.** `signal` is Signal *messaging*, `voice` is *console* calls, and `signal_voice` is Signal *calls*. They fail independently — Signal texts can be perfectly healthy while call audio is dead — so a green one tells you nothing about the others.
@@ -144,7 +146,7 @@ health:
 | Key | What it validates | Skipped when |
 |---|---|---|
 | `llm_fast` / `llm_standard` / `llm_powerful` | Last recorded outcome for that LLM tier (no billed API call made) | No model configured for that tier |
-| `embeddings` | Last recorded embedding call outcome, from OpenAI or your own embedding server | Entity memory off (no embedding source) |
+| `embeddings` | Last recorded embedding call outcome, from the bundled model or your embedding server. With a server, it also re-checks that the server still serves the same weights, and fails if they changed | Memory off (see `details.knowledge_graph`) |
 | `image_gen` | Last `image-generate` tool outcome | No `OPENAI_API_KEY` |
 | `nylas` | Fetches one message via the Nylas client | Email not configured |
 | `principal_mailbox:<id>` | One per connected principal mailbox: reads the grant, fetches one message and lists calendars. The default mailbox's result pings the `nylas_calendar` heartbeat | Not run with no mailbox connected; `skipped` with no Nylas API key |

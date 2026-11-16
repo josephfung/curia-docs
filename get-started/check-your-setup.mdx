@@ -134,13 +134,13 @@ docker compose restart curia
   </Step>
 
   <Step title="Memory is on">
-    Embeddings don't have a health field. Check the startup logs instead:
+    In `/api/health`, `knowledge_graph` reads `ok`. If it reads `fail`, memory is off, and so is most of the setup assistant; `details.knowledge_graph` names the reason. The startup logs say the same in words:
 
     ```bash
     docker compose logs curia | grep -i "entity memory"
     ```
 
-    You want `Entity memory initialized with knowledge graph`. If you see `No embedding endpoint: set EMBEDDING_BASE_URL and EMBEDDING_MODEL, or seed openai_api_key in the vault`, memory is off, and so is most of the setup assistant. Details: [Search and memory](/get-started/search-and-memory).
+    You want `Entity memory initialized with knowledge graph`. A line ending in `knowledge graph unavailable` says what's wrong and how to fix it. Details: [Embedding models](/integrations/embeddings-endpoint#see-which-model-is-active).
   </Step>
 
   <Step title="Web search works">
