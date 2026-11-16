@@ -166,8 +166,10 @@ A server can start serving different weights under the same model name, for exam
 At boot, and again with the daily health canary, Curia re-embeds five stored labels and compares the results with their stored vectors:
 
 - **Nearly identical:** nothing to do.
-- **Close but not the same** (a re-quantisation, for example): the knowledge graph stays on, and health reports `weights_shifted`.
-- **Different:** health reports `weights_changed`. Found at boot, it keeps the knowledge graph off.
+- **Close but not the same** (a re-quantisation, for example): the knowledge graph stays on, and health stays `ok` with the reason `weights_shifted`.
+- **Different** (most of the five labels no longer match, or the server returns vectors of another width): health reports `weights_changed`. Found at boot, it keeps the knowledge graph off.
+
+One stored label that no longer matches while the rest do (an old node whose vector predates a rename, for example) reads as `weights_shifted`, not `weights_changed`, and the log names that node's id.
 - **Server unreachable:** boot carries on, health reports `drift_unchecked`, and the canary retries.
 
 To clear a shift or a change, re-embed every node with the current weights. Stop Curia, run the re-embed command with `--force`, then start Curia:
