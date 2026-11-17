@@ -9,7 +9,7 @@ Curia's knowledge graph needs an embedding model to power entity memory and sema
 You can swap it for another model served by any program that speaks OpenAI's `/embeddings` API, such as [llama.cpp](https://github.com/ggml-org/llama.cpp), [Ollama](https://ollama.com), [vLLM](https://docs.vllm.ai), [text-embeddings-inference](https://github.com/huggingface/text-embeddings-inference) or OpenAI itself. The server can run on the same machine as Curia or on another one.
 
 <Note>
-  The bundled model and the embedding-server settings on this page are newer than the latest release (v0.44.0), and reach the default `latest` image with a later release. On v0.44.0, the knowledge graph needs an OpenAI key in the vault as `openai_api_key`; see [Search and memory](/get-started/search-and-memory).
+  The bundled model is newer than the latest release (v0.45.0), and reaches the default `latest` image with a later release. The embedding-server settings on this page already work on v0.45.0. There, with no server configured, the knowledge graph needs an OpenAI key in the vault as `openai_api_key`; see [Search and memory](/get-started/search-and-memory).
 </Note>
 
 ## When to swap the bundled model
