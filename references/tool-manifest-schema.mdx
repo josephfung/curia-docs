@@ -90,7 +90,7 @@ Array of permission names this tool requires. Validated at load time.
 
 ### `secrets`
 
-Array of vault secret keys this tool needs access to via `ctx.secret()`. Secrets are resolved from the [encrypted vault](/get-started/secrets-vault) (with an env-var fallback applied at bootstrap). Only secrets declared here are accessible — the tool cannot read arbitrary secrets or environment variables. Keys are lowercase snake_case (e.g. `tavily_api_key`, `nylas_api_key`).
+Array of vault secret keys this tool needs access to via `ctx.secret()`. Secrets are resolved from the [encrypted vault](/get-started/secrets-vault) (with an env-var fallback applied at bootstrap). Only secrets declared here are accessible — the tool cannot read arbitrary secrets or environment variables. Keys are lowercase snake_case (e.g. `tavily_api_key`, `openai_api_key`).
 
 This is the *runtime* allowlist — what the handler may read while executing. To require that a secret be **present before the tool can be installed or enabled**, also declare it in [`install.requires_secrets`](#install). To show a secret in the console as an optional upgrade, also declare it in [`install.optional_secrets`](#install). Either way, the key must still be listed here for the handler to read it.
 
@@ -109,7 +109,9 @@ Declares which privileged services this tool needs from the execution layer. Onl
 | `outboundGateway` | Outbound message delivery (email, Signal) |
 | `schedulerService` | Job scheduling |
 | `entityMemory` | Knowledge graph read/write |
-| `nylasCalendarClient` | Calendar operations via Nylas |
+| `calendarRouter` | Calendar operations. Resolves each calendar to the principal mailbox it belongs to and returns that mailbox's calendar client. Replaces `nylasCalendarClient`. |
+| `principalMailboxes` | The principal's connected mailboxes and their mail clients. No member returns a credential or grant id. |
+| `triageServices` | Per-mailbox triage cadences, state and start lines. No credentials or mail clients. |
 | `autonomyService` | Autonomy score management |
 | `executiveProfileService` | CEO writing voice profile |
 | `officeIdentityService` | Office identity — assistant name/title, tone & style, Detail level, constraints, and standing preferences. Used by `behavioral-preferences-update`. |
@@ -117,6 +119,7 @@ Declares which privileged services this tool needs from the execution layer. Onl
 | `bullpenService` | Inter-agent discussion threads |
 | `toolSearch` | Search the tool and skill registry |
 | `actionLogRepo` | Autonomy action log for approval lifecycle management |
+| `approvalDelivery` | Send one pending approval to the principal on one chosen channel |
 | `executionLayer` | Re-invoke tools with `humanApproved` bypass (CEO-only, `approve-action` tool) |
 | `confidencePipeline` | Contact confidence scoring — fire signals when modifying trust-related data |
 | `tempFileStore` | Write binary buffers to tmpfs; returns `file://` URLs for MCP tool handoff |
@@ -125,6 +128,11 @@ Declares which privileged services this tool needs from the execution layer. Onl
 | `taskRepo` | Task backlog read/write — used by the `task-*` tools and the dedup scanner |
 | `secretCapture` | Mint-only minter for agent-initiated secret-capture links; returns a one-time link, never the secret value. Restricted to the capture-request tools. |
 | `secretResolver` | By-reference resolver for reading resolved vault secrets at run time. Hard allowlist — only `web-browser` may declare it. |
+| `cardUse` | Files and confirms the principal's per-checkout approval to use a saved card. No method returns card details. Restricted to the card-use tools. |
+| `verification` | Track pending sign-in codes per site (ADR-050) |
+| `taskOutreach` | Record who Curia contacted for a task, so their reply finds the task |
+| `disclosureDecisions` | Record the principal's yes or no on an approval that carries a personal-data ask |
+| `phoneAppReady` | Check whether a paired phone can receive notifications |
 
 Services not listed here (`contactService`, `entityContextAssembler`, `agentPersona`) are universal — available to every tool without declaration.
 

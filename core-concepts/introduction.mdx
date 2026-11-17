@@ -49,7 +49,7 @@ Every event that flows through the bus — every message received, every tool in
 
 ### Secrets never reach the LLM
 
-Agents access credentials through a scoped interface that validates each request against the tool's declared manifest. The LLM sees "email-list connected to inbox" — never the actual password or API key. Every credential access is audit-logged.
+Agents access credentials through a scoped interface that validates each request against the tool's declared manifest. The LLM sees "email-list connected to inbox" — never the actual password or API key. The same goes for your website passwords and saved cards: the browser fills them in without the model seeing them, and a card is filled only after you approve that purchase. Every credential access is audit-logged. See [Secrets vault](/get-started/secrets-vault).
 
 ### Tool output sanitization
 
@@ -74,13 +74,13 @@ All tool results are sanitized before being fed back to the LLM: XML and HTML ta
 
 ## Autonomy engine
 
-Curia operates at a configurable autonomy level — a single score from 0 to 100 that determines how independently it acts across all channels and tools. The current band is injected into every agent's system prompt, so behaviour adjusts the moment you change the score — no restart required.
+Curia operates at a configurable autonomy level — a single score from 0 to 100 that determines how independently it acts across all channels and tools. The score's band decides when Curia asks you first, and behaviour adjusts the moment you change the score — no restart required.
 
 | Band | Score | What it means |
 |---|---|---|
-| **Full** | 90–100 | Acts independently. Flags only genuinely novel or irreversible actions. |
-| **Spot-check** | 80–89 | Proceeds on routine tasks. Notes consequential actions for your visibility. |
-| **Approval required** | 70–79 | Presents a plan and asks for confirmation before any consequential action. |
+| **Full** | 90–100 | Acts independently. Still asks first about money or legal matters. |
+| **Spot-check** | 80–89 | Proceeds on routine tasks. Asks first before committing you to something, or about money or legal matters. |
+| **Approval required** | 70–79 | Does the work, but asks first before speaking or committing on your behalf. |
 | **Draft only** | 60–69 | Prepares drafts and plans but does not send or act without explicit instruction. |
 | **Restricted** | < 60 | Advisory only. Takes no independent action. |
 
@@ -97,7 +97,7 @@ Talk to your agents wherever you are. Every channel is a thin adapter that norma
 | **SMS** | Text messages through Telnyx. |
 | **Slack** | Messages in your Slack workspace. |
 | **Voice** | Live spoken calls from the web console, through a self-hosted LiveKit server, with Deepgram and Cartesia for speech. |
-| **Web console** | Chat with Curia in the browser over `/api/chat` (REST + SSE), authenticated by your console session. |
+| **Web console** | Chat with Curia in the browser over `/api/chat` (REST + SSE), authenticated by your console session. The same console installs on a phone as an app, with notifications. See [Phone app](/channels/phone-app). |
 | **CLI** | Interactive terminal for local development and testing. |
 
 ## Multi-provider LLM support
@@ -108,7 +108,7 @@ Each agent declares a capability tier (`fast`, `standard`, `powerful`) rather th
 |---|---|---|
 | **Anthropic** | Claude Opus, Sonnet, Haiku | The default. The installer asks for an Anthropic API key, and the default tiers use Claude models. |
 | **OpenRouter** | Models from many vendors, such as DeepSeek, Gemini and GPT | One API key for many models. Remap the tiers to OpenRouter models in your configuration. |
-| **AWS Bedrock** | Claude on Bedrock | Opt-in, for running Claude through your AWS account. Newer than the latest release (v0.44.0). |
+| **AWS Bedrock** | Claude on Bedrock | Opt-in, for running Claude through your AWS account. |
 
 Each tier maps to a single model. If your primary provider is unavailable, change the tier mapping to a different model or provider — no agent files need to change. See [Model routing](/references/configuration#model-routing).
 

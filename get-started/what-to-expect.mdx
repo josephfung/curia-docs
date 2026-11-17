@@ -32,7 +32,7 @@ Gather these before you start. You don't need them all at once: each Setup page 
 - **A dedicated mailbox for Curia and a Nylas account.** Curia sends and receives email from its own address, through Nylas.
 - **A phone number for Curia, so it can message the principal.** Either a number registered with Signal (you run `signal-cli` yourself), or a Telnyx number for SMS.
 - **Voice keys.** LiveKit comes bundled with Curia. You also need a Deepgram key (speech-to-text) and a Cartesia key (Curia's spoken voice).
-- **Access to the principal's email and calendar.** Today this is a Nylas grant for the principal's mailbox, set up by hand. Google accounts only, for now.
+- **Access to the principal's email and calendar.** Today this is a Nylas grant for each of the principal's mailboxes (work and personal, say), set up by hand. Google accounts only, for now.
 - **A Google account for Curia**, plus a Google Cloud OAuth client, so Curia can create and share Google Docs.
 - **An embeddings source.** Either an OpenAI API key or your own embeddings server. Without one, Curia's memory and the setup assistant don't work.
 - **Optional: a Tavily key.** Web search works without one, but is capped at a few dozen searches an hour. A free key raises the limit.
@@ -89,12 +89,12 @@ Work through these in order. Each page says what it's for, what you'll need, the
 
 Here's what the principal's first days look like today:
 
-1. **The `/setup` form.** After install, the console opens a short form. It asks for the principal's name, timezone, email and working hours, Curia's name and signature, and how Curia should sound and how much it should do on its own. The form talks to whoever fills it in as the principal. If you're setting Curia up for someone else, fill it in with them, or from their answers.
+1. **The `/setup` form.** After install, the console opens a short form. It asks for the principal's name, timezone, email and working hours, Curia's name and signature, how Curia should sound (a few lines of tone and style, started from a template) and how much it should do on its own. The form talks to whoever fills it in as the principal. If you're setting Curia up for someone else, fill it in with them, or from their answers.
 2. **The setup assistant in chat.** The form then opens console chat. Curia offers a few quick wins: capturing preferences, a regular digest, pronouns, and a tour of what it can do. These questions are about the principal too.
-3. **Using Curia.** From then on, the principal messages Curia on Signal or SMS, emails it, or talks to it. Voice calls happen in console chat, which also opens in a phone's browser.
+3. **Using Curia.** From then on, the principal messages Curia on Signal or SMS, emails it, or talks to it. Voice calls happen in console chat. The console also installs on the principal's phone as an app, paired from your computer or by an invitation link you send them, and Curia can send them notifications there. See [Use Curia on your phone](/channels/phone-app).
 
 <Note>
-  **Coming soon.** A guided onboarding, where Curia invites the principal to a first conversation by voice or chat and takes it from there. A phone app is coming too. Until then, Signal or SMS is how Curia messages the principal.
+  **Coming soon.** A guided onboarding, where Curia invites the principal to a first conversation by voice or chat and takes it from there.
 </Note>
 
 ## How you'll know you're done

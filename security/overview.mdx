@@ -15,7 +15,7 @@ Curia was built for executives who cannot afford to run AI agents on trust alone
 | **Memory** | Conversation history (lost on restart) | Knowledge graph with temporal awareness — survives restarts |
 | **Error handling** | Retry and hope | Error budgets, state continuity, pattern detection |
 | **Agent communication** | Agents work in isolation | Structured, auditable, threaded inter-agent discussions |
-| **Multi-channel** | Single chat interface | Email, Signal, CLI, HTTP API — same security model everywhere |
+| **Multi-channel** | Single chat interface | Email, Signal, SMS, Slack, voice, the web console and phone app — same security model everywhere |
 
 ## Security pillars
 
@@ -42,7 +42,16 @@ Curia was built for executives who cannot afford to run AI agents on trust alone
     Inbound message content is treated as data, not instructions. The dispatch layer strips instruction-like patterns and tags high-risk messages with a `risk_score` before the LLM sees them. The coordinator's system prompt explicitly instructs it not to follow instructions embedded in user messages. Even if an injection succeeds at the coordinator level, architectural containment limits what a tricked agent can actually do.
   </Card>
   <Card title="Outbound safety" icon="paper-plane">
-    All outbound messages — regardless of which tool or agent produced them — pass through a single outbound gateway before being sent. A deterministic content filter checks for system prompt fragments, internal field names, secret patterns, and contact data leakage. A second-stage LLM-as-judge then reviews mixed-audience messages for principal-private or internal content leaking to external recipients, blocking the send and notifying you with a principal-safe reason. A third stage, a disclosure gate keyed on the recipient's trust tier, stops Curia oversharing on its own initiative — your availability, other contacts' details — with people not trusted enough to receive it; sends to you, to `trusted` contacts, or that you directed skip it. Display names in inbound emails are validated against the verified sender address to prevent spoofing.
+    All outbound messages — regardless of which tool or agent produced them — pass through a single outbound gateway before being sent. Blocked contacts are refused anywhere on To or CC. A deterministic content filter checks for system prompt fragments, internal field names and secret patterns, and an LLM-as-judge reviews mixed-audience messages for principal-private or internal content reaching external recipients. Then a [send review](/security/autonomy-engine#band-review) fact-checks every claim about you against what Curia actually looked up, holds anything an outsider seems to be steering, and checks each personal detail against who authorized it. Replies Curia sends on its own from your mailbox never share new information, are capped per day, and are held when legal, HR or board members are newly copied.
+  </Card>
+  <Card title="Sender authentication" icon="id-badge">
+    Curia knows when a message is really from you. The web console (chat and voice), Signal (messages and calls), Slack and verified email authenticate you, and only an authenticated instruction from you counts as your approval. Email authentication results are parsed as structured headers, so a sender can't fake a pass in the header text, and an email sender becomes known only from verified mail. Display names in inbound emails are validated against the verified sender address to prevent spoofing. A console link such as `/chat?q=…` never sends a message on your behalf.
+  </Card>
+  <Card title="Isolated browser" icon="window-maximize">
+    The [web browser](/integrations/web-browser) runs sandboxed in its own container, without Curia's settings or secrets and with no route to its database. Its traffic can't reach private, loopback or link-local addresses, checked by the resolved address, so a page can't use the browser to probe your server or network. A stored secret, such as a password, is never filled into a page frame that changed while the fill was being prepared.
+  </Card>
+  <Card title="Sign-in codes" icon="key">
+    When a site sends a one-time sign-in code, Curia tracks the pending sign-in per site with its `verification` tool and uses the code only for that sign-in. The code is scrubbed from task notes, memory and anything Curia sends, including messages to you.
   </Card>
   <Card title="Bulk export controls" icon="file-export">
     Sending data out in bulk — email attachments, or exports to Google Drive and Sheets — passes through dedicated gates on top of the outbound filter. An export above a configurable item count escalates for your approval; exports to a destination that is not a known contact are allowed only for higher-sensitivity data; and the most sensitive tier is never bulk-exported at all. Each item's sensitivity is resolved from the knowledge graph, and an approval notification lists exactly what would leave.
@@ -51,7 +60,7 @@ Curia was built for executives who cannot afford to run AI agents on trust alone
     Tools can declare which agents are allowed to invoke them via `allowed_callers` in the tool manifest. The execution layer enforces this before any other gate — a structurally forbidden caller is rejected immediately, not routed through autonomy or approval workflows. Agent names are validated at startup; unknown names prevent boot.
   </Card>
   <Card title="Container and supply chain" icon="container-storage">
-    The production Docker image runs as a non-root `curia` user, and its base images are pinned by SHA-256 digest. Automated security scanning runs on every pull request: Trivy (npm deps, Docker image, secrets), Semgrep (pattern-based SAST), CodeQL (semantic analysis), and Gitleaks (secret detection), plus a weekly OpenSSF Scorecard run published to the GitHub Security tab. Every GitHub Actions reference is pinned to a commit SHA, workflow `GITHUB_TOKEN` grants are scoped to least privilege per job, and Dependabot tracks npm, Actions, and Docker updates. Branch protection on `main` requires PR review and passing status checks before merge.
+    The production Docker image runs as a non-root `curia` user, and its base images are pinned by SHA-256 digest. Postgres and LiveKit signaling are published on `127.0.0.1` by default, and so is port 3000 on local and HTTPS installs, so nothing else on the server is reachable from outside unless you opt in. Automated security scanning runs on every pull request: Trivy (npm deps, Docker image, secrets), Semgrep (pattern-based SAST), CodeQL (semantic analysis), and Gitleaks (secret detection), plus a weekly OpenSSF Scorecard run published to the GitHub Security tab. Every GitHub Actions reference is pinned to a commit SHA, workflow `GITHUB_TOKEN` grants are scoped to least privilege per job, and Dependabot tracks npm, Actions, and Docker updates. Branch protection on `main` requires PR review and passing status checks before merge.
   </Card>
 </CardGroup>
 
@@ -82,6 +91,7 @@ If an attacker sends a malicious email crafted to trick Curia into exfiltrating 
 5. **Architectural containment** — even a tricked coordinator can only delegate to specialist agents and invoke tools; it cannot directly access the filesystem, database, or external APIs
 6. **Tool permission validation** — the execution layer validates that the invoked tool has declared the permissions needed for the requested action
 7. **Outbound content filter** — any outbound message is checked for leaked system context or internal data before being sent
+8. **Send review** — the escalation judge holds any send it finds an outsider steering, at every autonomy band
 
 Each layer independently reduces the probability of a successful attack. No single layer is the last line of defense.
 

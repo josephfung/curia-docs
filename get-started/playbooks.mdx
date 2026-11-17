@@ -37,12 +37,12 @@ You've installed Curia, signed in to the console with your bootstrap secret, and
 </Steps>
 
 <Note>
-  To revise the assistant's identity or tone later, visit `/setup` directly. The form stays available after setup and pre-fills with the current values.
+  To revise the assistant's name, signature or tone and style later, go to **Settings → Behaviour → Personality**. You can also visit `/setup` directly: the form stays available after setup and pre-fills with the current values.
 </Note>
 
 ## Calibrating autonomy
 
-Curia ships with the autonomy engine seeded at **score 75 (approval-required band)**. At that level, reads and internal state writes (memory, contacts, behavioral preferences) and outbound communications (email and Signal sends) run autonomously, while higher-risk actions — calendar writes, commitments on the CEO's behalf, and anything `critical` — pause for explicit approval through the approval workflow.
+Curia ships with the autonomy engine seeded at **score 75 (approval-required band)**. At that level, Curia takes on work, coordinates and reports back on its own, but asks first before speaking or committing on the principal's behalf. Higher-risk tools — calendar writes and anything `critical` — also pause for explicit approval through the approval workflow.
 
 <Steps>
   <Step title="Decide what you want to delegate">
@@ -50,7 +50,7 @@ Curia ships with the autonomy engine seeded at **score 75 (approval-required ban
   </Step>
 
   <Step title="Adjust from the console">
-    In the console, go to `/settings/autonomy`. The page shows the current score, lets you preview the consequences of a change on a slider, and asks for a written reason on save. Every change is versioned to `autonomy_history`.
+    In the console, go to **Settings → Behaviour → Autonomy**. The page shows the current score and its recent changes, and lets you adjust the score with an optional reason. Every change is versioned to `autonomy_history`.
   </Step>
 
   <Step title="Watch a few cycles before raising further">

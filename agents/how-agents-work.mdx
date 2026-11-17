@@ -8,7 +8,7 @@ Curia is not a single AI assistant — it is a team. A Coordinator agent serves 
 
 ## The Coordinator agent
 
-Every inbound message — across every channel — routes to the Coordinator first, without exception. The Coordinator has a persona you configure: a display name, a tone & style (a few lines on how it sounds, set in **Settings → Personality**), and an email signature. To the outside world, that persona is the only identity they see.
+Every inbound message — across every channel — routes to the Coordinator first, without exception. The Coordinator has a persona you configure: a display name, a tone & style (a few lines on how it sounds, set in **Settings → Behaviour → Personality**), and an email signature. To the outside world, that persona is the only identity they see.
 
 The Coordinator decides how to handle each message:
 
@@ -217,7 +217,7 @@ When specialist agents need to coordinate, they do so in the Bullpen — a struc
 Every Bullpen exchange is:
 
 - **Logged** — every message is written to the audit log with full causal tracing
-- **Visible** — you can observe all threads via the dashboard or HTTP API SSE stream
+- **Visible** — you can observe all threads via the dashboard
 - **Interruptible** — you can send a message to any thread via any channel to redirect, clarify, or stop a discussion
 
 Think of it as overhearing your staff coordinate at their desks — with the ability to step in at any moment.
@@ -228,7 +228,7 @@ When a message arrives, here is what happens inside Curia:
 
 <Steps>
   <Step title="Message received">
-    The channel adapter publishes a normalized `inbound.message` event to the bus. The dispatch layer receives it and routes it to the Coordinator.
+    The channel adapter publishes a normalized `inbound.message` event to the bus. The dispatch layer receives it and routes it to the Coordinator. If a turn for the same person is still running, the new message joins that turn instead of starting a second one.
   </Step>
   <Step title="Context loaded">
     The Coordinator loads its system prompt, the current contents of anything in its `pinned_context`, relevant entity memory and knowledge graph context, and any pending Bullpen threads. Conversation history for this `conversation_id` is loaded from working memory.

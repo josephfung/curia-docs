@@ -73,7 +73,7 @@ The [tool manifest schema](/references/tool-manifest-schema) reference covers ev
 
 #### action_risk values
 
-The `action_risk` field controls which autonomy band allows this tool to run without additional gating:
+The `action_risk` field sets the minimum autonomy score at which this tool may run on Curia's own initiative. Below that floor, the execution layer refuses the call and, for most tools, files an approval request:
 
 | Value | Minimum autonomy score | Examples |
 |---|---|---|
@@ -82,6 +82,8 @@ The `action_risk` field controls which autonomy band allows this tool to run wit
 | `medium` | 70 | Outbound communications (email, Slack) |
 | `high` | 80 | Calendar writes, commitments on behalf of the CEO |
 | `critical` | 90 | Financial, destructive, or irreversible actions |
+
+The floor applies the same way whichever `autonomy.gating` policy is set. A call in a task you started yourself skips it, and so does a send that goes only to you. Under `band` gating, the default, sends also pass the band review, and the contact's tier no longer decides what needs your approval. See [Hard execution gates](/security/autonomy-engine#hard-execution-gates) and [Band review](/security/autonomy-engine#band-review).
 
 ### The handler
 
@@ -178,6 +180,8 @@ return { success: true, data: { ts: '1234567890.123456', channel: '#general' } }
 // Failure
 return { success: false, error: 'Could not reach Slack API: connection refused' };
 ```
+
+A failure can also carry an `errorType`. Use `POLICY_HOLD` when your tool held or refused an action on purpose, under a rule (a blocked recipient, a setting that's off): the console shows it as "held for you", not as a hiccup, and it is never retried. The execution layer sets a failure's `gate` field itself when one of its access gates refused the call before your handler ran (`live_principal_turn` or `allowed_callers`); handlers don't set it.
 
 The `data` field can be any JSON-serializable value. Keep it focused — the execution layer truncates results longer than 200,000 characters before feeding them to the LLM.
 

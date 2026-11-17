@@ -26,7 +26,7 @@ Everything is entered in the console under **Settings → Channels → email**. 
 
 **Enable** becomes available once the API key is saved and at least one enabled account has a grant. The setup assistant marks email done when the same check passes and the channel is enabled.
 
-**Your principal's own mailboxes** are not set up here. They have their own page, **Settings → Personality → Email & Calendar**, which needs the Nylas API key above. Each grant is stored as `principal.mailbox.<id>.nylas_grant_id`. See [5. Your principal's email and calendar](/get-started/principal-email-calendar).
+**Your principal's own mailboxes** are not set up here. They have their own page, **Settings → Behaviour → Email & Calendar**, which needs the Nylas API key above. Each grant is stored as `principal.mailbox.<id>.nylas_grant_id`. See [5. Your principal's email and calendar](/get-started/principal-email-calendar).
 
 Saved credentials, enabling the channel and adding or removing accounts all take effect on the next restart:
 
@@ -36,6 +36,8 @@ docker compose restart curia
 
 <Note>
   Older installs may have `NYLAS_API_KEY` in `.env`. Curia still reads it as a fallback, but a value saved in the console wins. `NYLAS_GRANT_ID` and `NYLAS_SELF_EMAIL` are no longer read: add each mailbox under **Email accounts** instead.
+
+  Older vault names for these values (`nylas_api_key`, `nylas_grant_id`, `nylas_self_email`) are no longer read either. On upgrade, Curia moves a saved `nylas_api_key` to `channel.email.nylas_api_key`. If email still reports the Nylas key missing after the upgrade, save it again under **Settings → Channels → Email**.
 </Note>
 
 ## More than one mailbox
@@ -60,6 +62,8 @@ Once the email channel is running, these tools are available to Curia and any ag
 
 All email tools accept an `account` parameter naming one of the email accounts. If it's left out, Curia uses the first enabled account by name.
 
+`email-reply` replies to everyone on the thread by default, keeping every original To recipient, and each email carries a single signature.
+
 ## File attachments
 
 Outbound email tools (`email-send`, `email-reply`, and their CEO-inbox counterparts) accept an optional list of attachments. Files are referenced by `file://` URLs backed by Curia's temp-file store rather than passed inline, with a cap of **20 MB total across at most 10 attachments** per message. Anything an agent has written to the temp-file store can be attached; the [`drive-download-file`](/tools-and-skills/built-in-tools#email) tool bridges Google Drive by downloading a file (including Google-native exports) into that store and returning a `file://` URL ready to attach. No extra configuration is needed beyond a working Nylas grant: attachments ride the same Send API as the message body.
@@ -72,19 +76,21 @@ Outbound email tools (`email-send`, `email-reply`, and their CEO-inbox counterpa
 
     - `NYLAS_API_KEY not set — email channel disabled`: save the **Nylas API key** under **Credentials**.
     - `No email accounts resolved — email channel disabled`: add Curia's mailbox under **Email accounts**, with its grant ID.
-    - `channel enabled but required credentials missing; not starting`: one of the three **Credentials** fields is empty.
+    - `channel enabled but required credentials missing; not starting`: the **Nylas API key** isn't saved.
 
     Also check that the email row shows **enabled**, not just **installed**, and that you restarted Curia after your last change.
   </Accordion>
 
   <Accordion title="The Enable button is greyed out">
-    All three credential fields (Nylas API key, Nylas grant ID, Mailbox address) must show **configured**. Save any that read **missing**.
+    The **Nylas API key** must show **configured**, and at least one enabled account under **Email accounts** must have a grant ID. Save whichever is missing.
   </Accordion>
 
   <Accordion title="Messages not appearing">
     Curia polls Nylas every 30 seconds by default. If messages are slow to appear, check that the mailbox's grant is active in the Nylas dashboard and that the grant ID under **Email accounts** matches the one Nylas shows.
 
     `/api/health` reports `"email": "fail"` when polling has stopped succeeding.
+
+    Mail Curia had already fetched isn't lost if it crashes or restarts mid-message: inbound mail is saved first and processed again on the next start.
 
     You can change the polling interval in `.env` (it isn't a secret):
 

@@ -101,7 +101,7 @@ Tools that need API keys, passwords, or tokens declare them in their `secrets` a
 
 ```typescript
 // Inside a tool handler
-const apiKey = ctx.secret("nylas_api_key");
+const apiKey = ctx.secret("tavily_api_key");
 ```
 
 The execution layer validates that the calling tool's manifest declared the requested secret. If a tool tries to access a secret it did not declare, the call fails. Agents and LLMs never see secret values — only the tool handler does, and only through this scoped accessor. Every secret access is audit-logged (which tool, which task, when, and whether the value came from the vault or an env fallback) — but values are never written to the log.
@@ -138,7 +138,7 @@ Nothing from the outside world reaches the LLM unfiltered.
 
 ## Built-in tools
 
-Curia ships with more than 90 built-in tools, grouped into skills by capability area (contacts, email, calendar, memory, scheduling, tasks, web, and more). The [built-in tools reference](/tools-and-skills/built-in-tools) is the authoritative catalog — every tool with its `action_risk` level and a full description.
+Curia ships with more than 140 built-in tools, grouped into skills by capability area (contacts, email, calendar, memory, scheduling, tasks, web, and more). The [built-in tools reference](/tools-and-skills/built-in-tools) is the authoritative catalog — every tool with its `action_risk` level and a full description.
 
 <CardGroup cols={2}>
   <Card title="Building a tool or skill" icon="hammer" href="/tools-and-skills/building">

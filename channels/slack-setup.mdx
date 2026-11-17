@@ -159,6 +159,7 @@ DMs are never filtered by this list. An empty or absent list means all channels 
 Curia normalizes Slack reactions into a channel-agnostic reaction signal, and uses them to resolve approvals: react 👍 to a pending approval request to approve it, 👎 to reject.
 
 - Only the **principal** can decide by reaction. A reaction from anyone else is a no-op, recorded in the audit log.
+- A reaction counts only on the approval notification Curia sent the principal. A 👍 on an ordinary message that happens to mention an approval approves nothing.
 - The emoji sets are configurable (`security.reaction_intents` in `config/default.yaml`) and accept both Slack shortcodes and unicode glyphs. Skin-tone modifiers are stripped before matching.
 - An unrecognized emoji on a real pending approval gets a reply explaining which reactions work, rather than being silently dropped.
 - Removing a reaction is a no-op — it does not undo a decision.

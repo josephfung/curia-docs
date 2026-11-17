@@ -22,8 +22,11 @@ The browser loads pages from anywhere, so it is kept apart from the rest of Curi
 
 - it gets none of Curia's settings or secrets;
 - it cannot reach Curia's database;
-- it runs as a non-root user with Chrome's own sandbox on;
+- it runs as a non-root user with Chrome's own sandbox on, under a seccomp profile (`docker/seccomp-chrome.json`) that allows the sandbox for this container only;
+- its traffic can't reach private, loopback or link-local addresses, such as your server, your office network or a cloud metadata service. Each destination is checked by the address it resolves to, and that applies to page scripts and forms as well as navigation;
 - only Curia can talk to it, and its control port is never published on your server.
+
+When Curia fills a stored password into a form, the value is filled inside the browser and never shown to the model. A fill is refused if the page frame changed while the value was being fetched.
 
 Curia starts even when the browser container is down. While it is down, the health check reports `browser: fail` and the browser task in the setup assistant shows as not done. Curia reconnects on its own as soon as the container is back, including after a crash.
 
@@ -41,6 +44,12 @@ Set these in `.env` next to `docker-compose.yml`, then run `docker compose up -d
 `BROWSER_PROXY` cannot include a username or password, because Chrome cannot send them from its launch settings. Use a proxy that lets your server in without them, for example one that allows its IP address. A proxy value in any other shape stops the browser container rather than letting it connect directly.
 
 Match the language and proxy to where you are. A browser that says it is in Toronto while connecting from a German data centre looks suspicious to sites that check.
+
+## Sign-ins and codes
+
+When a site asks for a one-time code, Curia opens a pending sign-in for that site with its `verification` tool, asks your principal for the code (or reads it from their inbox when it arrives by email), and types it only into that sign-in. The code is replaced with `[sign-in code]` in task notes, memory and anything Curia sends.
+
+If a sign-in is interrupted halfway and the site keeps showing a blank or stuck sign-in page, Curia can clear that one site's cookies and storage with the `web-browser` action `clear_site_data`. Every other site stays signed in.
 
 ## Verify it is working
 

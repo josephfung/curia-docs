@@ -32,9 +32,13 @@ channels:
   cli:
     enabled: true          # the local CLI channel (always-on, not toggleable at runtime)
   max_message_bytes: 102400 # 100 KB — inbound messages larger than this are rejected before routing
+  email:
+    max_concurrent_turns: 4  # most coordinator turns one mailbox may have in flight from inbound mail
 ```
 
 `max_message_bytes` is the hard cap on a single inbound message across all channels; oversized messages are dropped before they reach an agent.
+
+`email.max_concurrent_turns` caps how many threads from one Curia mailbox are worked on at once. Messages on one thread stay in date order and never run together; further threads wait for a free slot.
 
 ## Rate limiting
 
@@ -52,6 +56,19 @@ dispatch:
     window_ms: 60000       # 1-minute fixed window
     max_per_sender: 15     # messages per sender per window
     max_global: 100        # total messages per window across all senders
+```
+
+## Turn lanes
+
+When the same person sends a follow-up while Curia is still working on their last message, the follow-up joins the running turn instead of starting a second one.
+
+```yaml
+# config/local.yaml
+dispatch:
+  turnInjection:
+    enabled: true                # false keeps concurrent turns
+    maxInjectionsPerTurn: 5      # follow-ups one turn takes in
+    laneWaitTimeoutMs: 1200000   # 20 min; after this a waiting message runs anyway
 ```
 
 ## Working memory summarization
@@ -166,16 +183,30 @@ The session TTL defaults to 30 minutes so a long multi-page form isn't evicted m
     security:
       trust_thresholds:
         information_query: 0.2   # answering questions, summaries
-        scheduling: 0.5           # calendar changes, meeting requests
+        scheduling: 0.3           # calendar changes, meeting requests
         data_export: 0.8          # sharing files, forwarding records
         financial: 0.8            # payments, financial commitments
     ```
+
+    The `scheduling` default dropped from 0.5 to 0.3 in v0.45, so a known email contact can ask for a meeting. If your `local.yaml` still sets 0.5, that override keeps the old behavior.
 
     These thresholds are compiled into the coordinator's system prompt at startup. Changes take effect on restart. See [Contacts and trust](/core-concepts/contacts-trust#action-thresholds) for how these thresholds are enforced.
 
     <Note>
       This replaces the previous top-level `trust_policy` config key, which was dead config (typed but never read by the runtime). If you had overrides under `trust_policy`, move them to `security.trust_thresholds`.
     </Note>
+  </Accordion>
+
+  <Accordion title="Your organization's email domains">
+    List the email domains your principal's organization controls. A sender at one of them whose mail passes SPF, DKIM and DMARC is treated as a colleague: Curia raises them from `unknown` to `known` before routing the message.
+
+    ```yaml
+    # config/local.yaml
+    security:
+      principal_org_domains: [acme.com]   # default: [] (the rule is off)
+    ```
+
+    List only domains your organization controls. Never list a shared mail provider such as `gmail.com`.
   </Accordion>
 
   <Accordion title="Custom PII patterns">
@@ -197,7 +228,7 @@ The session TTL defaults to 30 minutes so a long multi-page form isn't evicted m
   </Accordion>
 
   <Accordion title="Outbound PII redaction">
-    Distinct from `pii.extra_patterns` (which scrubs LLM-facing error strings), this policy governs which detected PII is allowed to leave in **outbound channel messages** (email, Signal). Detection uses the same library as the log scrubber; this block controls only the policy — which detected labels pass through on which channel. Anything not on a channel's allow list is redacted. The principal is exempt structurally (a UUID match on the CEO contact ID), so their own messages are never redacted.
+    Distinct from `pii.extra_patterns` (which scrubs LLM-facing error strings), this policy governs which detected PII is allowed to leave in **outbound channel messages** (email, Signal). Detection uses the same library as the log scrubber; this block controls only the policy — which detected labels pass through on which channel. Anything not on a channel's allow list is redacted. A send skips redaction only when the principal, as a verified identity, is its sole recipient. Copying anyone else on a message to the principal brings redaction back.
 
     ```yaml
     # config/local.yaml
@@ -209,7 +240,7 @@ The session TTL defaults to 30 minutes so a long multi-page form isn't evicted m
           email:
             allow: [email]     # email addresses pass through on email replies
           signal:
-            allow: []          # nothing allowed on Signal (except the principal)
+            allow: []          # nothing allowed on Signal (except to the principal alone)
     ```
 
     Each key under `channel_policies` is a channel name; its `allow` list holds the lowercase pattern labels permitted on that channel. With `default: block`, omitting a channel means everything is redacted for it.
@@ -250,11 +281,13 @@ Stage 2 of the outbound content filter is a single-purpose LLM judge that blocks
 filter:
   llmJudge:
     enabled: true
-    model: claude-haiku-4-5
+    model: claude-haiku-5-5
     timeout_ms: 5000
     failMode: split   # split (default) | open | closed
   identityGate: enforce   # enforce (default) | shadow | off
 ```
+
+The judge asks for temperature 0. The Anthropic API rejects sampling parameters for Claude models, so a Claude judge runs at the API default; pick an OpenRouter or Bedrock model if you want temperature 0. The same applies to the escalation judge below.
 
 `failMode` controls what happens on judge timeout or error: `split` sends to principal-only recipients but blocks mixed-audience sends, `open` sends anyway, `closed` blocks.
 
@@ -269,8 +302,9 @@ A separate LLM judge classifies outbound disclosures and proposed actions, then 
 escalation:
   judge:
     enabled: true
-    model: claude-haiku-4-5
+    model: claude-haiku-5-5
     timeout_ms: 5000
+    review_timeout_ms: 15000   # band review of a send reads the drafting turn's evidence, so it gets longer
 ```
 
 The same judge powers **Stage 2.5** of the outbound content filter, a disclosure gate keyed on the recipient's trust tier. It stops Curia oversharing on its own initiative — your availability, or other contacts' details — with someone not trusted enough to receive it. Sends to you, sends to `trusted` contacts, and sends you directed (in a live conversation or by approving the exact action) skip it.
@@ -360,12 +394,12 @@ dreaming:
     batchSize: 50             # max actions scored per pass
     minScoredActions: 30      # minimum scored actions before any adjustment fires
     halfLifeDays: 30          # time-decay half-life for weighting recent vs. older actions
-    weakExpiredWeight: 0.3    # reduced weight for an 'expired' compatibility signal
     ceoCooldownDays: 7        # days after a manual CEO set-autonomy before auto-adjust resumes
     errorRateThreshold: 0.20  # competence error rate above which score increases are blocked
+    errorRateWindowDays: 90   # that rate covers the last 30 competence rows, none older than this
 ```
 
-`model_tier` is a tier name (`fast` / `standard` / `powerful`), not a raw model string — set the concrete model under [model routing](#model-routing). The older `model` key is rejected at startup; use `model_tier`. `ceoCooldownDays` prevents the background pass from immediately undoing a score the CEO just set by hand. `weakExpiredWeight` and `errorRateThreshold` are fractions between 0 and 1; the interval, batch, and count knobs are positive integers.
+`model_tier` is a tier name (`fast` / `standard` / `powerful`), not a raw model string — set the concrete model under [model routing](#model-routing). The older `model` key is rejected at startup; use `model_tier`. `ceoCooldownDays` prevents the background pass from immediately undoing a score the CEO just set by hand. `errorRateThreshold` is a fraction between 0 and 1; the interval, batch, and count knobs are positive integers.
 
 ## Intent drift detection
 
@@ -402,13 +436,20 @@ Agents declare a capability tier rather than a specific model. The `model_routin
 model_routing:
   tiers:
     fast:
-      model: claude-haiku-4-5
+      model: claude-haiku-5-5
     standard:
       model: claude-sonnet-4-6
     powerful:
-      model: claude-sonnet-4-6
+      model: claude-opus-4-6
+      reasoning: { effort: high }   # optional: none | low | medium | high | max
   default_tier: standard   # tier used when a caller requests a model without naming a tier
 ```
+
+The shipped defaults are the models above, without `reasoning`. Claude Sonnet 5.5 (`claude-sonnet-5-5`) and Opus 5.5 (`claude-opus-5-5`) are also in the model registry. Opus 5.5 can't turn thinking off, so it can't serve the fast tier or the judges (see below).
+
+`reasoning.effort` sets how hard the tier's model thinks on agent turns. Leave it out to use the model's own default. Startup fails if the model's registry entry doesn't list the effort you set.
+
+The fast tier also serves short, capped calls (classifiers, the drift detector, fact extraction, and voice turns unless `channels.voice.model` is set), and so do the two judges. Startup refuses a model for `model_routing.tiers.fast.model`, `filter.llmJudge.model` or `escalation.judge.model` that can't turn thinking off, because it would spend those small output caps on thinking.
 
 `default_tier` (default `standard`) is the tier the `ModelRouter` falls back to when a caller resolves a model without specifying a tier. It must be one of `fast`, `standard`, or `powerful`; any other value is a hard startup failure.
 
@@ -418,7 +459,7 @@ To route a tier through OpenRouter (requires `openrouter_api_key` in the vault),
 model_routing:
   tiers:
     fast:
-      model: google/gemini-2.5-flash    # routed through OpenRouter
+      model: google/gemini-3.1-flash-lite  # routed through OpenRouter
     standard:
       model: claude-sonnet-4-6           # routed through Anthropic
     powerful:
@@ -463,13 +504,27 @@ contextBridge:
 
 Every outbound message auto-registers an entry. `channelDefaultExpiryHours` sets that window per channel: email ships at **72 hours**, because email is answered in business days — a late-afternoon send is often answered the next morning, and a Friday ask on Monday. The 6-hour `defaultExpiryHours` applies only to channels with no entry in the map. Callers can pass a `context_bridge` input with `expires_in_hours` to override per-entry; that value wins over all of these defaults.
 
+## Sign-in codes
+
+When a site Curia is signing in to asks for a code sent to the principal (by email, SMS or an authenticator app), Curia asks the principal for it on the first channel in `askChannelOrder` that is enabled and has a verified principal identity. It never asks on the channel the errand came in on.
+
+```yaml
+# config/local.yaml
+verification:
+  askChannelOrder: [signal, sms, slack, email]   # valid: signal, sms, slack, email
+  emailWaitSeconds: 180          # wait this long for an emailed code before asking the principal
+  defaultExpiryMinutes: 10       # a pending code request counts as expired after this
+```
+
+`identityProviderDomains` lists the sign-in providers (Microsoft, Okta, Auth0 and others) whose embedded sign-in frame may receive a code. Setting it replaces the shipped list, so copy the defaults from `config/default.yaml` when you extend it.
+
 ## Meeting debrief
 
 Configures the meeting-debrief specialist agent. The agent itself is defined in `agents/meeting-debrief.yaml`; this block controls runtime knobs.
 
 ```yaml
 debrief:
-  channel: signal               # channel for debrief prompts (signal | email)
+  # channel: signal             # pin the prompt channel (signal | sms | web | slack | email); unset = the principal's usual channel
   reminderDelayMinutes: 120     # minutes before a reminder is sent for unanswered debriefs
   contextBridgeTtlHours: 48     # how long replies to a debrief prompt remain routable back to the agent
 ```
@@ -515,12 +570,25 @@ autonomy:
 
 ### Approval expiry
 
-Sets how often Curia marks [expired approval requests](/security/approval-workflow#expiry) and emails you about high and critical ones.
+Sets how often Curia marks [expired approval requests](/security/approval-workflow#expiry). Each expired request becomes an item in your next digest. The same check emails you any approval that no agent delivered within 15 minutes.
 
 ```yaml
 autonomy:
   approval_expiry:
-    sweep_interval_minutes: 60   # how often the expiry check runs
+    sweep_interval_minutes: 15   # how often the expiry check runs
 ```
 
 The check is a system task, not an agent turn, so it makes no model calls. The first check runs a minute after startup, then once per interval. The value must be a positive integer; startup fails on anything else.
+
+### Digest fallback and relay budget
+
+```yaml
+autonomy:
+  report_fallback:
+    max_age_days: 7          # send a weekly summary once the oldest unreported digest item is this old
+    check_interval_hours: 24
+  relay_budget:
+    per_hour: 3              # immediate messages one outside contact can cause you per hour; 0 turns it off
+```
+
+`report_fallback` is for installs with no digest job: Curia sends a summary of unreported digest items once the oldest passes `max_age_days`. `relay_budget` caps how often one contact at tier `known` or below can make Curia message you right away. Over the cap, the rest goes to the digest and you get one line saying more is waiting.

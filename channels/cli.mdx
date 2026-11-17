@@ -29,6 +29,8 @@ The CLI adapter publishes `inbound.message` events on the bus, just like every o
 
 Because the CLI is local-only, messages from it bypass the trust score thresholds that apply to external channels. You never need to worry about unknown-tier restrictions when using the CLI.
 
+The CLI doesn't authenticate who is typing, though. So a CLI instruction doesn't count as the principal's own approval for a send, and it doesn't release personal details the way a signed-in console or Signal message does. See [Who counts as you](/core-concepts/autonomy#who-counts-as-you).
+
 ## When to use the CLI
 
 - **Development and testing** — the fastest way to interact with Curia during development

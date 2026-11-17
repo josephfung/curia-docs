@@ -1,65 +1,62 @@
 ---
 title: "Approval workflow"
-description: "How Curia handles actions blocked by the autonomy gate — creating approval requests, notifying you, and letting you approve, deny, or dismiss them conversationally."
+description: "How Curia handles actions it holds for you — creating numbered approval requests, delivering each once, and letting you approve, deny, or dismiss them."
 ---
 
-When Curia wants to take an action but its autonomy score is below the required threshold, it doesn't silently fail. Instead, it creates an **approval request** — a structured record of what it was trying to do, why it was blocked, and what it needs from you. You can approve, deny, or dismiss the request conversationally, without having to change your global autonomy score.
+When Curia wants to take an action it isn't allowed to take on its own, it doesn't silently fail. Instead, it creates an **approval request** — a structured record of what it was trying to do and why it stopped. You can approve, deny, or dismiss the request without having to change your global autonomy score.
 
 ## When approval requests are created
 
-An approval request is created any time the [execution layer](/security/autonomy-engine) blocks a tool invocation because the live score is below the tool's `action_risk` floor. Common situations:
+An approval request is created when Curia holds an action for you. Common situations:
 
-- **Score is in Draft Only (60–69):** Curia wants to send an email but the outbound gate blocks it. Instead of giving up, it saves a draft and creates an approval request asking you to authorize the send.
-- **Score is in Approval Required (70–79):** A tool with `action_risk: high` (e.g., creating a calendar event on your behalf) is invoked. The gate allows medium-risk tools but blocks high-risk ones — an approval request is raised.
-- **Any score, blocked tool:** A tool with `action_risk: critical` is invoked at any score below 90. The request captures the full context so you can evaluate it.
+- **Below a tool's score floor.** The [execution layer](/security/autonomy-engine) blocks a tool because the live score is below its `action_risk` floor. For example, at Draft Only (60–69) an email send is blocked; Curia saves a draft and asks you to authorize the send.
+- **The send review holds a message.** Under the default band gating, the [send review](/security/autonomy-engine#band-review) holds a message that speaks for you below the score its stakes need, anything involving money or legal positions, and anything an outsider seems to be steering.
+- **Someone asked for a personal detail.** Curia asks whether to share it, for example "Dana wants your mobile number to book the call. Share it?"
 
 ## What a request contains
 
 Each approval request includes:
 
-- A short reference code (e.g. `REF-A7B2`) for quick identification
-- The tool name and what it was trying to do
-- The context that triggered the request (task, channel, sender)
-- The required autonomy score vs. the current score
-- A timestamp and expiry window
+- An **approval number** (for example `Approval 3`), which is how you answer it
+- What Curia was trying to do, with contact references shown as names
+- Why it was held: the score it needs, or the review's reason (for example `Stakes: commitment. Why: …`)
+- When it expires
 
-When the approval notification is sent to you (the principal), it also includes the pending action's **recipient** and the **message or content** to be sent, so you can approve or deny with the full picture in front of you rather than approving blind. For a bulk data export, the notification lists the items being exported.
+The request also shows the pending action's **recipient** and the **message or content** to be sent, so you can approve or deny with the full picture in front of you rather than approving blind. If the message carries personal details, each one is listed with its value. For a bulk data export, the request lists the items being exported.
+
+## How requests reach you
+
+Each request is delivered **once**, on one channel: the one your standing preferences name for urgent items. With no preference set, Curia picks from the channels you've connected, in this order: Signal, SMS, the phone app (while a device is paired), Slack, then email. If that channel fails, Curia tries the next one. After that, the request is mentioned only in your next digest, so a busy day doesn't turn into a stream of pings.
+
+If a request hasn't been delivered within 15 minutes, Curia sends it anyway, by email or the next channel available.
 
 ## Acting on pending requests
 
-You interact with approval requests conversationally from any trusted channel.
+### Answering a request
+
+<Tip>
+Reply **"approve 3"** or **"deny 3"**, using the number from the request.
+
+On Signal and Slack you can also react 👍 to approve or 👎 to deny. A reaction counts only on the request message Curia sent you. In an email, reply on the request's own thread.
+</Tip>
+
+You can also approve or discard held items from the **Waiting on you** card on the console home page.
+
+When it's unclear which request you mean, or whether you're answering one at all, Curia asks rather than guessing. A reference it can't read is refused, never treated as "whichever one is pending".
 
 ### Seeing what's pending
 
 <Tip>
 Ask Curia: **"What's waiting for my approval?"** or **"List pending actions."**
-
-You can also use the `list-pending-actions` tool directly.
 </Tip>
 
-Example response:
-
-```
-2 actions pending your approval:
-
-REF-A7B2 — email-send (medium risk)
-  Send a reply to alice@example.com re: "Q3 budget review"
-  Blocked: score 65, required 70
-  Waiting since 10:14 AM · expires in 22 hours
-
-REF-C3D9 — calendar-create-event (high risk)
-  Create "Strategy sync" with the board on May 8 at 2 PM
-  Blocked: score 65, required 80
-  Waiting since 9:50 AM · expires in 22 hours
-```
+Curia lists each open request with its number, what it would do, and when it expires.
 
 ### Approving a request
 
-<Tip>
-Say: **"Approve REF-A7B2"** or **"Go ahead and send that email to Alice."**
+When you approve a request, Curia re-executes the held action immediately with your explicit authorization. It bypasses the gate for this single execution only — your global score is unchanged.
 
-Curia will re-execute the blocked action immediately with your explicit authorization. The action bypasses the autonomy gate for this single execution only — your global score is unchanged.
-</Tip>
+For a question about a personal detail, your answer also holds for that detail, that person and that thread: a yes lets Curia share it there again, and a no means later requests there are declined without asking you. A new instruction from you overrides an earlier no.
 
 When you approve a request, Curia:
 
@@ -71,7 +68,7 @@ When you approve a request, Curia:
 ### Denying a request
 
 <Tip>
-Say: **"Deny REF-A7B2"** or **"Don't send that email."**
+Say: **"Deny 3"** or **"Don't send that email."**
 </Tip>
 
 A denial marks the row as `rejected` and records it in the action log. The coordinator receives the denial as an advisory result and can surface alternative options or ask a clarifying question.
@@ -79,27 +76,27 @@ A denial marks the row as `rejected` and records it in the action log. The coord
 ### Dismissing a request
 
 <Tip>
-Say: **"Dismiss REF-C3D9"** or **"Ignore that calendar request."**
+Say: **"Dismiss 4"** or **"Ignore that calendar request."**
 </Tip>
 
 Dismissal is a neutral close — it doesn't count as an approval or a rejection in automatic scoring. Use it when a request is no longer relevant (e.g., the meeting was cancelled before you got to it).
 
 ## Expiry
 
-Approval requests do not stay open indefinitely. Stale requests expire automatically 24 hours after they are raised.
+Approval requests do not stay open indefinitely. Most expire 24 hours after they are raised.
 
-Curia checks for expired requests in the background every hour, starting a minute after it boots. The check is a system task, not an agent turn, so it costs no model calls. An expired request can't be approved even before the check runs.
+Curia checks for expired requests in the background every 15 minutes, starting a minute after it boots. The same check delivers any request that went undelivered for 15 minutes. It is a system task, not an agent turn, so it costs no model calls. An expired request can't be approved even before the check runs.
 
 **What happens on expiry:**
 
 - The row is marked `expired` in the action log
-- High and critical tier expirations trigger a single batched email to you. If no verified email is on file, the request still expires but no email is sent.
-- Standard expirations close quietly and are recorded in the action log
+- Each expired request gets one line in your next digest. Expiry sends no separate alert.
+- An expired request carries no signal for automatic scoring
 
 **Staying aware:** Ask Curia **"what's waiting for my approval?"** any time to see everything still open, or fold outstanding approvals into an [on-demand morning briefing](/examples/daily-morning-briefing) so nothing lingers unseen.
 
 <Note>
-The 24-hour window is fixed. To change how often the expiry check runs, set `autonomy.approval_expiry.sweep_interval_minutes` (see [Configuration](/references/configuration#approval-expiry)).
+The expiry window is not configurable. To change how often the expiry check runs, set `autonomy.approval_expiry.sweep_interval_minutes` (see [Configuration](/references/configuration#approval-expiry)).
 </Note>
 
 ## Approval vs. raising your autonomy score
@@ -110,11 +107,13 @@ Approving an individual request is intentionally narrow — it authorizes one sp
 - You're evaluating whether a type of action is worth raising the score for
 - A one-off high-stakes action needs your explicit sign-off
 
-If you find yourself approving the same type of request repeatedly, that's a signal the score should move up. Use `set-autonomy` or the Settings → Autonomy page to adjust.
+If you find yourself approving the same type of request repeatedly, that's a signal the score should move up. Use `set-autonomy` or **Settings → Behaviour → Autonomy** to adjust.
 
 ## How approvals feed automatic scoring
 
-Every approval and denial is recorded in the `autonomy_action_log` and factored into the daily autonomy scoring pass. Consistent approvals (Curia acted appropriately enough that you said yes) contribute to the Competence dimension and can nudge the score up over time. Consistent denials (Curia misjudged the situation) contribute negatively. This creates a feedback loop where the score gradually reflects observed performance rather than your initial estimate.
+Every approval and denial is recorded in the `autonomy_action_log`. The daily autonomy scoring pass counts the ones you give yourself, by reacting 👍 or 👎 or in the console, as your feedback. Consistent approvals (Curia acted appropriately enough that you said yes) contribute to the Competence dimension and can nudge the score up over time. Consistent denials (Curia misjudged the situation) contribute negatively. A request Curia resolves by reading your reply is recorded but carries no signal, because it is Curia's reading of what you said.
+
+Your verdicts on the spot checks in your digest feed the same pass, at three times the weight of a judged action. Together they make the score gradually reflect observed performance rather than your initial estimate.
 
 See [Autonomy engine](/security/autonomy-engine) for the scoring mechanics.
 

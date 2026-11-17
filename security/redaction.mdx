@@ -1,9 +1,14 @@
 ---
 title: "Redaction"
-description: "How Curia redacts sensitive data from outbound messages — built-in PII patterns, per-channel policies, and the redaction pipeline."
+description: "How Curia detects sensitive data in outbound messages — built-in PII patterns, per-channel policies, and what happens to each detected detail."
 ---
 
-Curia's PII redactor sits between agent responses and channel delivery. Before any outbound message reaches a recipient, it scans for sensitive data and replaces detected patterns with labelled tokens like `[REDACTED: CREDIT_CARD]`. The redactor is channel-aware — different channels can allow different types of information through.
+Curia's PII redactor sits between agent responses and channel delivery. Before any outbound message reaches a recipient, it scans for sensitive data. The redactor is channel-aware — different channels can allow different types of information through.
+
+What happens to a detected detail depends on `autonomy.gating`:
+
+- **`band` (the default):** nothing is cut out of the message. Each detected detail goes to the send review, which checks who authorized it and then sends the message, holds it for your yes, or sends it back to be rewritten without the detail. No `[REDACTED: …]` token is ever delivered. See [Personal details](/security/autonomy-engine#personal-details).
+- **`tier`:** detected details are replaced with labelled tokens like `[REDACTED: CREDIT_CARD]`, as described in the pipeline below.
 
 <Note>
   Redaction is one of two outbound safeguards and handles **pattern-based PII** (emails, phone numbers, card and SSN formats). It is distinct from the outbound content filter and its second-stage [LLM-as-judge](/security/overview), which catch *contextual* leaks — internal reasoning, system details, or principal-private content reaching the wrong audience — that no fixed pattern would match. Both run before a message is delivered.
@@ -18,21 +23,24 @@ The redactor detects these PII patterns in all outbound messages:
 | Email addresses | `alice@example.com` | `[REDACTED: EMAIL]` |
 | Phone numbers | `+1-555-234-5678` | `[REDACTED: PHONE]` |
 | Credit card numbers | `4111 1111 1111 1111` | `[REDACTED: CREDIT_CARD]` |
-| US Social Security numbers | `123-45-6789` | `[REDACTED: SSN]` |
+| US Social Security numbers | `SSN 123-45-6789` | `[REDACTED: SSN]` |
+| Canadian Social Insurance Numbers | `130-692-544` | `[REDACTED: SIN_CA]` |
 | Custom patterns | Configured per deployment | Configurable replacement |
+
+A Canadian SIN is recognized only when it passes the SIN checksum, and a bare nine-digit number only when "SIN" or "social insurance" comes just before it, so order numbers and reference IDs aren't mistaken for one. A US SSN likewise needs "SSN" or "social security" before it.
 
 You can add custom PII patterns for data types specific to your deployment (employee IDs, national ID numbers, etc.) via `pii.extra_patterns` in `config/local.yaml`. See the [configuration reference](/references/configuration) for details.
 
 ## The redaction pipeline
 
-When an outbound message is ready for delivery, the redactor evaluates it in this order:
+When an outbound message is ready for delivery, the redactor evaluates it in this order. Under `band` gating the first four steps still run, but the review decides what happens to each detail instead of the replacement step.
 
 <Steps>
   <Step title="Kill switch check">
     If `outbound_redaction.enabled` is `false`, the message passes through unmodified. This is an emergency override, not a recommended configuration.
   </Step>
   <Step title="Principal bypass">
-    If the recipient is you, the principal (matched structurally by contact UUID, resolved at startup), the message passes through unredacted. You always see full content. This is the only bypass — there is no trust-level override; even `trusted` contacts have PII redacted (what they're allowed to *receive* is governed separately by the tier-keyed disclosure gate on the outbound filter).
+    If you, the principal, are the only recipient (matched against your verified identities across every To and CC address), the message passes through unredacted. You always see full content. A message to you with anyone else on To or CC gets no bypass: the third party would see the details too. This is the only bypass — there is no trust-level override; even `trusted` contacts have PII redacted.
   </Step>
   <Step title="PII detection">
     The message content is scanned for all built-in and custom PII patterns.
@@ -67,7 +75,7 @@ outbound_redaction:
 With this configuration:
 - **Email** — email addresses and phone numbers are allowed; credit cards and SSNs are redacted
 - **Signal** — phone numbers are allowed; everything else is redacted
-- **CLI** — CEO bypass applies (CEO always sees full content)
+- **CLI** — the principal bypass applies (you always see full content)
 - **Any other channel** — all PII is redacted (the `default: 'block'` policy)
 
 ## Design principles
@@ -76,7 +84,7 @@ With this configuration:
 
 **No original values stored** — the audit event records *what type* of PII was redacted and *what it was replaced with*, but intentionally does not store the original matched value. This prevents the audit log itself from becoming a PII repository.
 
-**CEO identification by UUID** — the CEO bypass uses a contact UUID resolved once at startup from `CEO_PRIMARY_EMAIL`, not a mutable database field. This is tamper-resistant — contact management code paths cannot accidentally grant CEO-level bypass to another contact.
+**Principal identification by verified identity** — the bypass checks every recipient against your verified identities, not a name or a mutable field, so contact management code paths cannot accidentally grant the bypass to another contact.
 
 <CardGroup cols={2}>
   <Card title="Security overview" icon="shield" href="/security/overview">

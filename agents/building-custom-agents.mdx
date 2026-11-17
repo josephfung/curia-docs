@@ -17,7 +17,7 @@ The Coordinator can handle many tasks on its own using its pinned skills. Create
 
 ## Choosing built-in skills
 
-Curia ships with more than 90 built-in tools. The [built-in tools reference](/tools-and-skills/built-in-tools) is the catalog to shop from — each tool lists its `action_risk` level — and [how tools work](/tools-and-skills/how-tools-work) explains the execution model. A few rules of thumb when deciding what to give an agent:
+Curia ships with more than 140 built-in tools. The [built-in tools reference](/tools-and-skills/built-in-tools) is the catalog to shop from — each tool lists its `action_risk` level — and [how tools work](/tools-and-skills/how-tools-work) explains the execution model. A few rules of thumb when deciding what to give an agent:
 
 - **Pin the narrowest set that does the job.** List only the tools the agent actually needs in `pinned_skills`. A calendar agent doesn't need `email-send`; an expense tracker doesn't need `calendar-delete-event`. Smaller tool sets keep the agent focused and shrink the blast radius if a prompt goes wrong.
 - **Mind `action_risk`.** Higher-risk tools (`medium`, `high`, `critical`) trigger the [approval workflow](/security/approval-workflow) whenever the current [autonomy score](/core-concepts/autonomy) is below their floor. Pinning a tool doesn't bypass that gate — it only makes the tool available.
@@ -130,6 +130,17 @@ Restart Curia after adding the file — agents are loaded at startup.
     ```
 
     Use a `docs` entry for anything long or edited piece by piece, and a `configs` entry for a short value. Only agents that declare a `/shared/` document can write it, and you can always edit it in the console. Give a document a short format description at its top so every agent that uses it follows the same format. See [Pinned context](/agents/how-agents-work#pinned-context).
+  </Accordion>
+
+  <Accordion title="limits — what the agent can't do">
+    List anything your agent structurally can't do, and where that work goes instead. The Coordinator sees each entry after your agent's line in its specialist roster, as "Cannot: …", so it routes the work elsewhere instead of finding out from a decline:
+
+    ```yaml
+    limits:
+      - send email (return drafted text to the coordinator to send)
+    ```
+
+    Keep each entry short; the roster has a size budget. See the [agent manifest schema](/references/agent-manifest-schema#limits).
   </Accordion>
 
   <Accordion title="memory — access">

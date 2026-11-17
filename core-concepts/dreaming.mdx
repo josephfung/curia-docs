@@ -29,11 +29,13 @@ Edges follow their endpoints: when a node is archived, all edges pointing to or 
 
 The entire decay pass runs inside a single database transaction — partial failures leave no torn state.
 
+The same nightly run also archives scratch [documents](/core-concepts/memory#documents) that haven't changed in 7 days (`documentWorkspace.scratchTtlDays`). Documents under `/projects/` are never archived this way.
+
 ### Autonomy scoring pass
 
 The scoring pass evaluates Curia's recent actions to compute a capability score that can nudge the [autonomy score](/core-concepts/autonomy) up or down. It processes unscored entries in the autonomy action log:
 
-- **Deterministic scoring** — approval outcomes (CEO approved or rejected an action) are scored directly
+- **Deterministic scoring** — approval outcomes (CEO approved or rejected an action) are scored directly, and so are the principal's verdicts on the spot checks of autonomous work that the digest includes
 - **LLM-as-judge scoring** — task success and failure outcomes are evaluated by an LLM judge for quality
 
 The composite capability score weights three dimensions:

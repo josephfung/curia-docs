@@ -32,6 +32,11 @@ Every event type that flows through the bus produces an audit log entry:
 | `outbound.delivered` | Every successful wire-level delivery emitted by the outbound gateway — covers both response-path and tool-invoked sends (`signal-send`, `email-send`, `email-reply`, etc.). This is the canonical "did something actually leave the building?" audit signal; use it (not `outbound.message`) when counting outbound traffic for security review |
 | `outbound.blocked` | A message the outbound safety filter refused to send — records the recipient, a human-readable reason, and the specific findings (so you can review what would have leaked) |
 | `outbound.suppressed_duplicate` | A duplicate response-path send that was suppressed because a human-facing reply had already gone out for that task |
+| `autonomy.tool_blocked` | A tool the execution layer blocked because the live autonomy score was below its `action_risk` floor — the tool, the required score and the actual score |
+| `principal.report` | An item queued for your digest — an approval mention or expiry, a held reply, a note Curia kept out of a message to someone else, or an action Curia took and is reporting after the fact |
+| `autonomy.relay_deferred` | A message to you that an outside contact caused, moved to your digest because that contact went over the hourly limit. Records the contact, tier and channel, never the content |
+| `secret.changed` | A secret set, replaced or removed from the console, and which console session did it. Never the value |
+| `operator.session` | Console sign-ins, sign-outs, revoked sessions, and phone pairing and invitations |
 | `secret.accessed` | Every `ctx.secret()` call — the secret name (never the value), the requesting tool and task, and whether the value resolved from the vault or an env fallback (`source: vault \| env`) |
 | `channel.poll` | One per email poll cycle — messages fetched, processed, skipped (by reason), the new high-water mark, and duration |
 | `channel.stalled` | Watchdog alert raised when no poll cycle has completed within several intervals — surfaces a silently stuck channel |
@@ -87,9 +92,10 @@ Built-in patterns that are scrubbed from LLM-facing strings:
 
 - Email addresses → `[EMAIL]`
 - Phone numbers (US and CA format) → `[PHONE]`
-- UK phone numbers → `[PHONE]`
+- UK mobile numbers → `[PHONE]`
 - Credit card numbers → `[CREDIT_CARD]`
-- US Social Security Numbers → `[SSN]`
+- US Social Security Numbers, after an "SSN" or "social security" label → `[SSN]`
+- Canadian Social Insurance Numbers that pass the SIN checksum → `[SIN]`
 
 You can add organization-specific patterns in `config/local.yaml`:
 
@@ -98,8 +104,6 @@ pii:
   extra_patterns:
     - regex: "EMP-\\d{6}"
       replacement: "[EMPLOYEE_ID]"
-    - regex: "\\b\\d{3}[-\\s]?\\d{3}[-\\s]?\\d{3}\\b"
-      replacement: "[CA_SIN]"
 ```
 
 Changes take effect on restart — no code changes required.

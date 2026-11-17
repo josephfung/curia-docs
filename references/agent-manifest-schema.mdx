@@ -55,6 +55,11 @@ pinned_context:
     - key: <namespace>/<key>
       description: string
 
+# Optional — what this agent structurally cannot do, and where that work goes
+# Shown to the coordinator after this agent's roster line as "Cannot: …"
+limits:
+  - string
+
 # Optional — inject the list of available specialist agents into the system prompt
 # Used by the coordinator to know which specialists it can delegate to
 # Default: false
@@ -129,6 +134,15 @@ The agent fails to load, with an error naming the agent and the entry, on any of
 - a config key without exactly one `/`
 - a blank or over-long description
 - a duplicate entry
+
+### `limits`
+
+A short list of things this agent structurally cannot do, and where that work goes instead. The coordinator sees them after the agent's line in its specialist roster, as "Cannot: …", so it routes work somewhere that can do it instead of learning from a decline. Keep each entry short: the roster has a size budget. Each entry must be a non-empty string, or the agent fails to load.
+
+```yaml
+limits:
+  - draft to an address not from a contact or the principal's mail (have contacts add them first)
+```
 
 ### Memory access
 

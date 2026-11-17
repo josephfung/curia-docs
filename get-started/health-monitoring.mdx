@@ -31,7 +31,8 @@ The response includes a top-level `status` field and a `checks` object with per-
     "sms":          "skipped",
     "voice":        "skipped",
     "signal_voice": "skipped",
-    "scheduler":    "ok"
+    "scheduler":    "ok",
+    "principal_mailbox_triage": "ok"
   }
 }
 ```
@@ -60,10 +61,11 @@ The key distinction: both `ok` and `degraded` return `200`. A `degraded` instanc
 | `sms` | The Telnyx webhook handler is installed | SMS not configured |
 | `voice` | LiveKit reachability, via its management API | Voice not configured |
 | `signal_voice` | The shared PulseAudio socket that carries Signal call audio | `SIGNAL_PULSE_SOCKET_PATH` unset |
-| `browser` | A bounded round-trip to the Chrome process | Browser automation not running |
+| `browser` | A bounded round-trip to Chrome in the `browser` container | Browser automation not running |
 | `mcp.<server>` | A `ping` to each enabled MCP server | Server disabled |
-| `nylas_calendar` | The principal's calendar grant, separately from email | Calendar not configured |
+| `nylas_calendar` | The calendars of every connected principal mailbox, separately from email. One failing mailbox fails it | No principal mailbox connected |
 | `scheduler` | The scheduler ticked within its watchdog window | Never |
+| `principal_mailbox_triage` | The inbox triage heartbeat: recent ticks, unread checks, mailboxes that stopped making progress, and a suspended drain | The CEO Inbox agent isn't running |
 
 <Note>
   **Three voice-adjacent checks, on purpose.** `signal` is Signal *messaging*, `voice` is *console* calls, and `signal_voice` is Signal *calls*. They fail independently — Signal texts can be perfectly healthy while call audio is dead — so a green one tells you nothing about the others.
@@ -120,7 +122,9 @@ health:
     llm_standard:     "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
     llm_powerful:     "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
     embeddings:       "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
+    image_gen:        "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
     nylas:            "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
+    nylas_calendar:   "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
     signal:           "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
     google_workspace: "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
     tavily:           "https://uptime.betterstack.com/api/v1/heartbeat/<token>"
@@ -143,9 +147,9 @@ health:
 | `embeddings` | Last recorded embedding call outcome, from OpenAI or your own embedding server | Entity memory off (no embedding source) |
 | `image_gen` | Last `image-generate` tool outcome | No `OPENAI_API_KEY` |
 | `nylas` | Fetches one message via the Nylas client | Email not configured |
-| `nylas_calendar` | Lists calendars via the principal's calendar grant | Calendar not configured |
+| `principal_mailbox:<id>` | One per connected principal mailbox: reads the grant, fetches one message and lists calendars. The default mailbox's result pings the `nylas_calendar` heartbeat | Not run with no mailbox connected; `skipped` with no Nylas API key |
 | `signal` | Pings the Signal-cli socket | Signal not configured |
-| `google_workspace` | Checks that the credential file is readable and the refresh token has not expired | Google Workspace MCP server not registered |
+| `google_workspace` | Makes one live Drive call, so an expired or revoked Google sign-in fails it | Google Workspace MCP server not registered |
 | `tavily` | With a key set, calls Tavily's usage endpoint (no search credits spent); fails on an invalid key | No key set. Search runs keyless, and the canary reports `skipped` with "keyless mode (no API key set)" rather than spend a free search |
 
 <Note>

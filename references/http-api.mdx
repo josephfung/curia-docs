@@ -153,6 +153,9 @@ The following endpoints are used by the built-in web console. They use console s
 | `POST /api/registry/:kind/:name/disable` | Disable a tool, skill, or agent |
 | `DELETE /api/registry/:kind/:name` | Uninstall a tool, skill, or agent |
 | `GET /api/vault/*` | Manage vault secrets and channel credentials (names only; values are never returned) |
+| `GET/POST /api/registry/principal-mailboxes`, `PATCH/DELETE /api/registry/principal-mailboxes/:id` | List, add, update and remove the principal's mailboxes (**Settings → Behaviour → Email & Calendar**); `POST …/test` looks up a Nylas grant and returns its address and provider |
+| `GET/POST/PUT /api/documents/*` | The **Memory → Documents** workspace: browse, search, read, edit, archive, restore, export and import documents |
+| `GET /api/activity`, `GET /api/dashboard/*` | The console home page: activity feed, waiting items, work histogram, value tiles and Hiccups |
 
 See [Managing skills, agents, and channels](/core-concepts/registry) for how the registry and required-secret gates work.
 
