@@ -23,6 +23,8 @@ When you're done, Curia is running and you can sign in to its console. It can't 
 
 You don't need Node, pnpm or openssl on the host. Migrations, secret generation and vault seeding all run inside the image.
 
+You don't need an embedding key either. Curia's memory runs on an embedding model bundled in the image, so the knowledge graph works from the first boot. See [Embedding models](/integrations/embeddings-endpoint) to use a different one. (The bundled model is newer than v0.45.0; on that release, memory needs an OpenAI key or your own embedding server, as [Search and memory](/get-started/search-and-memory) explains.)
+
 **Time:** a few minutes once the host and DNS record are ready. Connecting everything else takes an hour or two, at your own pace. See [What to expect](/get-started/what-to-expect).
 
 ### Why HTTPS by default
@@ -120,9 +122,9 @@ A local install on `http://localhost:3000` is fine for a try-out on your own mac
   <Step title="Meet the setup agent">
     At `/chat`, the setup agent greets you. It starts with a few quick wins that need no credentials: Curia's persona, a scheduled debrief, how Curia refers to your principal, and a tour of what's ready. Then it helps you connect the rest, one item at a time. You can stop at any point and pick up in a later session.
 
-    <Warning>
-      Add an embedding source soon after you install. Without one, Curia's memory is off and the setup agent can't check what you've already set up. See [Search and memory](/get-started/search-and-memory).
-    </Warning>
+    <Note>
+      Curia's memory, which the setup agent uses to track what you've set up, works out of the box on the bundled embedding model. To build memory from conversations, turn on fact extraction later: see [Search and memory](/get-started/search-and-memory).
+    </Note>
   </Step>
 </Steps>
 
@@ -146,7 +148,7 @@ A local install on `http://localhost:3000` is fine for a try-out on your own mac
   curl https://curia.example.com/api/health
   ```
 
-  `"status"` should be `"ok"`. Channel checks such as `email`, `signal` and `sms` read `"skipped"` until you connect them. That's expected. See [Health monitoring](/get-started/health-monitoring) for every field.
+  `"status"` should be `"ok"`, and `"knowledge_graph"` should read `"ok"` (Curia's memory is on). Channel checks such as `email`, `signal` and `sms` read `"skipped"` until you connect them. That's expected. See [Health monitoring](/get-started/health-monitoring) for every field.
 - The setup form saved and you're in `/chat` with the setup agent.
 
 ## What your principal will notice

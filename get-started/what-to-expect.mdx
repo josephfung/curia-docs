@@ -26,7 +26,7 @@ The Setup pages are written to the operator. They say whose mailbox or phone num
 
 Gather these before you start. You don't need them all at once: each Setup page lists what it needs.
 
-- **A machine with Docker and Docker Compose.** A small server works.
+- **A machine with Docker and Docker Compose.** A small server works: 2 vCPU and 4 GB of memory plus swap. See [System requirements](/get-started/system-requirements).
 - **An Anthropic API key.** The installer asks for one. Other model providers (OpenRouter, Amazon Bedrock) need config changes after install. See the [configuration reference](/references/configuration).
 - **A domain, or another HTTPS route to the server.** Telnyx needs a public URL to deliver texts, and browsers only allow the microphone for voice calls over HTTPS (or on the server itself). The installer offers a local option, but use it only to try Curia out.
 - **A dedicated mailbox for Curia and a Nylas account.** Curia sends and receives email from its own address, through Nylas.
@@ -34,7 +34,6 @@ Gather these before you start. You don't need them all at once: each Setup page 
 - **Voice keys.** LiveKit comes bundled with Curia. You also need a Deepgram key (speech-to-text) and a Cartesia key (Curia's spoken voice).
 - **Access to the principal's email and calendar.** Today this is a Nylas grant for each of the principal's mailboxes (work and personal, say), set up by hand. Google accounts only, for now.
 - **A Google account for Curia**, plus a Google Cloud OAuth client, so Curia can create and share Google Docs.
-- **An embeddings source.** Either an OpenAI API key or your own embeddings server. Without one, Curia's memory and the setup assistant don't work.
 - **Optional: a Tavily key.** Web search works without one, but is capped at a few dozen searches an hour. A free key raises the limit.
 
 ## What it costs
@@ -49,10 +48,10 @@ Prices for the third-party services Curia uses, checked on the vendors' sites on
 | Telnyx | Messaging the principal by SMS (instead of Signal) | $0.004 per message part, plus carrier fees. Number and 10DLC registration fees vary. |
 | Deepgram | Speech-to-text for voice calls | $200 free credit. Nova-3 streaming: $0.0077/minute. |
 | Cartesia | Curia's spoken voice | Free: 20K credits (1 credit per character), which appears to lack a commercial licence. Pro: $5/month for 100K credits. |
-| OpenAI embeddings | Curia's memory (`text-embedding-3-small`) | $0.02 per 1M tokens |
+| OpenAI embeddings (optional) | Curia's memory, only if you choose `text-embedding-3-small` over the bundled model | $0.02 per 1M tokens |
 | Tavily | Web search. Works without a key; a key raises the limit. | Without a key: free, capped per hour. Free key: 1,000 credits/month, no card needed. |
 
-LiveKit runs on your own server, so it adds no fee. You can also run your own embeddings server instead of paying OpenAI.
+LiveKit runs on your own server, so it adds no fee. Curia's memory runs on an embedding model bundled in the image, which adds no fee either.
 
 ## The Setup steps
 
@@ -78,7 +77,7 @@ Work through these in order. Each page says what it's for, what you'll need, the
     Connect Curia's Google account. [Google Docs](/get-started/google-docs)
   </Step>
   <Step title="Search and memory">
-    Turn on embeddings (needed), and optionally add a Tavily key for more web searches. [Search and memory](/get-started/search-and-memory)
+    Turn on fact extraction, optionally swap the embedding model, and optionally add a Tavily key for more web searches. [Search and memory](/get-started/search-and-memory)
   </Step>
   <Step title="Check your setup">
     Confirm every item works, then hand over. [Check your setup](/get-started/check-your-setup)
