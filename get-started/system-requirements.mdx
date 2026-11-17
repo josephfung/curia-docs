@@ -1,0 +1,76 @@
+---
+title: "System requirements"
+description: "The machine to run Curia on: CPU, memory, disk, operating system and network."
+---
+
+Curia is a long-running service. It triages mail on a schedule, wakes tasks, and answers your principal at any hour, so run it on a machine that stays on: a small cloud server (VPS), a server in your own environment, or an always-on machine in your office. A laptop is fine for a try-out, but Curia stops working whenever the lid closes.
+
+<Note>
+  These figures apply to **Curia v0.45**. Curia's footprint changes as features land, and this page is revised with each release that moves it. Check it again before you upgrade.
+</Note>
+
+## At a glance
+
+| | Minimum | Recommended |
+|---|---|---|
+| **CPU** | 2 vCPU | 2 vCPU |
+| **Memory** | 4 GB RAM | 4 GB RAM plus 2–4 GB of swap |
+| **Disk** | 10 GB free for Docker | 20 GB or more |
+| **Architecture** | x86-64 (`linux/amd64`) or ARM64 (`linux/arm64`) | Either |
+| **Operating system** | Linux with Docker Engine and the Compose plugin | A current Ubuntu or Debian LTS |
+
+A 2 GB server is too small. Curia's containers alone use about 1.5 GB of memory at rest on a stock install, before any conversation, browser page or connected channel adds to it.
+
+## What runs on the machine
+
+A stock install, as `install.sh` starts it, runs three containers:
+
+| Container | What it does |
+|---|---|
+| `curia` | Curia itself: the console, channels, agents and tools. |
+| `postgres` | Postgres 16 with pgvector: memory, contacts, tasks and the audit log. |
+| `browser` | Chrome for the `web-browser` tool, sandboxed in its own container without Curia's secrets. See [Web browser](/integrations/web-browser). |
+
+Voice adds a fourth, `livekit`, when you turn it on. See [Voice](/get-started/voice).
+
+The language models don't run on this machine. Curia calls the provider you configure (Anthropic by default) over the internet, so the server needs no GPU. If you run a local model or your own embedding server instead, that server has its own requirements on top of these.
+
+## Memory
+
+4 GB of RAM is the working minimum. At rest, a stock install leaves about 1.9 GB of a 4 GB server free. That free memory is the budget everything else draws on:
+
+- **Conversations and tasks**: each running turn holds its context in memory.
+- **The browser**: every open page costs memory, and some sites cost a lot.
+- **Google Docs, connected channels and voice calls.**
+- **Data that grows** over months of use.
+
+Add 2–4 GB of swap so a busy moment slows Curia down instead of stopping a container. Most cloud servers ship without swap, so check with `free -h`.
+
+## Disk
+
+The images take about 6–7 GB under Docker's default image store. An upgrade keeps the old and new Curia images side by side until you prune, which adds about 4 GB for a while, so leave room for two copies:
+
+```bash
+docker image prune
+```
+
+Postgres grows with use: mail, documents, memory and the audit log. 20 GB is comfortable for a single principal for a long time. Back up the `pgdata` volume, not just the disk.
+
+## Network
+
+- **A domain name** with a DNS `A` record pointing at the server, for the default HTTPS install. Let's Encrypt issues the certificate.
+- **Inbound ports 80 and 443** open to the internet, for HTTPS and certificate renewal. Postgres binds to `127.0.0.1`, and so does Curia's port 3000 on the default HTTPS and local installs. If you run your own proxy in front of Curia, keep port 3000 off the public internet. See [Deployment](/get-started/deployment).
+- **Outbound HTTPS** to your model provider and to every service you connect (Nylas, Signal, Telnyx, Slack, Google).
+- **Voice** adds two ports for call audio (`7881/tcp` and `7882/udp`) and an HTTPS route to LiveKit's signaling port. See [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server).
+
+## Software
+
+On the operator install you need only **Docker** (Engine with the Compose plugin) and **curl**. Migrations, secret generation and vault seeding run inside the image, so you don't need Node, pnpm or openssl on the host.
+
+Running Curia from source for development needs **Node 26** or later and **pnpm**. See [Development](/get-started/development).
+
+## How these figures were measured
+
+The memory and disk figures come from a stock install at rest on a 2 vCPU, 4 GB RAM x86 cloud server with 4 GB of swap. Each container sat under 0.3% CPU at rest, and voice added about 55 MB of memory at rest.
+
+The measurement did not cover conversations with the language model, open browser pages, Google Docs, connected channels, months of data, load during a live call, or servers smaller than 2 vCPU and 4 GB. If you run Curia on something different, [open an issue](https://github.com/josephfung/curia/issues) with what you see: those reports are how this page gets better.

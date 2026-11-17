@@ -4,7 +4,7 @@ sidebarTitle: "Contacts & trust"
 description: "Curia verifies every sender before acting on their behalf, using trust scores, channel authentication, and deterministic permissions that you control."
 ---
 
-Every person who contacts Curia — whether through email, Signal, or the HTTP API — is a contact with a **capability tier**. Before Curia takes any action on a sender's behalf, it checks who they are, how confident it is in their identity, and whether the channel they're using is trusted enough for what they're asking. These checks are deterministic: a sender either has permission or they don't.
+Every person who contacts Curia — whether through email, Signal, Slack or SMS — is a contact with a **capability tier**. Before Curia takes any action on a sender's behalf, it checks who they are, how confident it is in their identity, and whether the channel they're using is trusted enough for what they're asking. These checks are deterministic: a sender either has permission or they don't.
 
 <Warning>
   New contacts start at the **`unknown`** tier. An unknown sender isn't ignored — Curia will read and reply to them under read-only constraints (it won't take actions, share your private context, or commit anything on your behalf). Contacts move up to **`known`** automatically as a real relationship becomes evident, and you can promote anyone to **`trusted`** explicitly. See [capability tiers](#capability-tiers) below.
@@ -27,9 +27,9 @@ messageTrustScore =
 
 | Channel | Trust level | Normalized weight |
 |---|---|---|
-| CLI | High | 1.0 |
+| CLI, web console and voice | High | 1.0 |
 | Signal | High | 1.0 |
-| HTTP API | Medium | 0.6 |
+| Slack, SMS | Medium | 0.6 |
 | Email | Low | 0.3 |
 
 Separately, a contact's **capability tier** indicates how much Curia trusts a specific person, regardless of channel. See [capability tiers](#capability-tiers) below for the full model — `principal` (you) outranks all others and bypasses PII redaction, outbound content filters, and trust-score thresholds.
@@ -74,7 +74,9 @@ You set a tier conversationally — "treat Dana as trusted" runs the `contact-se
 | Brand-new email sender | ~0.12 | Low channel trust (0.3 × 0.4) + zero contact confidence |
 | CEO-verified Signal contact | ~0.80 | High channel trust (1.0 × 0.4) + high confidence (0.95 × 0.4) |
 | Unknown Signal sender | ~0.40 | High channel trust + zero contact confidence |
-| Known email contact (long history) | ~0.52 | Low channel trust + high confidence |
+| Known email contact (long history) | ~0.52 | The `known` tier lifts email's channel weight to 0.6 (0.6 × 0.4), plus high confidence |
+
+A contact's tier can raise the channel weight: `known` counts as a medium-trust channel, and `trusted` or `principal` as high. So a known email contact scores about 0.24 plus 0.4 × their confidence, which is why the scheduling threshold below sits at 0.3.
 
 ## Action thresholds
 
@@ -83,7 +85,7 @@ The coordinator checks the sender's `messageTrustScore` before taking action. If
 | Action category | Minimum score | What this means |
 |---|---|---|
 | Information queries | 0.2 | Any authenticated message qualifies |
-| Scheduling | 0.5 | Medium trust channel or a known email contact |
+| Scheduling | 0.3 | A known contact, even by email, once there's a little message history |
 | Data export | 0.8 | High-trust channel and a verified contact |
 | Financial actions | 0.8 | High-trust channel and a verified contact |
 
@@ -102,7 +104,7 @@ Your email provider performs these checks at the server level. The email channel
 - `senderVerified: true` — SPF, DKIM, and DMARC all pass
 - `senderVerified: false` — any check fails, or headers are absent (fails closed)
 
-Only the header your own provider adds on receipt counts. A sender can write their own `Authentication-Results` header into a message claiming everything passed; Curia ignores it.
+Only the header your own provider adds on receipt counts. A sender can write their own `Authentication-Results` header into a message claiming everything passed; Curia ignores it. Curia also reads the provider's header strictly as results: text the sender controls inside it, such as an address in a comment, can't supply a pass.
 
 When a message arrives with `senderVerified: false`, the coordinator will not take consequential actions — financial, data, or access changes — without confirmation via a verified channel like Signal or CLI.
 
@@ -152,11 +154,19 @@ Existing contacts are not counted toward the limits — only genuinely new conta
 
 ## Automatic elevation
 
-An `unknown`-tier contact is elevated to **`known`** automatically when Curia sees evidence of a real relationship — no confirmation step from you, and no fixed daily sweep. Three kinds of signal drive it:
+An `unknown`-tier contact is elevated to **`known`** automatically when Curia sees evidence of a real relationship — no confirmation step from you, and no fixed daily sweep. Four kinds of signal drive it:
 
 1. **Correspondence** — when Curia (or you) sends an outbound message to the contact, the outbound gateway raises their tier to at least `known` before the message goes out. Two-way communication is enough.
-2. **Judgment** — a weekly background scan and the dispatch-layer scoring pipeline weigh signals like email domain, relationship context, and communication patterns, elevating contacts that cross the confidence threshold.
-3. **Backfill** — a one-shot maintenance script re-evaluates existing `unknown` contacts against the same criteria.
+2. **People you know** — a new email sender is treated as `known` from their first message when you have written to them before (Curia checks your Sent mail), or when they're on one of your organization's own domains. The domain rule is off until you list the domains in `config/local.yaml`. List only domains your organization controls, never a shared provider such as `gmail.com`:
+
+   ```yaml
+   security:
+     principal_org_domains: [acme.com]
+   ```
+3. **Judgment** — a weekly background scan and the dispatch-layer scoring pipeline weigh signals like email domain, relationship context, and communication patterns, elevating contacts that cross the confidence threshold.
+4. **Backfill** — a one-shot maintenance script re-evaluates existing `unknown` contacts against the same criteria.
+
+For email, the second and third paths only count mail that passes SPF, DKIM and DMARC, so a forged From address can't earn `known`. Judgment also never elevates a sender on their first day: Curia must have known them since an earlier day, so a stranger can't become `known`, and book time with you, in a couple of quick emails.
 
 <Note>
   Automatic elevation only ever reaches `known`. Moving a contact to `trusted` or `principal` always requires an explicit step from you. Elevation also never marks a *self-claimed* channel identity as verified — that still requires your confirmation.
@@ -190,11 +200,18 @@ Curia sends only to a **contact** (or to you), never to an address it has typed 
 
 Beyond identity and trust, Curia keeps a small set of **canonical profile attributes** directly on each contact record: preferred name, job title, organization, primary email and phone, timezone, locale, location, pronouns, LinkedIn URL, a short bio, and birthday. These are stored as structured fields on the contact itself — not as free-floating knowledge-graph facts — so agents read a reliable value instead of inferring one from a list of remembered notes. That distinction matters: it's what stops Curia from guessing a stale address or timezone when composing on your behalf.
 
-You set them the same conversational way as anything else ("Sarah's title is now VP of Sales", "her timezone is US Pacific"), and Curia writes them via the `contact-update` tool (phone numbers are normalized to E.164). Richer, narrative knowledge about a person — relationships, history, preferences — still lives in the knowledge graph; the canonical attributes are just the handful of stable fields worth pinning down. The console's contact view exposes the same fields for direct editing.
+You set them the same conversational way as anything else ("Sarah's title is now VP of Sales", "she's in Vancouver now"), and Curia writes them via the `contact-update` tool (phone numbers are normalized to E.164). Richer, narrative knowledge about a person — relationships, history, preferences — still lives in the knowledge graph; the canonical attributes are just the handful of stable fields worth pinning down. The console's contact view exposes the same fields for direct editing.
+
+Timezones are stored as IANA zones such as `America/Vancouver`. A calendar-style label like "Eastern Time - Toronto", or a city name, is converted when exactly one zone matches. A region that spans several zones, such as "Eastern Time - US & Canada", is refused rather than guessed. Your own timezone changes only when you say so: a fact Curia reads in an email or calendar invite never changes it.
 
 ## Contact deduplication
 
-Curia runs a weekly background scan for likely duplicate contacts — for example, "Jenna Torres" and "J. Torres" who share the same email address. When potential duplicates are detected, Curia presents them to you for review:
+Curia runs a weekly background scan for likely duplicate contacts and settles most of them itself:
+
+- **Proven duplicates merge automatically.** Two contacts that share the same verified email address or phone number, or point to the same person in the knowledge graph, are merged without asking, as long as both are at the same tier and Curia's autonomy score is at least 70. Every automatic merge is audit-logged.
+- **A matching name is never proof.** Namesakes are common, so a name match alone never merges anything.
+- **Curia decides the rest when no one you vouch for is involved.** For a likely pair where neither contact is `known` or `trusted`, such as two records for the same newsletter sender, Curia reviews it and either merges it or records the two as different.
+- **Ambiguous pairs come to you.** When a pair of people includes someone at `known` or `trusted` and the evidence isn't conclusive, or a merge would raise someone's tier, Curia asks you:
 
 > "I noticed two contacts that look like the same person:
 > - Jenna Torres (CFO, verified email jenna@acme.com)
@@ -202,7 +219,7 @@ Curia runs a weekly background scan for likely duplicate contacts — for exampl
 >
 > I'd merge them into Jenna Torres (CFO). Want me to proceed?"
 
-Curia never auto-merges contacts. You confirm every merge.
+Your own contact, Curia's agents and system contacts are never merged. A pair you or Curia put off isn't raised again for 8 weeks, unless one of the contacts changes.
 
 **Saying "no" sticks.** If you tell Curia two contacts are genuinely different people, that ruling is recorded permanently and the pair is never proposed again — including for two people who share a name and have no knowledge-graph presence at all, which is exactly the case that used to fail silently. Exclusions survive later merges: if one of the two is merged into someone else, the ruling follows the surviving contact rather than being quietly forgotten.
 
@@ -217,7 +234,7 @@ Authorization runs through a layered check on every request from a non-principal
 3. **Role defaults** — the default permissions and denials for the contact's role (CFO, board member, direct report, advisor, etc.).
 4. **Channel trust gate** — even if role and overrides permit an action, the channel must be trusted enough. Financial and data actions require a high-trust channel.
 
-Separately, a **consequential-action gate** weighs the *initiating* contact's tier against the action's stakes: a `known` contact can get a reply to themselves, but a third-party-facing or higher-stakes action escalates to you for a decision. When the call isn't clear-cut, an escalation judge classifies it and, by design, escalates rather than guesses.
+Separately, Curia decides whether a consequential action needs your approval first. By default that's decided by its **autonomy score** and the action's stakes, not by the contact's tier: an escalation judge reviews sends for an outsider steering Curia, for claims made in your voice, and for whether the content is supported, and escalates rather than guesses. See [Autonomy](/core-concepts/autonomy). Installs that want the older tier-based gate, where a `known` contact gets a reply to themselves but anything third-party-facing escalates to you, can set `autonomy.gating: tier` in `config/local.yaml`; it will be removed in a later release.
 
 The outcome is one of: `Allowed`, `Denied`, `Blocked by channel trust`, or `Needs CEO decision`.
 

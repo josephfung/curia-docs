@@ -103,6 +103,8 @@ Once it's set up, your principal can use Signal to:
 - get urgent notifications when Curia flags something;
 - send Curia instructions securely when away from their desk.
 
+If they send a follow-up while Curia is still working on their last message ("actually, make it Thursday"), it joins the work already under way instead of starting a second, separate reply.
+
 <Info>
   Trust levels decide which actions Curia takes on a sender's behalf. Signal carries `high` trust, the same as the console.
 </Info>
@@ -118,7 +120,7 @@ Your principal can send Curia a Signal voice note and it's transcribed into an o
 
 ## Voice calls
 
-People can also **call** Curia's Signal number and hold a live spoken conversation. This is off by default and needs extra infrastructure around signal-cli. See [Signal calls](/channels/voice-setup#signal-calls) on the Voice page.
+People can also **call** Curia's Signal number and hold a live spoken conversation. A call from your principal's linked number counts as your principal, just like their Signal messages. This is off by default and needs extra infrastructure around signal-cli. See [Signal calls](/channels/voice-setup#signal-calls) on the Voice page.
 
 <Warning>
   By default Curia picks up for strangers too, at unknown trust: calls follow the same `unknown_sender` setting as Signal texts, which ships as `allow`. That's a different exposure from Signal messaging. Read the [policy section](/channels/voice-setup#who-can-call-and-what-they-can-do) before enabling it.

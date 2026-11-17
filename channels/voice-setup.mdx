@@ -1,7 +1,7 @@
 ---
 title: "Talk to Curia by voice"
 sidebarTitle: "Voice"
-description: "Reference for Curia's voice channel: LiveKit, Deepgram and Cartesia settings, running LiveKit on a server, Signal calls, and troubleshooting."
+description: "Reference for Curia's voice channel: LiveKit, Deepgram and Cartesia settings, running LiveKit on a server, call agendas and minutes, Signal calls, and troubleshooting."
 ---
 
 Voice lets your principal talk to Curia out loud: a live, two-way call instead of typing. Curia streams the caller's speech to text, thinks and runs tools the same way it does in chat, and speaks its reply back sentence by sentence. The caller can interrupt it mid-sentence (barge-in) and it stops to listen, the way a real conversation works.
@@ -16,6 +16,8 @@ There are two ways to place a call, and they share everything above the audio la
 - **By Signal call:** anyone can place a native Signal voice call to Curia's Signal number. This is off by default, needs the console path working first, and is covered in [Signal calls](#signal-calls) below.
 
 A console call runs inside an authenticated console session, so it carries the same **high** trust as the CLI. Curia treats whoever is on a console call as the principal: during setup that's you, and after hand-over it's normally your principal. A Signal call does not get that trust automatically. The caller is whoever dialled, and Curia resolves them like any other Signal contact. See [Who can call, and what they can do](#who-can-call-and-what-they-can-do).
+
+Console calls, and Signal calls from the principal's own number, count as the principal speaking for themselves. A direct instruction on the call is their approval, just as it is in console chat.
 
 <Warning>
   Enabling voice means **audio and transcripts leave the host** to three third parties: Deepgram (speech-to-text), Cartesia (text-to-speech), and your configured LLM provider. Speech-vendor keys never reach the browser, but treat these vendors' data-processing terms the way you would any external service before turning voice on.
@@ -32,6 +34,8 @@ A call uses three services, wired together by Curia:
 - **Cartesia:** streaming text-to-speech. It turns Curia's reply into spoken audio in the voice you chose.
 
 The reply is spoken from within the console session (like principal web chat), while any tools Curia calls still run through the normal execution layer and any external sends still go through the outbound gateway. Final transcripts are written to working memory, so the call shows up in the console chat history afterward.
+
+Spoken turns run on the fast tier's model (Claude Haiku 5.5 by default) with thinking turned off, because a call can't wait for the model to think. They also carry a small set of tools of their own: briefing a specialist (for the calendar, contacts, the inbox or research), resolving dates, the to-do list, remembering facts, meeting agendas and notes, and handing work off. Anything else, such as sending a message, goes through that hand-off. See [It hands work off instead of stalling the call](#what-curia-does-on-a-call).
 
 ## LiveKit
 
@@ -164,15 +168,31 @@ You can call from the Curia app on your phone too. If you lock the phone or swit
   </Accordion>
 
   <Accordion title="The caller can interrupt it">
-    When the caller starts talking while Curia is speaking, it stops to listen. Detection takes about a second, because Curia waits for enough of their speech to rule out its own voice or background noise. On console calls, audio already queued is dropped as soon as they're detected. On Signal calls, up to about two seconds of queued audio can still play out before it goes quiet.
+    When the caller starts talking while Curia is speaking, it stops as soon as it hears them start, before any words are transcribed, and drops the audio it had queued. To avoid stopping for its own voice coming back through the caller's speaker, or for background noise, it only counts sound at least as loud as `-35` dBFS.
+
+    If echo or noise keeps cutting Curia off, raise the level toward `0` in `config/local.yaml`. To have Curia wait for actual words instead, turn onset detection off:
+
+    ```yaml
+    channels:
+      voice:
+        barge_in_speech_start_min_dbfs: -25   # from -90 to 0
+        # barge_in_on_speech_start: false
+    ```
+
+    Restart Curia after changing either setting.
   </Accordion>
 
   <Accordion title="It knows what just happened on other channels">
     Spoken turns read the same active outbound context the text channels write to. Call right after Curia emails someone and it already knows what went out; the caller doesn't have to re-establish the subject.
   </Accordion>
 
-  <Accordion title="It hands heavy work off instead of stalling the call">
-    Some asks take minutes, not seconds — research, a browser session, a multi-step delegation. Rather than leaving dead air while it works, Curia acknowledges the request, dispatches it to the async coordinator, and calls or messages the principal back when it is done. The call keeps moving.
+  <Accordion title="It hands work off instead of stalling the call">
+    Some asks need more than a live call can do: research, a browser session, a saved sign-in, a message to someone. Curia hands these to its full self (the `async-offramp` tool) in one of two ways:
+
+    - **While you talk.** For something the caller wants done now, such as sending a message or checking a site, the result usually comes back on the call within about a minute. If it runs longer, Curia says it will follow up afterwards.
+    - **After the call.** For longer work, Curia says it will take care of it and follows up on the principal's usual channel, or the one they name.
+
+    An action that needs the principal's authority, such as blocking a contact, runs on their instruction only while they're still on the call. If the call has ended by the time it's ready, it becomes an approval request instead.
   </Accordion>
 
   <Accordion title="It uses the same guardrails as the text agent">
@@ -183,6 +203,15 @@ You can call from the Curia app on your phone too. If you lock the phone or swit
 <Note>
   Voice needs a model that genuinely supports **streaming** and **tool calls**, and Curia checks the model registry for both before it will start the channel. A provider exposing a streaming API is not proof — OpenRouter, for instance, exposes one for every model it routes, including models that do neither. If `channels.voice.model` names a model missing either capability (or a model Curia does not know), voice refuses to boot and says which capability is missing.
 </Note>
+
+## Agendas, notes and minutes
+
+A call with the principal can follow an agenda and end with minutes.
+
+- **Parking an agenda.** The principal, a routine or Curia itself can park an agenda for an upcoming call: up to ten topics plus the background Curia needs. Ask in chat, for example "for our call tomorrow, let's cover the board deck and the hiring plan". Agendas live in the console under **Memory → Documents**, in `/meetings/agendas/`, where the principal can read and edit them. An agenda expires after 7 days unless given a later date, up to 30 days.
+- **Starting the call.** When the principal calls (from the console, the phone app or Signal), Curia checks for parked agendas. If exactly one is waiting and it's due, the call opens on it. Otherwise Curia knows which ones are waiting and pulls up whichever the principal picks. They can switch to another agenda mid-call.
+- **Notes on any call.** Without an agenda, the principal can say "take notes on this call" or "send me a recap afterwards" (`meeting-notes-start`).
+- **After the call.** Curia saves the transcript and writes minutes, under `/meetings/minutes/` in **Memory → Documents**. It then sends one follow-up: a recap if the principal asked for one or an agenda topic was covered. It carries out changes the principal directed on the call, and drafts anything meant for other people rather than sending it. An agenda the call didn't finish goes back in the queue, noting which topics were covered.
 
 ## Signal calls
 
@@ -222,7 +251,7 @@ Whether Curia answers a stranger follows the same setting as Signal texts: `chan
 - A contact you have **blocked**.
 - A caller with **no phone number** on the call (Signal permits UUID-only callers). There is nothing stable to resolve or to attach a contact to later, so Curia declines rather than talk to someone untraceable.
 
-Callers are resolved against the **same Signal identity** used for text messages, so standing carries over: a call from the Signal number on the principal's contact is treated as the principal. A stranger is admitted at **unknown** trust, which means the call is answered but the caller stays outside the elevated-tool and cross-channel-context gates. They can talk to Curia; they cannot use it as a lever on the principal's accounts.
+Callers are resolved against the **same Signal identity** used for text messages, so standing carries over: a call from the Signal number on the principal's contact is treated as the principal, and their instructions on the call count as their own approval. A stranger is admitted at **unknown** trust, which means the call is answered but the caller stays outside the elevated-tool and cross-channel-context gates. They can talk to Curia; they cannot use it as a lever on the principal's accounts.
 
 <Warning>
   With the default `allow`, Curia's Signal number is a phone number the public can reach Curia on. If that is not what you want, either set `channels.signal.unknown_sender: ignore` (accepting that strangers' texts are ignored too) or leave `SIGNAL_VOICE_CALLS_ENABLED` off. There is no calls-only allowlist in this version.
@@ -247,6 +276,10 @@ Signal calls fail in a way messaging does not: the JSON-RPC socket can be perfec
 <AccordionGroup>
   <Accordion title="The Voice button doesn't appear">
     Confirm Voice is installed **and** enabled in **Settings → Channels**, that all six vault keys are set (the Cartesia voice id is required), and that Curia was restarted after saving them.
+  </Accordion>
+
+  <Accordion title="The call shows 'Curia couldn't join the call'">
+    The console connected, but Curia's side of the call didn't join within 15 seconds, so the console ended the call. Check Curia's log for `Voice runtime failed to start session`, which gives the reason.
   </Accordion>
 
   <Accordion title="Token or session creation fails">
@@ -278,6 +311,10 @@ Signal calls fail in a way messaging does not: the JSON-RPC socket can be perfec
 
   <Accordion title="Curia cuts me off mid-thought">
     Your pause was longer than the turn hold, so Curia treated it as the end of your request. Raise `channels.voice.turn_hold_ms` (default `350`) in `config/local.yaml` and restart. See [It waits a beat before answering](#what-curia-does-on-a-call).
+  </Accordion>
+
+  <Accordion title="Curia stops talking when nobody spoke">
+    Its own voice or background noise was loud enough to count as the caller starting to speak. Each time, Curia logs `voice barge-in on speech onset was not followed by speech` at `warn`, and the interruption's `voice.barge_in_caller_dbfs` shows how loud the sound was. Raise `channels.voice.barge_in_speech_start_min_dbfs` above that level (toward `0`), or set `barge_in_on_speech_start: false`. See [The caller can interrupt it](#what-curia-does-on-a-call).
   </Accordion>
 
   <Accordion title="Barge-in feels slow, or the audio is choppy">

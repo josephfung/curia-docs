@@ -34,7 +34,7 @@ A blocked invocation:
 `OutboundGateway.send()` has an independent gate: direct sends are blocked when the score is below 70. Drafts are always available as the fallback — Curia can still compose and save a draft even when it cannot send.
 
 <Note>
-**CEO-bound and system messages are exempt from the outbound gate.** Messages addressed to you (the CEO) and internal infrastructure notifications (such as approval request alerts) bypass the autonomy gate at the gateway level. The gate governs autonomous communication with external parties — gating agent-to-principal messages would cause Curia to go silent at low scores and prevent it from delivering the very notifications you need to act on blocked requests. All other checks (content filter, PII redaction, blocked-contact) still apply.
+**CEO-bound and system messages are exempt from the score gates.** A send whose only recipient is you (the CEO), and internal infrastructure notifications (such as approval requests), skip both the `action_risk` floor and the outbound gate. A message to you with anyone else on To or CC is gated like any other send. The gate governs autonomous communication with external parties — gating agent-to-principal messages would cause Curia to go silent at low scores and prevent it from delivering the very notifications you need to act on blocked requests. All other checks (content filter, PII redaction, blocked-contact) still apply.
 </Note>
 
 ### Principal bypass
@@ -46,6 +46,56 @@ The rationale: the autonomy score governs *autonomous* behavior (scheduled jobs,
 This bypass applies only to tasks that trace back to a message from you. Scheduled jobs, agent-to-agent delegations, and other autonomous work are still subject to the full gate logic regardless of autonomy score.
 
 The bypass is logged at every invocation — you can see principal-originated gate skips in the audit log.
+
+## Band review
+
+The score gates above decide which tools can run at all. A second check decides when Curia asks you first. It is chosen by `autonomy.gating` (see [Configuration](/references/configuration#gating)):
+
+- `band` (the default since v0.45): the autonomy band decides. Contact tier matters only when an outsider seems to be steering Curia.
+- `tier`: the older policy, where the tier of the contact who started the work decides which actions need approval and what a recipient may be told. It will be removed in a later release.
+
+Under `band`, the escalation judge reviews every send to someone other than you before it leaves. It asks whether an outsider is steering Curia, whether the message speaks for you, what it commits you to, whether its claims about you are grounded, and whether it shares anything it doesn't need to. Claims count as grounded when they come from your own words or from what Curia looked up during that turn.
+
+| Stakes | Examples | Goes out without asking at |
+|---|---|---|
+| Routine | Acknowledgements, thanks, scheduling logistics, offering open times | 80+ |
+| Commitment | Agreeing to new dates, deliverables, terms or introductions | 90+ |
+| Money or legal | Payments, purchase orders, pricing, contracts, signatures, legal positions | Never: always held for you |
+
+| Finding | What happens |
+|---|---|
+| An outsider is steering Curia | Held for you, at every band |
+| Speaks for you below the score its stakes need | Held for you |
+| Unsupported claims or unneeded details | Sent back for one rewrite. If the rewrite still has findings, it is held (below 80) or not sent and noted in your digest (80+) |
+| The judge fails or times out | Autonomous sends are held for you |
+
+A send you direct in a live turn is not stakes-gated: you decided. It is still checked for grounding and for personal details.
+
+Other actions at medium risk or above are checked before they run. One an outsider started is held when the judge finds Curia is being steered, and below 80 one that speaks for you asks first.
+
+### Personal details
+
+Under `band`, the gateway never cuts text out of a message or replaces it with `[REDACTED: …]` tokens. It detects each personal detail in the message, the subject and the quoted thread, and rules on who authorized it:
+
+| Who authorized the detail | Result |
+|---|---|
+| You, in a live turn, in the task you started, or by answering yes earlier on that thread | Sent |
+| A trusted contact on an authenticated channel | Held for you |
+| Someone who asked for it and that Curia can ask you about (a known or trusted contact, or someone linked to work you started) | Held, with a question to you: "*requester* wants your *detail* to *purpose*. Share it?" |
+| Nobody | Sent back to be rewritten without it. A stranger gets a polite decline |
+
+Your yes or no is stored for that detail, that person and that thread. Text quoted or forwarded inside a message never grants authority. A detail that appears only in the quoted thread is not a disclosure when everyone receiving the reply was already on the quoted message; otherwise the quote is dropped.
+
+Under `tier`, the [redactor](/security/redaction) replaces detected details with tokens as before.
+
+### Replies from your own mailbox
+
+Replies Curia sends on its own from your mailbox (not Curia's) are stricter still. Each mailbox's sending setting (off, on request by default, routine, all) caps what may go out, at most ten such replies go out a day across all your mailboxes, and a reply is held for you, left in your Drafts, when it:
+
+- shares information that isn't already on the thread;
+- answers a message that newly copied someone from legal, HR or the board, or someone senior to its sender.
+
+See [Replies from your mailbox](/core-concepts/inbox-sending) for the setting and what each level allows.
 
 ## Approval requests
 
@@ -63,7 +113,7 @@ Every change to the autonomy score is written to an append-only history record i
 - An optional reason you provided
 - The timestamp
 
-You can view the full history in Settings → Autonomy or by asking Curia directly: *"Show me my autonomy score history."* The `get-autonomy` tool also surfaces the trend direction (improving / declining / stable), `lastSetBy`, and the count of scored actions.
+You can view recent changes in **Settings → Behaviour → Autonomy** or the full history by asking Curia directly: *"Show me my autonomy score history."* The `get-autonomy` tool also surfaces the trend direction (improving / declining / stable), `lastSetBy`, and the count of scored actions.
 
 ## Automatic score adjustment
 
@@ -72,6 +122,8 @@ The autonomy scoring pass runs as part of the [dream engine](/core-concepts/drea
 - **Competence** (45%) — task success rate, accuracy of information retrieved, follow-through on commitments
 - **Commitment** (35%) — reliability on recurring tasks, consistency with stated preferences
 - **Compatibility** (20%) — alignment with your communication style and decision patterns
+
+The strongest evidence is your own: your verdicts on the spot checks in your digest ("2 bad") weigh three times as much as a judged action of the same age. An approval or denial counts as your feedback when you give it yourself, by reacting 👍 or 👎 to the request or in the console. One Curia resolves by reading your reply carries no signal, and an approval that expires carries none either.
 
 Automatic adjustments require a minimum of 30 scored actions before any change applies, use time-decay weighting so recent behavior matters more, and are capped at ±5 per pass. A 7-day CEO cooldown prevents the system from immediately overriding a manual score you just set. All automatic changes are written to the audit record — you can always see exactly what changed and why.
 

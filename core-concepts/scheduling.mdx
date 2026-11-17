@@ -50,7 +50,7 @@ You don't need to edit YAML to schedule tasks. Ask Curia in plain language and i
 > Run a competitor pricing check the first Monday of every month.
 ```
 
-Curia translates your request into a cron expression, creates the job in the scheduler, and confirms the schedule with you. For recurring jobs, it also stores an **intent anchor** — a short description of what the task is meant to accomplish — to prevent the job from drifting from its original purpose over multiple runs.
+Curia translates your request into a cron expression, creates the job in the scheduler, and confirms the schedule with you. For a long-running piece of work that spans many runs, it also stores an **intent anchor**, a short description of what the task is meant to accomplish, to keep the work from drifting from its original purpose.
 
 ## One-shot jobs
 
@@ -78,23 +78,26 @@ Scheduled debriefs carry their own recap steps, and a **weekly** debrief covers 
   <Tab title="Via conversation">
     ```
     > What scheduled jobs are running?
+    > Move the weekly expense summary to Tuesdays.
     > Cancel the weekly expense summary job.
     > Show me all jobs for the expense-tracker agent.
     ```
 
-    Curia uses `scheduler-list` and `scheduler-cancel` internally to handle these requests.
+    Curia uses `scheduler-list`, `scheduler-get`, `scheduler-update` and `scheduler-cancel` internally to handle these requests. Changing a routine edits the existing job rather than creating a second one.
   </Tab>
   <Tab title="Via HTTP API">
     ```bash
     # List all jobs
-    curl -H "Authorization: Bearer $API_TOKEN" \
+    curl -H "x-web-bootstrap-secret: $SECRET" \
       http://localhost:3000/api/jobs
 
     # Cancel a specific job
     curl -X DELETE \
-      -H "Authorization: Bearer $API_TOKEN" \
+      -H "x-web-bootstrap-secret: $SECRET" \
       http://localhost:3000/api/jobs/<job-id>
     ```
+
+    The jobs routes use console authentication: the `curia_session` cookie, or the `x-web-bootstrap-secret` header carrying `web_app_bootstrap_secret` from the vault. See [HTTP API](/references/http-api).
   </Tab>
 </Tabs>
 
@@ -106,6 +109,8 @@ Agents can manage jobs programmatically using these built-in tools:
 |---|---|
 | `scheduler-create` | Create a cron or one-shot job with optional `intent_anchor` |
 | `scheduler-list` | List jobs filtered by status or agent |
+| `scheduler-get` | Read one job in full: its whole task, schedule, linked task and last run |
+| `scheduler-update` | Edit a job's schedule or task in place, pause it, or resume a suspended or paused job |
 | `scheduler-cancel` | Cancel a job by ID |
 | `scheduler-report` | Write a summary of a completed run for use by the next execution |
 
@@ -117,19 +122,22 @@ The `scheduler-create` tool accepts these inputs:
   cron_expr?: string;     // Cron expression for recurring jobs
   run_at?: string;        // ISO 8601 timestamp for one-shot jobs
   agent_id?: string;      // Which agent to run the task (default: coordinator)
-  intent_anchor?: string; // Required for recurring jobs to prevent drift
+  intent_anchor?: string; // Makes this a persistent, multi-burst task
   timezone?: string;      // IANA timezone override (e.g., "America/Vancouver")
-  error_budget?: {        // Caps for this specific job
-    max_turns?: number;
+  error_budget?: {        // Resumable-task limits only
+    resumable?: boolean;
+    max_stalls?: number;
+    max_iterations?: number;
+    max_wallclock_hours?: number;
     max_cost_usd?: number;
   };
 }
 ```
 
 <Note>
-  Provide `intent_anchor` for every recurring (`cron_expr`) job. Write it as a description of what the job is meant to accomplish — not which tools to call. Good: "Summarize investor email activity from the past week and alert the CEO to anything requiring follow-up." Bad: "Call email-list then filter by sender domain."
+  An ordinary recurring routine needs only `cron_expr` and `task`. Provide `intent_anchor` only for persistent work that spans many bursts. Write it as a description of what the work is meant to accomplish — not which tools to call. Good: "Summarize investor email activity from the past week and alert the CEO to anything requiring follow-up." Bad: "Call email-list then filter by sender domain."
 
-  Do not provide `intent_anchor` for one-shot (`run_at`) jobs.
+  Do not provide `intent_anchor` for one-shot (`run_at`) jobs. An exact copy of an active job (same agent, task and schedule) is refused.
 </Note>
 
 ## Long-running tasks
@@ -182,6 +190,8 @@ A scheduled job is a trigger; a task is a unit of work. A task that needs to wak
 
 A deterministic **hourly heartbeat** is the backstop that keeps open work from lingering. It does no AI reasoning — it simply notices tasks that have gone quiet (an idle task Curia owns, or a "waiting" task whose expected reply never came) and wakes the owning agent to advance or re-evaluate them. Most work actually advances faster than that, driven by incoming replies and per-task wake timers; the heartbeat only catches the stragglers. Task management is enabled per agent by pinning the `tasks` skill (`pinned_skills: [tasks]`), which also makes the agent heartbeat-eligible, and tuned under the `tasks` block in `config/default.yaml`.
 
+Inbox triage of your principal's mailboxes has its own heartbeat instead of a cron job. Every 15 minutes it checks, without any AI call, which mailboxes are due on their own schedule and have unread mail, and only then wakes the inbox specialist. See [Your principal's email and calendar](/get-started/principal-email-calendar#what-your-principal-will-notice).
+
 ### When a task gets stuck
 
 Long-running work doesn't always go smoothly, and Curia is explicit when something needs you. Rather than a bare "still working" line, a stuck task escalates to you with the *reason* and enough detail to act on. There are four shapes:
@@ -222,7 +232,7 @@ intentDrift:
 
 ## Error budgets on scheduled tasks
 
-The same `max_turns` and `max_cost_usd` limits that apply to interactive tasks apply to scheduled tasks. Each burst gets a fresh budget allocation:
+The same `max_turns` and `max_cost_usd` limits that apply to interactive tasks apply to scheduled tasks. They're set in the agent's YAML, and each burst gets a fresh budget allocation:
 
 ```yaml
 # In agent YAML
@@ -231,27 +241,15 @@ error_budget:
   max_cost_usd: 1.00
 ```
 
-Or per-job when creating via `scheduler-create`:
-
-```typescript
-scheduler_create({
-  task: "Run competitor analysis",
-  cron_expr: "0 9 * * 1",
-  intent_anchor: "Monitor competitor pricing and product changes weekly.",
-  error_budget: {
-    max_turns: 30,
-    max_cost_usd: 2.00
-  }
-})
-```
-
 When a budget is exceeded, the burst stops cleanly. The job itself remains scheduled — the next burst gets a fresh budget.
+
+A persistent, multi-burst task has its own ceilings across all of its bursts, passed as `error_budget` to `scheduler-create`: `max_stalls`, `max_iterations`, `max_wallclock_hours` and `max_cost_usd`. Defaults are under `tasks.resumableCeilings` in `config/default.yaml`. Breaching one fails the task and escalates it to you.
 
 ## Job status and observability
 
 The web console has a **Jobs** view that lists every scheduled job. You can filter by schedule type and by agent, read a plain-language summary of each schedule, and jump straight from a job to the tasks it has spawned via linked task titles.
 
-The health endpoint reports the number of active and suspended jobs:
+The health endpoint's `scheduler` check reports whether the scheduler is still ticking:
 
 ```bash
 curl http://localhost:3000/api/health
@@ -261,11 +259,11 @@ Jobs that fail 3 consecutive times are automatically **suspended**. When this ha
 
 If the scheduler watchdog detects a job stuck in the `running` state (process crashed mid-execution) and resets it back to `pending`, you also receive a direct email — so you know the recovery happened automatically and can review whether the job needs attention.
 
-To resume a suspended job, use the HTTP API:
+To resume a suspended job, ask Curia ("resume the weekly expense summary"), or use the HTTP API:
 
 ```bash
 curl -X PATCH \
-  -H "Authorization: Bearer $API_TOKEN" \
+  -H "x-web-bootstrap-secret: $SECRET" \
   -H "Content-Type: application/json" \
   -d '{"status": "pending"}' \
   http://localhost:3000/api/jobs/<job-id>

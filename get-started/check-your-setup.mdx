@@ -54,7 +54,8 @@ docker compose restart curia
         "sms": "skipped",
         "voice": "ok",
         "signal_voice": "skipped",
-        "scheduler": "ok"
+        "scheduler": "ok",
+        "principal_mailbox_triage": "ok"
       }
     }
     ```
@@ -113,10 +114,12 @@ docker compose restart curia
   <Step title="The principal's calendar is connected">
     In `/api/health`, `nylas_calendar` reads `ok`.
 
-    - `skipped` means no principal mailbox is connected yet. Add one under **Settings → Personality → Email & Calendar**; no restart is needed.
-    - `fail` means Curia couldn't list the default mailbox's calendars.
+    - `skipped` means no principal mailbox is connected yet. Add one under **Settings → Behaviour → Email & Calendar**; no restart is needed.
+    - `fail` means Curia couldn't list the calendars of at least one connected mailbox.
 
-    Each connected mailbox also has its own check, `principal_mailbox:<id>`, which should read `ok`. Details: [Your principal's email and calendar](/get-started/principal-email-calendar).
+    `principal_mailbox_triage` should also read `ok`. It covers the regular inbox triage across the principal's mailboxes.
+
+    The daily health check also tests each connected mailbox on its own. Look for a `Health canary result` log line with `"canary":"principal_mailbox:<id>"` and `"status":"ok"` for each one. Details: [Your principal's email and calendar](/get-started/principal-email-calendar).
   </Step>
 
   <Step title="Google Docs works">
@@ -143,6 +146,16 @@ docker compose restart curia
   <Step title="Web search works">
     Ask Curia in console chat to search the web for something recent. Web search works without a Tavily key, capped at a few dozen searches an hour. If you added a key, a daily check also tests it; look for a `Health canary result` log line with `"canary":"tavily"` and `"status":"ok"`. Without a key, that check reports `skipped`.
   </Step>
+
+  <Step title="The web browser works">
+    In `/api/health`, `browser` reads `ok`. The browser runs in its own container, which `docker compose up` starts with everything else. On the server, `docker compose ps browser` should say `healthy`.
+
+    Details: [Web browser](/integrations/web-browser).
+  </Step>
+
+  <Step title="Optional: the phone app">
+    If your principal will use Curia on their phone, Curia must be on an `https://` address with a real hostname. Pair a phone under **Settings → System → Devices** and turn on its notifications. The setup assistant counts this item done once any signed-in device has notifications on. Details: [Use Curia on your phone](/channels/phone-app).
+  </Step>
 </Steps>
 
 <Tip>
@@ -155,16 +168,18 @@ If you set Curia up for yourself, you're done. Start using it.
 
 If you set it up for someone else, tell your principal:
 
-- **How to open the console:** its address and the access key. A phone's browser works too.
+- **How to open the console:** its address and the access key.
+- **How to get Curia on their phone:** create an invitation link under **Settings → System → Devices → Invite your principal** and send it to them yourself. It works once and lasts 48 hours. See [Invite someone else's phone](/channels/phone-app#invite-someone-elses-phone).
 - **Curia's email address,** so they can forward mail and write to Curia.
 - **Curia's Signal or SMS number,** so they can save it as a contact and message Curia.
 - **How to call Curia:** open console chat and click **Voice**.
+- **Where to save passwords and cards:** they can hand Curia a website password or a payment card through the one-time link it sends, or add one under **Memory → Secrets**. See [Secrets vault](/get-started/secrets-vault).
 
 ### After hand-over, use Settings, not chat
 
 The console treats everyone in console chat as the principal. Anything typed there after hand-over, including by you, is taken as the principal speaking, and Curia may remember it as their preference. Console chat is also one shared thread, so your principal will see your setup conversation in its history.
 
-After hand-over, make changes through the Settings pages instead: **Channels**, **MCP Skills**, **System** and **Contacts**.
+After hand-over, make changes through the console's pages instead: **Settings → Channels**, **Settings → MCP Skills**, **Settings → System**, **Memory → Contacts** and **Memory → Secrets**.
 
 <Note>
   **Coming soon.** A **Start onboarding** step in the console. Once every Setup item passes, it gives you a link to send your principal, valid for 48 hours, and Curia starts its first conversation with them.

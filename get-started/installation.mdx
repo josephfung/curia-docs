@@ -16,7 +16,7 @@ When you're done, Curia is running and you can sign in to its console. It can't 
 
 ## What you'll need
 
-- **A host with Docker and the Compose plugin.** Docker 20.10 or later: [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI.
+- **A host with Docker and the Compose plugin.** Docker 20.10 or later: [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI. Check the [system requirements](/get-started/system-requirements) for the machine to run Curia on.
 - **curl**, to download the installer.
 - **An Anthropic API key** (it starts with `sk-ant-`). The installer asks for it and won't continue without one. Get one at [console.anthropic.com](https://console.anthropic.com); usage is billed by Anthropic. OpenRouter and Amazon Bedrock also work, but only with configuration changes after install (see the [configuration reference](/references/configuration)).
 - **A domain pointing at the host,** with ports 80 and 443 open. Create a DNS A record for it before you start. If you already terminate TLS at your own proxy or load balancer, you can use that instead.
@@ -31,7 +31,7 @@ Run Curia on its own domain with HTTPS unless you're only trying it out:
 
 - Browsers only allow microphone access on HTTPS (or on `localhost`), so voice calls from the console need it.
 - SMS needs a public HTTPS address for the Telnyx webhook.
-- The phone app and your principal's email sign-in will need it too. Both are coming soon.
+- The [phone app](/channels/phone-app) installs on a home screen and sends notifications only from an HTTPS address.
 
 A local install on `http://localhost:3000` is fine for a try-out on your own machine. It isn't a setup you can hand to a principal.
 
@@ -65,12 +65,12 @@ A local install on `http://localhost:3000` is fine for a try-out on your own mac
     The installer:
 
     - checks that Docker, the Compose plugin and curl are available;
-    - fetches the compose files and the `.env` template next to the script;
+    - fetches the compose files, the `.env` template, the Caddyfile and the browser container's seccomp profile (`docker/seccomp-chrome.json`) next to the script;
     - generates the database password and the vault master key (`SECRET_ENCRYPTION_KEY`) and writes them to `.env`;
     - asks for your Anthropic API key;
     - asks how you'll reach Curia (next step);
-    - pulls the image, starts Postgres, runs migrations and seeds the encrypted vault;
-    - starts Curia and waits for it to report healthy.
+    - pulls the images, starts Postgres, runs migrations and seeds the encrypted vault;
+    - starts Curia and its [browser container](/integrations/web-browser), and waits for Curia to report healthy.
 
     Secrets go into the [encrypted vault](/get-started/secrets-vault). Only the four bootstrap values needed to reach and unlock it stay in `.env`.
   </Step>
@@ -182,6 +182,8 @@ Nothing yet. Curia has no email, messaging or voice connected, so it can't conta
 ## Updating Curia
 
 Curia applies pending database migrations automatically on every startup and skips ones already applied. Updating is pulling the new images and restarting. There's no manual SQL step.
+
+Some releases also need a change to your `docker-compose.yml` or `.env`, which an update never makes for you. Read the [upgrade notes](/get-started/deployment#upgrade-notes) before you update from an earlier release.
 
 <Warning>
   Back up your database before updating. A fresh dump makes an interrupted migration much easier to recover from.

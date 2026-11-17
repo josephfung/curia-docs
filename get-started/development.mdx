@@ -11,7 +11,7 @@ The flow is the same in spirit as the image install — one command, an Anthropi
 
 Before you start, install the following:
 
-- **Node.js 24 or later** — verify with `node --version`
+- **Node.js 26 or later** — verify with `node --version`. The repository's `engines` field requires it, and the runtime image uses it too
 - **Docker and Docker Compose** — Postgres and the app both run in Docker; install [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI
 - **pnpm** — install with `npm install -g pnpm`
 
@@ -95,6 +95,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build --f
 ## Contributing
 
 If you're contributing changes upstream rather than just running your own instance, read [`CONTRIBUTING.md`](https://github.com/josephfung/curia/blob/main/CONTRIBUTING.md) in the repository for the branch, commit, and pull-request conventions, and the test and type-check commands to run before opening a PR.
+
+A PR that changes shipped behavior adds one changelog fragment, `changes/<branch-name>.md`, instead of editing `CHANGELOG.md`; [`changes/README.md`](https://github.com/josephfung/curia/blob/main/changes/README.md) gives the format. The fragments are assembled into `CHANGELOG.md` at release.
 
 ## Troubleshooting
 

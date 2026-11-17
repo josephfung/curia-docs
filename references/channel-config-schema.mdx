@@ -1,13 +1,13 @@
 ---
 title: "Channel configuration schema"
-description: "Reference for Curia channel configuration — the channel registry, credential vault keys, and multi-account email YAML."
+description: "Reference for Curia channel configuration — the channel registry, credential vault keys, channel trust policy, and email accounts."
 ---
 
 Channels have three configuration surfaces:
 
 1. **The channel registry** — a DB-backed record of which channels are installed and enabled, plus their credentials in the vault. Managed from the Channels page in the console, not from YAML. See [Managing skills, agents, and channels](/core-concepts/registry).
 2. **`config/channel-trust.yaml`** — per-channel trust level, unknown-sender policy, and threading. This is where a channel's security posture is set, not the vault or the adapter.
-3. **`config/local.yaml` under `channel_accounts`** — used only for the multi-account email layout (one set of credentials per logical account). Single-account email, Signal, Slack, SMS, voice, CLI, and HTTP do not need this block.
+3. **Email accounts** — the mailboxes Curia itself reads and sends from, added in the console. See [Email accounts](#email-accounts).
 
 ## The channel registry
 
@@ -64,69 +64,23 @@ Current defaults: CLI, Signal, and voice are `high`; HTTP, Slack, and SMS are `m
 
 ## Email accounts
 
-The `channel_accounts.email` block in `config/local.yaml` is for connecting **multiple** email accounts. A single-account deployment does not need it — its credentials come from the vault keys above.
+Curia's own mailboxes are managed in the console under **Settings → Channels → Email → Email accounts**, not in YAML. The old `channel_accounts.email` block in `config/local.yaml` is no longer read.
 
-```yaml
-# config/local.yaml
-channel_accounts:
-  email:
-    <account-name>:
-      nylas_grant_id: string          # Nylas grant ID (supports "env:VAR_NAME")
-      self_email: string              # email address this account sends from (supports "env:VAR_NAME")
-      excluded_sender_emails: [string] # optional, supports "env:VAR_NAME"
-```
+Each account has:
 
-### Field details
+| Field | Meaning |
+|---|---|
+| Account name | Lowercase letters, digits, `-` and `_`, starting with a letter or digit (e.g. `curia`, `scheduling`). Email tools take it as their `account` parameter. |
+| Address | The address this mailbox reads from and sends as. |
+| Grant ID | The mailbox's Nylas grant, stored in the vault as `channel.email.<name>.nylas_grant_id`. |
 
-#### `account-name`
-
-The logical name for this account (e.g., `curia`, `personal`, `work`). Used as the `account` parameter in email tools (`email-list`, `email-get`, `email-draft-save`, `email-archive`).
-
-#### `nylas_grant_id`
-
-The Nylas grant identifier for the connected email account. Supports `env:VAR_NAME` references to pull the value from an environment variable.
-
-#### `self_email`
-
-The email address this account reads from and sends as. Supports `env:VAR_NAME` references.
-
-#### `excluded_sender_emails`
-
-Additional sender email addresses to suppress from this account's inbox, beyond the account's own `self_email`. Primary use case: exclude other connected accounts' addresses to prevent processing loops. Supports `env:VAR_NAME` references.
-
-### `env:VAR_NAME` references
-
-Use `env:VAR_NAME` syntax in any string field to reference an environment variable rather than inlining credential values in the YAML:
-
-```yaml
-channel_accounts:
-  email:
-    curia:
-      nylas_grant_id: "env:NYLAS_GRANT_ID_CURIA"
-      self_email: "env:NYLAS_SELF_EMAIL_CURIA"
-```
-
-## Example: multi-account setup
-
-```yaml
-channel_accounts:
-  email:
-    # Curia's own email
-    curia:
-      nylas_grant_id: "env:NYLAS_GRANT_ID_CURIA"
-      self_email: "env:NYLAS_SELF_EMAIL_CURIA"
-
-    # CEO's personal inbox
-    personal:
-      nylas_grant_id: "env:NYLAS_GRANT_ID_PERSONAL"
-      self_email: "env:NYLAS_SELF_EMAIL_PERSONAL"
-      excluded_sender_emails:
-        - "env:NYLAS_SELF_EMAIL_CURIA"
-```
+All accounts share the one Nylas API key, `channel.email.nylas_api_key`. An account whose grant is missing is skipped at startup, and the others still start. Restart Curia after adding an account.
 
 <Note>
-When `channel_accounts.email` is present in `config/local.yaml`, the single-account mode sourced from the vault keys `channel.email.nylas_api_key` / `channel.email.nylas_grant_id` / `channel.email.nylas_self_email` is ignored.
+The legacy vault keys `nylas_api_key`, `nylas_grant_id`, `nylas_self_email`, `ceo_nylas_grant_id` and `ceo_self_email` are no longer read. Curia migrates existing keys at boot. If email reports the Nylas key missing, re-save it in **Settings → Channels → Email**.
 </Note>
+
+The principal's own mailboxes are separate: they're managed under **Settings → Behaviour → Email & Calendar**. See [Your principal's email and calendar](/get-started/principal-email-calendar).
 
 <CardGroup cols={2}>
   <Card title="Email setup" icon="envelope" href="/channels/email-setup">

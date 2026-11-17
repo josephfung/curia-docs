@@ -45,13 +45,13 @@ The Coordinator agent receives the task with the current [autonomy score](/core-
 
 | Band | Score range | Behavior |
 |---|---|---|
-| Full | 90–100 | Proceeds on standard operations without confirmation |
-| Spot-check | 80–89 | Proceeds on routine tasks, notes consequential actions |
-| Approval Required | 70–79 | Carries out direct CEO instructions; asks before other consequential actions |
+| Full | 90–100 | Acts for you, including committing for you; asks first on money and legal positions |
+| Spot-check | 80–89 | Speaks for you on routine matters; asks before committing you, and on money and legal positions |
+| Approval Required | 70–79 | Carries out your instructions and coordinates; asks before speaking or committing for you |
 | Draft Only | 60–69 | Prepares drafts but does not send without explicit go-ahead |
 | Restricted | < 60 | Advisory only, takes no independent action |
 
-This is a behavioral governance layer — the agent self-governs based on the band description. The autonomy score applies uniformly across all agents, channels, and tools.
+The band, not the contact's tier, decides when Curia asks first (`autonomy.gating: band`, the default). The agent reads the band description in its prompt, and an independent reviewer checks each send against the band before it goes out. The autonomy score applies uniformly across all agents, channels, and tools. See [Band review](/security/autonomy-engine#band-review).
 
 ### Layer 4: Tool action risk
 
@@ -65,27 +65,27 @@ Every tool declares an `action_risk` level in its manifest, establishing the min
 | `high` | 80 | Creating calendar events, making commitments |
 | `critical` | 90 | Financial actions, irreversible operations |
 
-If the current autonomy score is below the tool's declared floor, the execution layer blocks the invocation. This is a hard gate — unlike the autonomy band (which guides agent behavior through the prompt), tool gating is enforced architecturally.
+If the current autonomy score is below the tool's declared floor, the execution layer blocks the invocation and, for most tools, files an approval request. This is a hard gate, enforced architecturally, and it applies under both `band` and `tier` gating. A task you started yourself skips it, and so does a send that goes only to you. See [Hard execution gates](/security/autonomy-engine#hard-execution-gates).
 
 ### Layer 5: Outbound safety
 
 Before a response leaves through any channel, the outbound safety pipeline applies:
 
 - **PII redaction** — sensitive data (email addresses, phone numbers, credit card numbers, SSNs, plus custom patterns) is replaced with labelled tokens like `[REDACTED: CREDIT_CARD]`. Redaction policies are configurable per channel — some channels may allow phone numbers through while redacting credit cards.
-- **Content filtering** — deterministic rules prevent certain classes of content from being sent (display name sanitization, caller verification). An LLM-as-judge gateway for content review is planned.
+- **Content filtering** — deterministic rules prevent certain classes of content from being sent (display name sanitization, caller verification), and an LLM judge blocks messages that leak internal notes or system status to anyone but you. See [Outbound content filter](/references/configuration#outbound-content-filter-llm-judge).
 
 ## How the layers compose
 
 Consider a message arriving via email from an unknown sender, with the autonomy score at 75:
 
 1. **Channel trust**: Email = low trust (0.3)
-2. **Dispatch policy**: Unknown sender = low contact confidence. Trust score falls below floor → message is **held** for CEO review. Flow stops here.
+2. **Dispatch policy**: Unknown sender = low contact confidence. Curia handles the message in read-only mode: it may reply or ask a clarifying question, but takes no action and shares nothing private. Flow stops here.
 
 Now consider the same message arriving via Signal from a confirmed contact:
 
 1. **Channel trust**: Signal = high trust (1.0)
 2. **Dispatch policy**: Confirmed contact = high confidence. Trust score passes. Rate limits pass. No injection detected. Message proceeds.
-3. **Agent autonomy**: Score 75 = Approval Required. Agent will present a plan before any consequential action.
+3. **Agent autonomy**: Score 75 = Approval Required. Curia coordinates on its own, but asks you before it speaks or commits for you.
 4. **Tool action risk**: Agent wants to send an email reply (action_risk: medium, min score 70). Score 75 >= 70 → tool executes.
 5. **Outbound safety**: Email reply passes through PII redaction per email channel policy before sending.
 

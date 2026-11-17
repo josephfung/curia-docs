@@ -107,20 +107,20 @@ The Coordinator delegates to the Research Analyst when a request requires multi-
 
 ## CEO Inbox
 
-A specialist agent that manages the CEO's personal email inbox. It runs on a 15-minute schedule and can also be delegated inbox queries or rule management tasks by the Coordinator.
+A specialist agent that manages the CEO's own mailboxes, work and personal. A 15-minute inbox heartbeat wakes it to triage each mailbox on that mailbox's own cadence, and the Coordinator can also delegate inbox queries, sends and rule management to it.
 
 | Field | Value |
 |---|---|
 | **Role** | specialist |
 | **Model** | Standard tier (Claude Sonnet by default) |
-| **Tools** | ceo-inbox-* (incl. `ceo-inbox-draft-compose`), task-* (via task management), doc-* (documents), contact-register, contact-update, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve, scheduler-report, context-bridge-release, context-bridge-clear |
+| **Tools** | ceo-inbox-* (incl. `ceo-inbox-draft-compose` and `ceo-inbox-send-draft`), archive-extract, task-* (via task management), doc-* (documents), contact-register, contact-update, bullpen, entity-context, memory-query, memory-store, config-store, executive-profile-get, file-parse, date-resolve, scheduler-report, context-bridge-release, context-bridge-clear |
 | **Discovery** | Disabled |
 | **Task management** | Enabled (pins the `tasks` skill) |
-| **Schedule** | Every 15 minutes |
+| **Schedule** | Inbox heartbeat every 15 minutes. Each mailbox is triaged on its own cadence, set in the `ceo_inbox/triage` setting; a mailbox without one is triaged hourly, 06:00–23:00 |
 
 **What it handles:**
-- Autonomous inbox triage — reads unread messages and classifies each as URGENT, ACTIONABLE, NEEDS DRAFT, LEAVE FOR CEO, or NOISE
-- Draft reply creation — writes reply-all drafts in the CEO's voice using the stored executive profile; the CEO reviews and sends from Gmail
+- Autonomous inbox triage — reads unread messages across every connected mailbox and files each as 🚨 Urgent, ✅ Handled, ✍️ Drafted, 📌 Seen, ✔️ Cleared, or ⚠️ Stuck. A message delivered to two mailboxes is triaged once
+- Draft reply creation — writes reply-all drafts in the CEO's voice using the stored executive profile, saved in the mailbox the mail arrived at; the CEO reviews and sends them, or asks Curia to send them
 - Cold-outreach drafts — composes new (non-reply) drafts into the CEO's Gmail Drafts via `ceo-inbox-draft-compose`. Recipients are addressed by contact, so the address comes from the contact record rather than being retyped; someone who isn't a contact must have an address that appears in the CEO's mail or in the CEO's own message. When an address is missing, the agent looks for it in the CEO's mail before asking. Editing a draft adds or removes individual recipients and leaves everyone else as they were
 - Escalation — sends a Signal alert and opens a Bullpen thread for URGENT items; opens a Bullpen thread mentioning the appropriate specialist for ACTIONABLE items
 - Standing rules and decision tagging — standing rules (for example, "label anything from the board BOARD and treat it as urgent") live in the shared document `/shared/inbox/rules.md`, one section per rule, so the list can grow without a size limit and one rule can be added, changed, paused or removed without touching the rest. The rules and the decision-tagging switch (which labels each message with its final classification) arrive with every turn through [pinned context](/agents/how-agents-work#pinned-context). Ask Curia to change a rule, or edit the document yourself under Memory → Documents
@@ -128,7 +128,7 @@ A specialist agent that manages the CEO's personal email inbox. It runs on a 15-
 - Invite triage — formal calendar invites are linked to calendar events and routed to the Calendar Specialist, which evaluates the invite and sends the RSVP, releasing any matching hold
 - Inbox queries — searches, reads, and labels messages on demand when delegated by the Coordinator. Searches skip Spam and Trash unless you ask for them, and the agent won't draft a reply to a message sitting in either folder
 
-The CEO Inbox agent runs directly against the CEO's personal email account via Nylas. It never replies directly to senders — all outbound replies go through draft creation for CEO review.
+The CEO Inbox agent runs directly against the CEO's mailboxes via Nylas. Every reply starts as a draft. It sends a draft with `ceo-inbox-send-draft` when the CEO asks, or during triage when that mailbox's `ceo_inbox/sending` setting covers it (on request only, by default). See [Replies from your mailbox](/core-concepts/inbox-sending).
 
 **Tasks keep the loop closed.** When a reply depends on something not yet available (a document the CEO must provide, a fact to look up), the agent creates a tracked follow-up [task](/core-concepts/scheduling#tasks-and-the-backlog) rather than sending a bare "the CEO will follow up" — it resolves the dependency first where it can, and resumes drafting when the task wakes. On a backed-up inbox it drains messages in fixed-size, self-continuing batches (keyed on read/archive status) until the inbox is clear, so the time spent per run stays bounded regardless of backlog.
 
@@ -175,7 +175,7 @@ A proactive specialist agent that scans the CEO's calendar for recently-ended ex
 
 **What it handles:**
 - **Detection** — scans calendar events ending in the recent past, classifies attendees as internal vs external, and uses LLM judgment to decide which meetings warrant a debrief prompt (`YES`, `NO`, `DEFER`)
-- **Prompting** — opens a Bullpen thread asking the coordinator to send a brief conversational prompt on the CEO's preferred channel (Signal by default): *"You just wrapped up with Sarah Chen and David Park from Meridian. Any takeaways or follow-ups?"*
+- **Prompting** — opens a Bullpen thread asking the coordinator to send a brief conversational prompt on the CEO's usual channel, unless `debrief.channel` pins one: *"You just wrapped up with Sarah Chen and David Park from Meridian. Any takeaways or follow-ups?"*
 - **Follow-up execution** — when the CEO replies with notes, the agent uses its full skill set to draft emails, find conflict-free meeting slots, store commitments, and post Bullpen threads to other specialists (e.g. research-analyst) for cross-cutting work
 - **Reminders** — nudges the CEO on the same thread if a prompt goes unanswered after a configurable delay (default: 2 hours)
 - **Preference learning** — when the CEO says *"don't debrief me on meetings with X"*, the rule is stored as a KG fact and respected on future scans

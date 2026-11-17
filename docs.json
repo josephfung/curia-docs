@@ -58,6 +58,7 @@
           {
             "group": "Setup",
             "pages": [
+              "get-started/system-requirements",
               "get-started/installation",
               "get-started/curia-email",
               "get-started/reach-your-principal",
@@ -103,6 +104,7 @@
               "core-concepts/architecture",
               "core-concepts/layers-model",
               "core-concepts/memory",
+              "core-concepts/console",
               "core-concepts/contacts-trust",
               "core-concepts/how-curia-refers-to-you",
               "core-concepts/autonomy",

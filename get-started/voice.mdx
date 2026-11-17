@@ -6,7 +6,7 @@ description: "Turn on spoken conversations with Curia: run LiveKit, add Deepgram
 
 ## What this is for
 
-Voice lets your principal talk to Curia out loud, in a live two-way call, instead of typing. Curia listens, works the same way it does in chat, and answers in a spoken voice that you choose here. Today a call is placed from the **console chat** in a web browser.
+Voice lets your principal talk to Curia out loud, in a live two-way call, instead of typing. Curia listens, works the same way it does in chat, and answers in a spoken voice that you choose here. A call is placed from the **console chat**, in a web browser or in the [phone app](/channels/phone-app).
 
 This page walks you through setup in order. For ports, settings and troubleshooting, see the [Voice reference](/channels/voice-setup).
 
@@ -93,19 +93,17 @@ This page walks you through setup in order. For ports, settings and troubleshoot
 
 1. Open `/api/health` on your Curia address. `checks.voice` should read `ok`. It reads `fail` if Curia can't reach LiveKit, and `skipped` if voice didn't start.
 2. Open the console **Chat**. A **Voice** button (with a phone icon) appears once voice is running. If it's missing, see [The Voice button doesn't appear](/channels/voice-setup#troubleshooting).
-3. Click **Voice**, allow the microphone, and say something. Curia greets you first, then answers out loud. Hang up from the call bar. The transcript appears in the chat history.
+3. Click **Voice**, allow the microphone, and say something. Curia greets you first, then answers out loud. Hang up from the call bar. The transcript appears in the chat history. If the console shows **Curia couldn't join the call**, see [Troubleshooting](/channels/voice-setup#troubleshooting).
 
 If the setup assistant shows **Voice (console)** as done, that only means the six values are saved. The test call is the real check.
 
 ## What your principal will notice
 
 - A **Voice** button in the console chat. They click it, allow the microphone, and talk.
-- Curia speaks in the voice you chose. It greets them first, waits a moment when they pause, and stops talking when they interrupt.
+- Curia speaks in the voice you chose. It greets them first, waits a moment when they pause mid-sentence, and stops talking as soon as they interrupt.
 - For longer jobs, Curia says it will get back to them rather than leaving silence on the line.
 - Each call's transcript is saved to the chat history, so they can scroll back to it.
+- They can have Curia prepare an agenda for their next call, or ask it to take notes on any call. Afterwards Curia writes minutes and sends one follow-up. See [Agendas, notes and minutes](/channels/voice-setup#agendas-notes-and-minutes).
+- In the phone app, locking the phone or switching apps pauses the call instead of dropping it.
 
-Whoever uses the console chat is treated as your principal, so a test call you make during setup is a conversation as them. Keep test calls short and neutral.
-
-<Note>
-  **Coming soon:** calling Curia from the phone app. Until it ships, calls are placed from the console in a browser.
-</Note>
+Whoever uses the console chat is treated as your principal, so a test call you make during setup is a conversation as them, and an instruction on the call counts as their approval. Keep test calls short and neutral.

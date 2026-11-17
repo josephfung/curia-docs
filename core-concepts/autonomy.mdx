@@ -7,19 +7,59 @@ Curia's autonomy engine gives you a single dial to control how independently you
 
 ## The five autonomy bands
 
-The score maps to one of five named bands. Each band has a precise behavioral description that is injected into the Coordinator's system prompt on every task, so Curia self-governs in real time — no restart required.
+The score maps to one of five named bands. Each band has a behavioral description that is injected into the Coordinator's system prompt on every task, so Curia self-governs in real time — no restart required.
+
+The band, not the tier of the contact Curia is dealing with, decides when Curia asks you first.
 
 | Band | Score range | Behavior |
 |---|---|---|
-| **Full** | 90–100 | Acts independently. No confirmation needed for standard operations. Flags only genuinely novel, irreversible, or high-stakes actions where the cost of pausing is justified. |
-| **Spot-check** | 80–89 | Proceeds on routine tasks. Notes consequential actions — sending email, creating commitments — in its response so you maintain visibility without being asked. |
-| **Approval Required** | 70–79 | Carries out your direct instructions, using conservative defaults (view-only access, the latest version) and saying which it chose. Presents a plan and asks for explicit confirmation before any consequential action you didn't ask for, or when it can't tell which file or person you mean. Routine reporting, summarization, and information retrieval proceed without approval. |
-| **Draft Only** | 60–69 | Prepares drafts, plans, and analysis but does not send, publish, schedule, or act without an explicit go-ahead. Surfaces work for your review; execution requires a direct instruction. |
-| **Restricted** | < 60 | Advisory only. Presents options and analysis. Takes no independent action whatsoever. Every step with an external effect requires an explicit instruction from you. |
+| **Full** | 90–100 | Acts for you, including speaking and committing for you. Puts notable actions in the digest. Asks first when an outsider seems to be steering it, and before committing you on payments, pricing, contracts or legal positions. |
+| **Spot-check** | 80–89 | Takes on work, coordinates, and speaks for you on routine matters without asking. Asks first before committing you to dates, deliverables, terms or introductions, and on anything involving money or legal positions. Reports what it did in the digest. |
+| **Approval Required** | 70–79 | Takes on work and coordinates (logistics, confirmations, bringing people in) without asking. Asks you first before it speaks for you or commits you to anything. |
+| **Draft Only** | 60–69 | Drafts rather than sends. You confirm new work; internal logistics within confirmed work can proceed. Drafts and asks surface in the digest. |
+| **Restricted** | < 60 | Proposes and drafts only. Takes no action with an external effect. |
+
+A direct instruction from you counts as your approval: Curia carries it out and fills in any open details itself, taking the conservative choice and saying which it made. This applies when Curia knows the instruction is really from you (see [Who counts as you](#who-counts-as-you)).
 
 <Note>
-Curia defaults to **75 (Approval Required)** on first deployment. This is a conservative starting point — Curia does what you tell it, but confirms before taking consequential actions on its own initiative until you decide to extend more independence.
+Curia defaults to **75 (Approval Required)** on first deployment. This is a conservative starting point — Curia does what you tell it, but confirms before speaking or committing for you on its own initiative until you decide to extend more independence.
 </Note>
+
+<Note>
+Before v0.45, a contact's trust tier decided which actions needed approval. That policy is still available until a later release removes it: set `autonomy.gating: tier` in `config/local.yaml` to keep it. See [Configuration](/references/configuration#gating).
+</Note>
+
+## What Curia checks before it sends
+
+When Curia writes to someone on your behalf, an independent reviewer checks the message before it goes:
+
+- **Is someone steering Curia?** If an outsider seems to be pushing Curia to act against your interests, the send is held for you at every band.
+- **Is every claim about you backed up?** Statements about you must be supported by your own words or by something Curia looked up during that turn. A message with an unsupported claim goes back for one rewrite. If the rewrite still has the problem, it is held or not sent.
+- **What does it commit you to?** Routine replies (thanks, acknowledgements, scheduling logistics) can go out on their own at 80 and above. Commitments (new dates, deliverables, terms or introductions) need a score of 90 or above. Anything about money or legal positions always asks you first.
+- **Does it share personal details?** Each personal detail is checked against who authorized it. See [Personal details](#personal-details).
+
+If the reviewer can't be reached, Curia holds autonomous sends for you rather than sending them unchecked.
+
+## Personal details
+
+Before a message carries someone's personal details (a phone number, an address, a Canadian SIN, a card number and similar), Curia checks who authorized each one:
+
+- **You asked for it.** Your own instruction, on a channel where Curia knows it's you, releases the details you asked to share.
+- **Someone else asked for it.** A trusted contact's request, a stranger's ask, or text quoted inside an earlier message goes to you first. Curia asks you, for example "Dana wants your mobile number to book the call. Share it?" Your answer holds for that thread.
+- **Nobody authorized it.** Curia rewrites the message without the detail. A stranger Curia has no reason to deal with gets a polite decline, and you hear about it in the digest.
+
+Canadian SINs are recognized by their checksum, so ordinary nine-digit numbers such as order IDs aren't mistaken for one.
+
+## Who counts as you
+
+A direct instruction counts as your approval only when Curia can tell it's really you. Messages from these count:
+
+- the web console, in chat and in voice calls, while you're signed in;
+- Signal, both messages and calls;
+- Slack;
+- email that passes the sender checks.
+
+SMS, the local CLI and phone calls identified only by caller ID don't count as authenticated.
 
 ## Checking your current score
 
@@ -70,10 +110,10 @@ A practical approach for new deployments:
     Pay attention to which confirmations feel unnecessary. If Curia is asking about things you always say yes to, your score is too low for your comfort level.
   </Step>
   <Step title="Move to 80–85 when you're comfortable">
-    Spot-check lets Curia proceed on routine tasks while still noting consequential actions in its responses. You stay informed without being interrupted.
+    Spot-check lets Curia handle routine replies and logistics on its own and report them in the digest. It still asks before committing you to anything. You stay informed without being interrupted.
   </Step>
   <Step title="Reserve 90+ for high-trust workflows">
-    Full autonomy is appropriate when you have established that Curia handles a class of tasks reliably and you don't need to review each one. Consider using it for specific recurring tasks before applying it globally.
+    Full autonomy lets Curia make commitments for you, such as agreeing to a date or a deliverable. It's appropriate once you've seen Curia handle that kind of work reliably. Money and legal matters still come to you first.
   </Step>
 </Steps>
 
@@ -85,19 +125,31 @@ This means the bands are binding. At **Draft Only** (60–69), outbound sends ar
 
 ## What happens when Curia can't act
 
-A blocked invocation doesn't fail silently. Curia creates an **approval request** — a record of what it was trying to do, why it was blocked, and what permission it needs. You receive a notification so you can decide whether to allow the specific action without having to change your global autonomy score.
+A blocked or held action doesn't fail silently. Curia creates a numbered **approval request**: a record of what it was trying to do and why it stopped. It sends you the request once, on the channel your standing preferences name, so you can allow that one action without changing your global autonomy score.
 
 <Tip>
-Ask Curia: **"What's waiting for my approval?"** to see all pending requests. You can approve or deny conversationally: **"Approve the last action"** or **"Deny action REF-1234."**
+Reply **"approve 3"** or **"deny 3"**, using the number from the request. On Signal and Slack you can also react 👍 or 👎 to the request message. Ask **"What's waiting for my approval?"** to see everything still open.
 </Tip>
 
 Nothing needing your attention lingers unseen: approval requests notify you directly, and any task that has stalled, hit a limit, or is blocked on you escalates to you with the reason (see [Tasks and the backlog](/core-concepts/scheduling#tasks-and-the-backlog)). You can also ask **"what's waiting on me?"** any time, or fold these items into an [on-demand morning briefing](/examples/daily-morning-briefing).
 
 Curia also brings them up on its own. Whenever you message it while approvals are pending, stored facts need re-confirming, or tasks are waiting on you, it handles what you asked first, then mentions the oldest waiting item in a sentence — once per conversation, not on every turn. See [Approval workflow](/security/approval-workflow) for the full picture.
 
+## Spot checks in the digest
+
+Most of what Curia does at the higher bands, you never see as it happens. To keep you in the loop, your digest includes a few samples of work Curia did on its own:
+
+```
+Spot check (optional, reply with a number):
+1. <summary>
+2. <summary>
+```
+
+Reply with a number and a verdict, for example **"2 bad, that was a renewal notice"**. Your verdicts are the strongest evidence the [automatic score adjustment](/security/autonomy-engine#automatic-score-adjustment) uses. Answering is optional, and silence records nothing.
+
 ## Autonomy web UI
 
-The Settings page in the web dashboard includes a dedicated Autonomy view where you can see the current score, trend direction (improving / declining / stable), and full paginated change history — including automatic adjustments made by the system.
+**Settings → Behaviour → Autonomy** in the console shows the current score and band, a slider to change it with an optional reason, and the recent changes, including automatic adjustments made by the system.
 
 <CardGroup cols={2}>
   <Card title="Autonomy engine mechanics" icon="gears" href="/security/autonomy-engine">

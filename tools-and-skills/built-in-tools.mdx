@@ -3,7 +3,7 @@ title: "Built-in tools"
 description: "Catalog of the tools Curia ships with — grouped into skills by category, with action_risk levels and descriptions."
 ---
 
-Curia ships with 90+ tools, grouped into [skills (bundles)](/tools-and-skills/overview) by functional area. Every tool declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it. Tools with `action_risk: none` can always run; higher-risk tools trigger the [approval workflow](/security/approval-workflow) when the score is below their floor. The category headings below map to the built-in skills an agent pins (`email`, `calendar`, `contacts`, `tasks`, `web`, and so on).
+Curia ships with 140+ tools, grouped into [skills (bundles)](/tools-and-skills/overview) by functional area. Every tool declares an `action_risk` level that determines the minimum [autonomy score](/core-concepts/autonomy) required to invoke it. Tools with `action_risk: none` can always run; higher-risk tools trigger the [approval workflow](/security/approval-workflow) when the score is below their floor. The category headings below map to the built-in skills an agent pins (`email`, `calendar`, `contacts`, `tasks`, `web`, and so on).
 
 Some tools are also **`elevated`**: they exercise CEO authority directly, so they run only during a *live CEO turn* (a fresh inbound from you, or a synchronous delegation within it) and never autonomously or from a scheduled/woken task. These are the autonomy and approval controls (`set-autonomy`, `approve-action`, `deny-action`, `dismiss-action`), the grant-recommendation decisions (`approve-grant-recommendation`, `decline-grant-recommendation`), the authorization-altering contact tools (`contact-set-tier`, `contact-set-role`, `contact-grant-permission`, `contact-revoke-permission`), and `system-secret-capture-request`. See [Sensitivity](/tools-and-skills/how-tools-work#sensitivity-normal-and-elevated).
 
@@ -56,7 +56,9 @@ Outbound email and console rendering share one sanitized converter: markdown in 
 
 ## CEO Inbox
 
-Tools for the CEO Inbox agent to manage the CEO's personal email account. These tools are pinned exclusively to the `ceo-inbox` agent — they access the CEO's personal email and should not be called from other agents.
+Tools for the CEO Inbox agent to manage the CEO's own mailboxes. These tools are pinned exclusively to the `ceo-inbox` agent — they access the CEO's personal email and should not be called from other agents.
+
+Every CEO Inbox tool takes an optional `mailbox` (a connected mailbox's id). Leave it out unless the CEO named an account, and Curia finds the right one. A new draft (`ceo-inbox-draft-compose`) needs it once several mailboxes are connected.
 
 | Tool | action_risk | Description |
 |---|---|---|
@@ -64,8 +66,9 @@ Tools for the CEO Inbox agent to manage the CEO's personal email account. These 
 | `ceo-inbox-read` | none | Read a specific message, returning plain text and HTML body |
 | `ceo-inbox-search` | none | Search the CEO's inbox using Gmail-native query syntax. When `unread_only` is set alongside a search query, `is:unread` is embedded into the search string so the filter actually applies. Spam and Trash are left out unless `include_spam_and_trash` is set. |
 | `ceo-inbox-draft-compose` | low | Compose a cold-outreach (new, non-reply) draft into the CEO's Gmail Drafts for review. `to`/`cc` take contact IDs; a non-contact's address must be copied from the CEO's mail or the CEO's own message, or nothing is saved |
-| `ceo-inbox-draft-reply` | low | Create a reply-all draft for CEO review (never sent automatically). Refuses to draft a reply to a message in Spam or Trash |
-| `ceo-inbox-draft-edit` | low | Update an existing draft's recipients, subject, or body, so a wrong-recipient or stale draft can be fixed without recreating it. Recipients are added or removed one at a time (`add_to` / `add_cc` / `remove`); everyone else stays as they are |
+| `ceo-inbox-draft-reply` | low | Create a reply-all draft for CEO review. Curia sends it only through `ceo-inbox-send-draft`. Refuses to draft a reply to a message in Spam or Trash |
+| `ceo-inbox-draft-edit` | low | Update an existing draft's recipients, subject, or body, so a wrong-recipient or stale draft can be fixed without recreating it. `move_to_mailbox` moves a draft saved in the wrong account. Recipients are added or removed one at a time (`add_to` / `add_cc` / `remove`); everyone else stays as they are |
+| `ceo-inbox-send-draft` | 80 | Send one existing draft from the CEO's mailbox when the CEO asks, or, in triage, a reply Curia drafted that the mailbox's [sending setting](/core-concepts/inbox-sending) covers. Two or more drafts are read back and sent only after a yes. A refusal leaves the draft in Drafts |
 | `ceo-inbox-download-attachment` | low | Download an attachment from the CEO's inbox by its Nylas ID (10 MB limit) |
 | `ceo-inbox-archive` | low | Archive a message by removing it from the INBOX folder |
 | `ceo-inbox-label` | low | Apply one or more labels to a message, creating labels that don't yet exist |
@@ -84,19 +87,21 @@ Tools for the CEO Inbox agent to manage the CEO's personal email account. These 
 
 ## Calendar
 
+Every calendar tool takes an optional `mailbox`: the connected mailbox a calendar belongs to. Once several mailboxes are connected, it's required for a bare `primary` calendar and for writes to the CEO's calendars (`calendar-create-event`, `calendar-create-hold`, `calendar-respond-to-invite`); without it, nothing is written.
+
 | Tool | action_risk | Description |
 |---|---|---|
-| `calendar-list-calendars` | none | List all registered calendars |
+| `calendar-list-calendars` | none | List registered calendars, for one mailbox or every mailbox |
 | `calendar-register` | high | Register a new calendar |
-| `calendar-list-events` | none | List events in a date range |
-| `calendar-create-event` | high | Create a new calendar event |
-| `calendar-update-event` | high | Update an existing event |
+| `calendar-list-events` | none | List events in a date range. A meeting on calendars of two accounts is listed once, and each event carries `icalUid`, `organizerEmail` and a `meetingKey` that is the same on every calendar. `partial` and `removed` say when a calendar couldn't be read |
+| `calendar-create-event` | high | Create a new calendar event. `recurrence` takes one `RRULE` line plus optional `EXDATE` lines for a repeating event |
+| `calendar-update-event` | high | Update an existing event, or a series' `RRULE` (cancel one occurrence with `calendar-delete-event`) |
 | `calendar-delete-event` | high | Delete a calendar event |
-| `calendar-find-free-time` | none | Find available time slots (treats `free`-status events as available) |
-| `calendar-check-conflicts` | none | Check for scheduling conflicts (`free`-status events do not count) |
+| `calendar-find-free-time` | none | Find available time slots across at most 20 calendars (treats `free`-status events as available). `treat_as_free` names blocking events the CEO's preferences say don't count. `partial` and `removed` list calendars that couldn't be read; their time is never reported as free |
+| `calendar-check-conflicts` | none | Check for scheduling conflicts across at most 20 calendars (`free`-status events do not count). `clear` is false whenever a calendar couldn't be read |
 | `calendar-create-hold` | medium | Place a tentative `HOLD (TBC)` event on an offered slot so it is not re-offered while scheduling is in flight |
 | `calendar-holds-sweep` | low | Remove expired tentative holds (runs daily on a schedule) |
-| `calendar-respond-to-invite` | medium | Send an RSVP (accept / decline / tentative) to a formal calendar invite via Nylas, and release any matching hold |
+| `calendar-respond-to-invite` | medium | Send an RSVP (accept / decline / tentative) to a formal calendar invite via Nylas, and release any matching hold. `mailbox` (formerly `account`) is the mailbox the invite arrived in; the RSVP is never sent from another account |
 
 ## Memory and knowledge graph
 
@@ -118,6 +123,7 @@ Tools for the CEO Inbox agent to manage the CEO's personal email account. These 
 |---|---|---|
 | `scheduler-create` | low | Create a recurring or one-shot scheduled task |
 | `scheduler-list` | none | List active scheduled jobs |
+| `scheduler-get` | none | Read one scheduled job in full by ID: its whole task payload, schedule, linked task, and the last run's summary and outcome |
 | `scheduler-update` | low | Modify an existing job by ID: `resume` a paused or suspended job, `pause` an active one, or `edit` its cron expression, one-shot run time, or payload |
 | `scheduler-cancel` | low | Cancel a scheduled job |
 | `scheduler-report` | none | Generate a report on scheduled task activity (system tool) |
@@ -154,12 +160,22 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 | Tool | action_risk | Description |
 |---|---|---|
 | `signal-send` | medium | Send a Signal message. Accepts an optional `context_bridge` JSON for delegation-aware reply routing. |
-| `web-send` | medium | Message the principal in the console chat, with a notification to their phone app when the chat isn't open. Principal only. If the phone can't be reached, it sends on the next configured channel and says which one it used. See [Use Curia on your phone](/channels/phone-app). |
+| `web-send` | medium | Message the principal in the console chat, with a notification to their phone app when the chat isn't open. Principal only. It fails if no phone is paired for notifications. If a paired phone can't be reached, it sends on the next configured channel and says which one it used. See [Use Curia on your phone](/channels/phone-app). |
 | `bullpen` | low | Open or contribute to an inter-agent discussion thread |
 | `request-clarification` | none | Pause a delegated task mid-execution to ask the CEO a clarifying question; the runtime short-circuits the tool loop and returns a typed result with a resume token so the coordinator can re-delegate seamlessly once the CEO replies |
 | `context-bridge-release` | low | Coordinator-only — explicitly close an active outbound-context entry once the LLM detects a conversation thread has ended, freeing the slot before TTL expiry |
 | `context-bridge-clear` | low | Release all active outbound-context entries for a named meeting subject across the full active table; used by the meeting-debrief agent after "clear meeting X" to ensure every entry is freed, not just the one in the injected window |
-| `async-offramp` | low | **Voice only** — hand a heavyweight ask (deep research, bulk triage, multi-document drafting) off the live call to the async coordinator, so Curia acknowledges and moves on instead of leaving dead air. You get a callback when it finishes |
+| `async-offramp` | low | **Voice only** — hand work Curia can't do on the live call to the full coordinator, which has the vault, saved sign-ins, scheduling, browsing and documents. With `mode: now`, the call waits about a minute for the full result; with `mode: after_call` (the default), longer work such as research or drafting finishes after the call and reaches you on your usual channel, or the one you name |
+| `turn-handoff` | none | Coordinator-only — pass a follow-up to the same person's turn still running in another conversation, when it corrects or adds to that turn's work |
+| `record-outreach` | low | Coordinator-only — record outreach that no send tool made (a submitted web form, a call) so the reply finds its task |
+
+## Calls and meetings
+
+| Tool | action_risk | Description |
+|---|---|---|
+| `meeting-agenda-park` | low | Park an agenda for a future principal call, under `/meetings/agendas/`. It expires after 7 days by default, and at most 30 |
+| `meeting-agenda-load` | low | **Voice only** — open a parked agenda on the live call |
+| `meeting-notes-start` | low | **Voice only** — take notes on the live call when the caller asks, with or without an agenda. Minutes are written when the call ends; with `recap: true`, a recap goes to the principal afterwards |
 
 ## Web research
 
@@ -167,7 +183,10 @@ An `ls` / `grep` / `read` / `write` interface over the agent's OKF document work
 |---|---|---|
 | `web-search` | none | Search the web via Tavily. Enabled by default and works with no key, in Tavily's keyless mode (free, capped per hour). An optional `tavily_api_key` in the vault, declared in `install.optional_secrets`, raises the limit. When keyless search hits the cap, it returns an error saying search is temporarily limited and when it should work again. See [Tavily](/integrations/tavily). |
 | `web-fetch` | none | Fetch and extract content from a URL. Refuses Google Docs, Sheets, and Drive links and points to the Google Workspace tools instead |
-| `web-browser` | medium | Interact with JavaScript-rendered pages via a Patchright-driven browser with a human-behavior layer (curved mouse paths, paced typing, post-load dwell) to reduce bot-detection blocking. Refuses Google Docs, Sheets, and Drive links, like `web-fetch` |
+| `web-browser` | medium | Interact with JavaScript-rendered pages via a Patchright-driven browser with a human-behavior layer (curved mouse paths, paced typing, post-load dwell) to reduce bot-detection blocking. Refuses Google Docs, Sheets, and Drive links, like `web-fetch`. The `clear_site_data` action signs the browser out of one host, to recover from a half-finished sign-in |
+| `verification` | low | Coordinator-only — track a sign-in code screen per site (`open`, `satisfy`, `abandon`, `list`). Never takes the code itself; tracked codes are scrubbed from notes, memory and sends. ADR-050 |
+| `card-use-request` | none | Coordinator-only — ask the principal to approve paying with a saved card at one checkout. Card number and CVV fills are refused until the principal approves. One approval covers one card, one site and 30 minutes, with two fills each of number and CVV |
+| `card-use-confirm` | critical | Internal — writes the card-use grant when the principal approves a `card-use-request`. Agents can't call it |
 
 ## Google Workspace
 
@@ -178,6 +197,7 @@ Google Workspace connects as an [MCP server](/tools-and-skills/building#connect-
 | Tool | action_risk | Description |
 |---|---|---|
 | `file-parse` | medium | Extract structured data from CSV, PDF, HTML, and image files. Accepts either inline `content_base64` or a `temp_file_url` pointing at a file in the configured `CURIA_TEMPFILE_DIR` (paths are validated against the base directory). |
+| `archive-extract` | none | Open a `.zip` or `.gz` attachment into temp files for `file-parse`. Nested archives are listed, not opened. Encrypted entries, archives over 20 entries, and output over 10 MB per file or 25 MB per archive are refused |
 
 ## Autonomy
 
@@ -189,6 +209,19 @@ Google Workspace connects as an [MCP server](/tools-and-skills/building#connect-
 | `approve-action` | none | Approve a pending Curia action request |
 | `deny-action` | none | Deny a pending action request |
 | `dismiss-action` | none | Dismiss a pending request without approving or denying |
+| `deliver-approval` | none | Coordinator-only — send one pending approval to the principal on one channel. Each approval is delivered once, then mentioned only in the next digest |
+
+## Reports and spot checks
+
+The **`reports`** skill feeds the principal's digest: what Curia did on its own, and spot checks of that work.
+
+| Tool | action_risk | Description |
+|---|---|---|
+| `report-to-principal` | none | Record an action, decision or reading of an ambiguous instruction for the principal's next digest. Doesn't message the principal |
+| `list-principal-reports` | none | List the digest items since the last acknowledged digest, numbered |
+| `ack-principal-reports` | none | Mark those items reported, after the digest has been sent |
+| `list-spot-checks` | none | Up to three recent autonomous actions for the principal to spot-check in the digest |
+| `record-spot-check` | none | Record the principal's verdicts ("2 bad", "1 good") on a spot check; they feed the autonomy score |
 
 ## System and utility
 

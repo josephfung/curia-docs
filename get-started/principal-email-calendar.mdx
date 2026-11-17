@@ -33,7 +33,7 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
   </Step>
 
   <Step title="Add each mailbox in the console">
-    In the console, go to **Settings → Personality → Email & Calendar**. This page is only for your principal's own mail and calendars; Curia's own email accounts stay under **Settings → Channels → Email**.
+    In the console, go to **Settings → Behaviour → Email & Calendar**. This page is only for your principal's own mail and calendars; Curia's own email accounts stay under **Settings → Channels → Email**.
 
     If the page shows **Finish setting up the email channel first**, the Nylas API key from page 2 isn't saved yet. Save it under **Settings → Channels → Email** and come back. Until then, the page lists any mailboxes already connected but can't add or change them.
 
@@ -73,7 +73,7 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
 </Steps>
 
 <Note>
-  **Upgrading from a single mailbox?** There's nothing to do. On its first start after the upgrade, Curia moves the existing principal mailbox into the list as the default, named after its address's domain (for example `gmail`). Rename it in the console if you like.
+  **Upgrading from a single mailbox?** There's nothing to do. On its first start after the upgrade, Curia moves the existing principal mailbox into the list as the default, named after its address's domain (for example `gmail`). Rename it in the console if you like. Older vault keys for the mailbox and the Nylas key move to their new names at the same time. If email or the mailboxes then report the Nylas API key missing, save it again under **Settings → Channels → Email**.
 </Note>
 
 <Note>
@@ -82,9 +82,10 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
 
 ## Check it works
 
-1. On **Settings → Personality → Email & Calendar**, each mailbox should be listed with the right address.
-2. Open `/api/health` on your Curia address. There's one check per mailbox, named `principal_mailbox:<id>`, and each should read `ok`. The check runs once a day; if a mailbox's access stops working, Curia alerts your principal once. Replace its grant, or remove the mailbox if the account is gone.
-3. In the console chat, ask "What's on my calendar tomorrow?" and check the answer against the real calendars.
+1. On **Settings → Behaviour → Email & Calendar**, each mailbox should be listed with the right address.
+2. Open `/api/health` on your Curia address. `nylas_calendar` should read `ok`; it fails if any mailbox's calendars can't be reached. Once the inbox specialist is running, `principal_mailbox_triage` should read `ok` too.
+3. Each mailbox also has its own daily check, named `principal_mailbox:<id>`. It runs with the daily canary and is logged as a `Health canary result` line with `"canary":"principal_mailbox:<id>"`. If a mailbox's access stops working, Curia alerts your principal once. Replace its grant, or remove the mailbox if the account is gone.
+4. In the console chat, ask "What's on my calendar tomorrow?" and check the answer against the real calendars.
 
 Console chat counts as your principal, so keep test questions to reading, not changing.
 
@@ -93,20 +94,36 @@ Console chat counts as your principal, so keep test questions to reading, not ch
 **In their inboxes**, every hour from 6am to 11pm by default:
 
 - Curia works through unread mail. Messages it has dealt with are marked read or archived.
-- Replies appear as **drafts** in the Drafts folder of the account the message arrived in, for them to review and send.
+- Replies appear as **drafts** in the Drafts folder of the account the message arrived in, for them to review and send. Curia sends a draft when they ask, and can send routine replies itself if they allow it. See [Replies from your mailbox](/core-concepts/inbox-sending).
 - Some messages get labels, such as `⏳ In Progress` while Curia waits on something, or `⚠️ Stuck` when it needs them.
 - Anything urgent reaches them on another channel, such as Signal.
 - A message sent to both of their addresses is handled once, not twice.
 
-Your principal can give each inbox its own schedule just by asking, for example "check my work email every 30 minutes on weekdays, and my personal email once a day at 6pm". A newly added mailbox starts with mail that arrives after it was connected, so an old backlog isn't worked through unless they ask ("go through the last week of my work email").
+Your principal can give each inbox its own schedule just by asking, for example "check my work email every 30 minutes on weekdays, and my personal email once a day at 6pm". A schedule can run every so many minutes (in steps of 15) or hours, or once a day, within a time window and on weekdays only. A newly added mailbox starts with mail that arrives after it was connected, so an old backlog isn't worked through unless they ask ("go through the last week of my work email").
+
+Behind the schedule, Curia looks every 15 minutes for a mailbox that's due and has unread mail, and only then starts work. Two limits keep a flood of mail in check:
+
+- **Backlog alarm.** If a mailbox has more than 100 messages waiting, Curia tells your principal once.
+- **Daily ceiling.** Curia triages at most about 600 messages a day across all mailboxes. If it reaches that, it tells your principal and stops until the next day.
+
+If triage stops working, the `principal_mailbox_triage` check in `/api/health` reads `fail`.
 
 **When Curia writes new mail or books a meeting**, it chooses the account from who it's for, the topic, past mail and your principal's standing preferences (such as "meetings always go on my work calendar"). It mentions the account only when the choice was a judgement call, and asks when it can't tell. A draft in the wrong account can be moved by asking ("move that to my personal account").
 
 **On their calendars:**
 
-- Curia answers scheduling questions from all of their calendars together. Your principal can tell Curia which events don't count as busy, for example "the cleaner's visits on my personal calendar don't block me".
+- Curia answers scheduling questions from all of their calendars together. A meeting that's on two of their calendars is listed once. Your principal can tell Curia which events don't count as busy, for example "the cleaner's visits on my personal calendar don't block me".
+- If a calendar doesn't answer, or has been removed, Curia never treats that time as free. It says which calendar it couldn't check.
 - While it negotiates a time, it may place tentative events titled `HOLD (TBC): …`. It clears stale holds every night.
-- It can accept invitations, answering from the account the invitation arrived in, and create events as them. At the default autonomy level (75), creating an event waits for their approval first.
+- It can accept invitations, answering from the account the invitation arrived in, and create events as them, including repeating ones such as a weekly one-on-one. At the default autonomy level (75), creating an event waits for their approval first.
+
+**When your principal hands Curia a meeting to set up:**
+
+- **Forwarding is enough.** When your principal forwards a request to Curia, Curia treats it as "please handle this" and tells them what it did, rather than asking first.
+- **CC'd requests get times.** When your principal copies Curia on a thread to set up a meeting, Curia offers specific times from their calendar.
+- **Booking links are used.** If the other person shared a booking page (Calendly and similar), Curia books through it instead of proposing times.
+- **People they know are treated as known.** A first email from someone your principal has written to before (found in their Sent mail) is handled as a known contact, not a stranger, as long as the mail passes sender checks. You can also list your principal's company domains so colleagues count as known; see [Automatic elevation](/core-concepts/contacts-trust#automatic-elevation).
+- **"Move things around."** When your principal asks Curia to make room, it moves their own blocks first, then small internal meetings, and never external or personal events. At an autonomy score of 80 or more it moves them and says what moved. Below 80 it asks first.
 
 Changes appear as made by their own account, because Curia acts as them.
 

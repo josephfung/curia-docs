@@ -35,6 +35,8 @@ Sometimes a reply to someone else carries a remark meant only for you — "I've 
 
 If a specialist errors or times out, Curia still answers in its own voice. The reply doesn't name the specialist or expose internals — no model reasoning, delegation briefs, or error text. When the person waiting is an external sender, the reply is written for them, and the review task it opens for you records that they are waiting on a reply.
 
+A specialist can also decline work it can't do. The Coordinator then takes the alternative the specialist offered, does the work itself, or tries another specialist, and it tells you the real reason when it can't. Each specialist's known limits are listed in the Coordinator's roster (the agent YAML's `limits`), so most such work is routed correctly in the first place.
+
 A timeout doesn't cancel the work. If the specialist finishes late, its result is handed back so the follow-up still happens, and the review task stays open until the waiting sender has their answer.
 
 ## Extensibility

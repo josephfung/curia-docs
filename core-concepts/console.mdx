@@ -1,0 +1,62 @@
+---
+title: "The console"
+description: "A tour of Curia's web console: the Home page, chat, the Memory views and Settings, and how sign-in sessions work."
+---
+
+The console is Curia's web app. Open your Curia address in a browser and sign in with the access key the installer printed. It's where you chat with Curia, see what it has done and what's waiting on you, look through what it remembers, and change its settings.
+
+The same console installs on a phone as an app. See [Use Curia on your phone](/channels/phone-app).
+
+## Home
+
+The Home page is the first thing you see after signing in. From top to bottom:
+
+- **Waiting on you.** Overdue tasks and actions held for your approval. **Review** opens a held draft so you can **Approve** or **Discard** it, **Mark done** closes a task, and **×** dismisses an item. You can undo a dismissal or **Mark done** for a few seconds. An approval can't be undone.
+- **Four numbers for the last seven days.** **Time saved · 7d** is an estimate of the time Curia's work saved; open its note to see how each kind of work is weighted. **Done for you · 7d** counts finished work, **Open tasks** shows open and overdue tasks and opens the task list, and **Hiccups · 7d** counts things that went wrong. Click **Hiccups** for the list. An action Curia held back because a rule required your say isn't a hiccup: the tile shows those as "held for you" instead.
+- **Work history.** A chart of the last 14 days of work, grouped **By agent** or **By outcome**.
+- **Ask Curia.** Type a question, and it opens in chat.
+- **Bullpen.** Which agents are mid-task right now. It links to [Ant Farm](/core-concepts/ant-farm).
+- **System health.** The [health checks](/get-started/health-monitoring), plus a **Setup ·** line listing anything installed but not finished.
+- **Recent activity.** One plain line for each job Curia did, with a link to replay the whole day in Ant Farm.
+
+## Chat
+
+**Chat** is your conversation with Curia. It's one conversation on every device you sign in on: something you send from your phone shows up on your computer, and the other way round. When voice is set up, the **Voice** button above the message box starts a [call](/get-started/voice).
+
+## Memory
+
+| View | What it shows |
+|---|---|
+| **Knowledge Graph** | The people, organizations, projects and facts Curia has learned. Filter, inspect and merge duplicates. See [the knowledge graph browser](/core-concepts/memory#the-knowledge-graph-browser). |
+| **Documents** | Curia's working documents, including the `/shared/` rules agents work from. See [Documents](/core-concepts/memory#documents). |
+| **Contacts** | Everyone Curia knows, with their channels and trust level. See [Contacts and trust](/core-concepts/contacts-trust). |
+| **Tasks** | Curia's backlog, yours and its own. |
+| **Scheduled Jobs** | Recurring and one-off jobs. See [Scheduling](/core-concepts/scheduling). |
+| **Secrets** | Every credential, website login and saved card, never with its value. See [the Secrets page](/get-started/secrets-vault#the-secrets-page). |
+
+## Settings
+
+- **Behaviour** is how Curia acts for you:
+  - **Personality**: the assistant's name, title and email signature, and its **Tone & style**. Tone & style is a few lines describing how Curia sounds and what it never does. Start from a template (**Dry & understated**, **Warm & personable**, **Crisp & direct** or **Formal**) and edit it.
+  - **Ghostwriting**: words and phrases to prefer or avoid when Curia writes as you.
+  - **Standing preferences**: lasting instructions that apply everywhere, on every channel.
+  - **Email & Calendar**: [your mailboxes and calendars](/get-started/principal-email-calendar).
+  - **Autonomy**: the [autonomy score](/core-concepts/autonomy).
+- **Tools**, **Agents**, **Channels** and **MCP Skills** install, enable and configure what Curia can do. See [Managing skills, agents, and channels](/core-concepts/registry).
+- **System** is about this installation:
+  - **About**: the Curia version, the models each tier uses, and a **Restart** button.
+  - **Devices**: every signed-in device, phone pairing and notifications.
+  - **Retention**: how long Curia keeps conversations, documents and facts. It's read-only, because it's set when Curia is deployed.
+
+## Staying signed in
+
+A sign-in lasts **90 days from when you last used it**, and restarts and updates of Curia don't sign you out. **Settings → System → Devices** lists every signed-in browser and phone. From there you can rename a device, sign one out, or **Sign out all other devices**.
+
+<CardGroup cols={2}>
+  <Card title="Use Curia on your phone" icon="mobile" href="/channels/phone-app">
+    Install the console on your home screen and get notifications.
+  </Card>
+  <Card title="Memory and the knowledge graph" icon="brain" href="/core-concepts/memory">
+    What Curia remembers and how to inspect and correct it.
+  </Card>
+</CardGroup>
