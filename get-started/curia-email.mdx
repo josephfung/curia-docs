@@ -51,7 +51,7 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
     1. Set **Region** to the one your Nylas application lives in, or click **Detect** and Curia finds it. It's saved as `channel.email.nylas_region` and defaults to US.
     2. Click **Register callback**. This adds Curia's sign-in callback, `https://<your-domain>/api/mailbox-signin/callback`, to your Nylas application.
 
-    Until both are done the section reads **Not ready** and says what's missing. The callback and the region apply straight away: no restart.
+    Until both are done the section reads **Not ready** and says what's missing. Registering the callback needs no restart. Saving the API key or the region for the first time, or changing either later, needs one restart: until then the section reads **Restart Curia to finish setting up sign-in.** Restart from **Settings → System → About**, or run `docker compose restart curia`. After that, connecting a principal mailbox needs no restart.
   </Step>
 
   <Step title="Create the Google Cloud project and consent screen">
@@ -98,6 +98,7 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
     | The section says (after "Not ready:") | What to do |
     |---|---|
     | Save the Nylas API key under Channels → Email first. | Save it under **Settings → Channels → Email** (step 3). |
+    | Restart Curia to finish setting up sign-in. | The API key or region was saved or changed since Curia started. Restart once from **Settings → System → About**. |
     | Nylas rejected the key. Check the key, then use Detect to find its region. | Check the key, then click **Detect**: a key only works in its own region. |
     | This Nylas application is a sandbox. Use a production application and its API key. | Create a production application and use its key. |
     | Set APP_ORIGIN to this console's public https:// address and restart Curia. | Set it to Curia's public `https://` address and restart. |

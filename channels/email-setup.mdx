@@ -23,7 +23,7 @@ Everything is entered in the console under **Settings → Channels → email**. 
 | **Nylas API key** | Your Nylas application's | `channel.email.nylas_api_key` |
 | **Nylas region** (optional) | `us` or `eu`, the data centre your Nylas application is in. Blank means `us`. | `channel.email.nylas_region` (not secret; `NYLAS_REGION` is the fallback) |
 
-An API key only works in its own region. You can set the region here, or on **Settings → Behaviour → Email & Calendar** with **Detect**, which finds it from the key. The sign-in setup reads the key and region live, so saving them there needs no restart.
+An API key only works in its own region. You can set the region here, or on **Settings → Behaviour → Email & Calendar** with **Detect**, which finds it from the key. After you first save the key or the region, or change either, Curia needs one restart before sign-in works; until then the sign-in setup says **Restart Curia to finish setting up sign-in.** After that, connecting a principal mailbox needs no restart.
 
 **Email accounts** (one entry per Curia mailbox): an account name, the mailbox address and its Nylas grant. Each entry's grant is stored in the vault as `channel.email.<name>.nylas_grant_id`. These entries are the mailboxes Curia reads and sends from.
 
