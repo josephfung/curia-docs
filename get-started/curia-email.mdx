@@ -15,7 +15,7 @@ Both mailboxes connect the same way: you click **Connect with Google**, sign in 
 ## What you'll need
 
 - **A new mailbox just for Curia,** such as `curia@yourcompany.com`, on **Google Workspace or Gmail**. Don't reuse a person's inbox: Curia reads and acts on everything that arrives. Microsoft 365 and other providers aren't supported for sign-in yet.
-- **A Nylas account,** with a **production** application (not Sandbox). Curia talks to email through [Nylas](https://nylas.com). Sandbox applications can't create the Google connector this page needs.
+- **A Nylas account,** with a **production** application (not Sandbox). Use this application only for Curia: Curia removes Google connections in it that it created but doesn't use. Curia talks to email through [Nylas](https://nylas.com). Sandbox applications can't create the Google connector this page needs.
 - **A Google Cloud account** to create one OAuth client. This is the part that takes longest.
 - **An HTTPS address for Curia.** Set `APP_ORIGIN` to Curia's public `https://` address (see [Deployment](/get-started/deployment)). The sign-in callback must be reachable from the browser you sign in with, and sign-in stays unavailable while `APP_ORIGIN` isn't `https://`.
 - **The console,** signed in as in [1. Install Curia](/get-started/installation).
