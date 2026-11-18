@@ -80,14 +80,14 @@ Outbound email tools (`email-send`, `email-reply`, and their CEO-inbox counterpa
     Check the startup logs (`docker compose logs curia | grep -i "email channel"`). The message says what's missing:
 
     - `NYLAS_API_KEY not set — email channel disabled`: save the **Nylas API key** under **Credentials**.
-    - `No email accounts resolved — email channel disabled`: add Curia's mailbox under **Email accounts**, with its grant ID.
+    - `No email accounts resolved — email channel disabled`: add Curia's mailbox under **Email accounts**, with **Connect with Google** (or a pasted grant ID).
     - `channel enabled but required credentials missing; not starting`: the **Nylas API key** isn't saved.
 
     Also check that the email row shows **enabled**, not just **installed**, and that you restarted Curia after your last change.
   </Accordion>
 
   <Accordion title="The Enable button is greyed out">
-    The **Nylas API key** must show **configured**, and at least one enabled account under **Email accounts** must have a grant ID. Save whichever is missing.
+    The **Nylas API key** must show **configured**, and at least one enabled account under **Email accounts** must have a grant (from **Connect with Google** or a pasted grant ID). Save whichever is missing.
   </Accordion>
 
   <Accordion title="Connect with Google is greyed out, or a sign-in failed">

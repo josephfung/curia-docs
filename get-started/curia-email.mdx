@@ -95,15 +95,15 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
 
     Click **Check**. When the section reads **Ready. Mailbox sign-in is set up.**, you can add mailboxes. If it doesn't, the message names the next thing to fix:
 
-    | The section says | What to do |
+    | The section says (after "Not ready:") | What to do |
     |---|---|
-    | Save the Nylas API key first | Save it under **Settings → Channels → Email** (step 3). |
-    | Nylas rejected the key | Check the key, then click **Detect**: a key only works in its own region. |
-    | This Nylas application is a sandbox | Create a production application and use its key. |
-    | Set `APP_ORIGIN` | Set it to Curia's public `https://` address and restart. |
-    | Register the callback | Click **Register callback** (step 4). |
-    | Create the Google connector | Fill in the client ID and secret above. |
-    | Nylas did not answer | Wait a moment and click **Check** again. |
+    | Save the Nylas API key under Channels → Email first. | Save it under **Settings → Channels → Email** (step 3). |
+    | Nylas rejected the key. Check the key, then use Detect to find its region. | Check the key, then click **Detect**: a key only works in its own region. |
+    | This Nylas application is a sandbox. Use a production application and its API key. | Create a production application and use its key. |
+    | Set APP_ORIGIN to this console's public https:// address and restart Curia. | Set it to Curia's public `https://` address and restart. |
+    | Click Register callback to add the sign-in callback URL to Nylas. | Click **Register callback** (step 4). |
+    | Create the Google connector below with your Google Cloud OAuth client. | Fill in the client ID and secret above. |
+    | Nylas did not answer. Try Check again in a moment. | Wait a moment and click **Check** again. |
   </Step>
 
   <Step title="If the Google account is on Workspace: ask the admin to trust the app">
@@ -168,7 +168,11 @@ When a sign-in doesn't finish, the page it ends on says why:
 
 | The page says | What happened and what to do |
 |---|---|
-| Link expired, not valid or already used | Links last 60 minutes and work once. Click **Connect with Google** for a new one. |
+| Link expired | The link ran out. Links last 60 minutes. Click **Connect with Google** for a new one. |
+| Link not valid | The link isn't one Curia recognises. Click **Connect with Google** for a new one. |
+| Link already used | Links work once. If the mailbox isn't connected, click **Connect with Google** for a new one. |
+| Sign-in failed | Something went wrong while connecting. Try again, and if it keeps failing, ask for help. |
+| Something went wrong | Curia couldn't tell what happened. Get a new link and try again. |
 | Sign-in cancelled | The Google sign-in was closed or cancelled. Open the link again. |
 | Blocked by your Google admin | The Workspace admin blocks unapproved apps. Ask them to mark the client ID **Trusted** (step 8), then try again. |
 | Account not allowed | The Google app is **Internal** to one organisation, and the account is outside it. Sign in with an account from that organisation, or switch the app to External. |
