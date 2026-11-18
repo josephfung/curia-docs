@@ -44,7 +44,7 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
 
     You can also add the account in other ways:
 
-    - **Let your principal connect it.** Your principal can ask Curia to connect or reconnect their Gmail, and Curia replies with a sign-in link for one of their verified email addresses. A link lasts 60 minutes and works once, and must be used with the account it was made for. A brand-new account that isn't one of their verified addresses yet is added from the console, as above.
+    - **Let your principal connect it.** Your principal can ask Curia to connect or reconnect their Gmail, and Curia replies with a sign-in link for one of their verified email addresses. They can also ask to connect a new address of theirs, for example "connect my new work email", as long as they ask from a signed-in conversation (the console chat, not an email or text from outside). Signing in adds that address to their contact record. A link lasts 60 minutes and works once, and must be used with the account it was made for.
     - **Paste a grant ID.** Under **Paste a grant ID instead**, enter a **Mailbox id** (a short permanent name such as `work`; lowercase letters, digits and hyphens; it can't be changed or reused), a **Label** and the **Grant ID** from the Nylas dashboard. Click **Test** to check the address first, then **Add mailbox**. This is the older route and still works.
 
     Curia refuses a grant that isn't a Google account, that's already connected, or that belongs to one of Curia's own email accounts. The grant is stored in the vault as `principal.mailbox.<id>.nylas_grant_id`.
