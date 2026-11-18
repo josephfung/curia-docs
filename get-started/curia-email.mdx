@@ -1,26 +1,30 @@
 ---
 title: "Curia's own email"
 sidebarTitle: "2. Curia's own email"
-description: "Give Curia a dedicated mailbox, connected through Nylas, so it can send, receive and reply to email as itself."
+description: "Give Curia a dedicated mailbox, connected through Nylas and Google sign-in, so it can send, receive and reply to email as itself."
 ---
 
 ## What this is for
 
 Curia needs an email address of its own, the way an assistant has their own inbox. People write to it, your principal forwards or CCs it, and Curia replies from it, signed as Curia.
 
-This page connects **Curia's** mailbox. It is not your principal's mailbox. Giving Curia access to your principal's email and calendar is a separate step: [5. Your principal's email and calendar](/get-started/principal-email-calendar).
+This page connects **Curia's** mailbox. It is not your principal's mailbox. Giving Curia access to your principal's email and calendar is a separate step: [5. Your principal's email and calendar](/get-started/principal-email-calendar). That step reuses the Google sign-in you set up here, so most of the work is done once, on this page.
+
+Both mailboxes connect the same way: you click **Connect with Google**, sign in as that Google account, and Curia stores the access itself. There is no grant ID to copy. (Pasting a grant ID from the Nylas dashboard still works as a fallback.)
 
 ## What you'll need
 
-- **A new mailbox just for Curia,** such as `curia@yourcompany.com`, on Google Workspace, Gmail, Microsoft 365 or another provider Nylas supports. Don't reuse a person's inbox: Curia reads and acts on everything that arrives.
-- **A Nylas account.** Curia talks to email through [Nylas](https://nylas.com). Create the application in Nylas's **US** region: Curia uses Nylas's US API and doesn't support other regions yet.
+- **A new mailbox just for Curia,** such as `curia@yourcompany.com`, on **Google Workspace or Gmail**. Don't reuse a person's inbox: Curia reads and acts on everything that arrives. Microsoft 365 and other providers aren't supported for sign-in yet.
+- **A Nylas account,** with a **production** application (not Sandbox). Curia talks to email through [Nylas](https://nylas.com). Sandbox applications can't create the Google connector this page needs.
+- **A Google Cloud account** to create one OAuth client. This is the part that takes longest.
+- **An HTTPS address for Curia.** Set `APP_ORIGIN` to Curia's public `https://` address (see [Deployment](/get-started/deployment)). The sign-in callback must be reachable from the browser you sign in with, and sign-in stays unavailable while `APP_ORIGIN` isn't `https://`.
 - **The console,** signed in as in [1. Install Curia](/get-started/installation).
 
-**Time:** about half an hour, plus however long it takes to create the mailbox.
+**Time:** about an hour for the Nylas and Google Cloud setup, plus however long it takes to create the mailbox.
 
 **Cost** (checked 2026-11-01):
 
-- Nylas Free: $0 for up to 5 connected accounts. Nylas describes it as "for proving it works" and doesn't say whether it covers production use.
+- Nylas Free: $0 for up to 5 connected accounts. Nylas describes it as "for proving it works" and doesn't say whether it covers production use. Whether the free plan allows a custom Google connector isn't confirmed, so check on your plan.
 - Nylas Essentials: $15/month for up to 10 accounts.
 - Plus whatever your email provider charges for one more mailbox.
 
@@ -34,53 +38,144 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
   </Step>
 
   <Step title="Create a Nylas application and copy its API key">
-    Sign up at [nylas.com](https://www.nylas.com) and, in the Nylas dashboard, create an application in the **US** region. Copy its **API key**.
+    Sign up at [nylas.com](https://www.nylas.com) and, in the Nylas dashboard, create a **production** application. Choose its data region, **US** or **EU**, and remember which. Copy its **API key**.
   </Step>
 
-  <Step title="Connect Curia's mailbox to Nylas">
-    In the Nylas dashboard, open **Grants** and add a grant. Sign in as **Curia's mailbox** (not your principal's) when the provider asks. When it's done, copy the **grant ID**.
+  <Step title="Save the API key in the console">
+    In the Curia console, go to **Settings → Channels** and click the **email** row. If its state is **not installed**, click **Install**. Under **Credentials**, enter your **Nylas API key** and click **Save**. It's stored in the vault as `channel.email.nylas_api_key`.
   </Step>
 
-  <Step title="Open the email channel in the console">
-    In the Curia console, go to **Settings → Channels** and click the **email** row. If its state is **not installed**, click **Install**.
+  <Step title="Choose the region and register the callback">
+    Go to **Settings → Behaviour → Email & Calendar**. At the top is **Sign in with Google (Nylas)**, which reads Nylas live using the key you just saved.
+
+    1. Set **Region** to the one your Nylas application lives in, or click **Detect** and Curia finds it. It's saved as `channel.email.nylas_region` and defaults to US.
+    2. Click **Register callback**. This adds Curia's sign-in callback, `https://<your-domain>/api/mailbox-signin/callback`, to your Nylas application.
+
+    Until both are done the section reads **Not ready** and says what's missing. The callback and the region apply straight away: no restart.
   </Step>
 
-  <Step title="Enter the API key">
-    Under **Credentials**, enter your **Nylas API key** and click **Save**. It's stored in the vault as `channel.email.nylas_api_key`, and the row turns to **configured (vault)**.
+  <Step title="Create the Google Cloud project and consent screen">
+    In [Google Cloud](https://console.cloud.google.com), create a project, or use one you already have for Curia. Then open **APIs & Services → OAuth consent screen** and choose the user type. This decision matters:
+
+    | Situation | Choose |
+    |---|---|
+    | Curia's mailbox and your principal are on **Google Workspace** and you can create the project inside that organisation | **Internal.** No verification and no warning screen. Only accounts in that organisation can sign in. |
+    | Anything else, including a mix of Workspace and Gmail accounts | **External**, then set the publishing status to **In production**. It stays unverified. See [Why an unverified app is OK](#why-an-unverified-app-is-ok). |
+
+    <Warning>
+      **Never leave an External app in Testing.** In Testing, Google expires refresh tokens after 7 days, so every mailbox would stop working weekly and need reconnecting. Click **Publish app** to move it to **In production**.
+    </Warning>
+
+    Add these scopes to the consent screen:
+
+    - `https://www.googleapis.com/auth/gmail.modify`
+    - `https://www.googleapis.com/auth/gmail.compose`
+    - `https://www.googleapis.com/auth/calendar`
+
+    Enable the **Gmail API** and **Google Calendar API** for the project, under **APIs & Services → Library**.
   </Step>
 
-  <Step title="Add Curia's mailbox under Email accounts">
-    Further down the same panel, under **Email accounts**, fill in:
+  <Step title="Create a Web OAuth client with Nylas's redirect">
+    Under **APIs & Services → Credentials**, click **Create credentials → OAuth client ID**. Set the application type to **Web application**. A Desktop client won't work.
 
-    - **Account name:** a short name, such as `curia`.
-    - **Mailbox address:** Curia's email address.
-    - **Nylas grant ID:** the grant ID from step 3.
+    Under **Authorised redirect URIs**, add Nylas's address for your region:
 
-    Click **Add account**. This is the mailbox Curia reads and sends from.
+    - US: `https://api.us.nylas.com/v3/connect/callback`
+    - EU: `https://api.eu.nylas.com/v3/connect/callback`
+
+    The console shows the exact address for your region in the same **Sign in with Google (Nylas)** section. Copy it from there. Then click **Create**.
+
+    <Warning>
+      Google shows the **client secret only once**, when you create the client. Copy it straight into Curia in the next step. If you miss it, create a new secret.
+    </Warning>
   </Step>
 
-  <Step title="Enable the channel and restart Curia">
-    Click **Enable**. The button stays disabled until the API key is saved and at least one enabled email account has a grant.
+  <Step title="Create the Google connector">
+    Back in the console's **Sign in with Google (Nylas)** section, paste the **Client ID** and **Client secret** and click **Create connector**. Curia passes the secret to Nylas and doesn't keep it. The fields clear once Nylas has it. The Pub/Sub topic field is optional and only matters for Nylas mail push notifications.
 
-    Enabling, credentials and new accounts all take effect on the next restart. From the folder where you ran the installer:
+    Click **Check**. When the section reads **Ready. Mailbox sign-in is set up.**, you can add mailboxes. If it doesn't, the message names the next thing to fix:
+
+    | The section says | What to do |
+    |---|---|
+    | Save the Nylas API key first | Save it under **Settings → Channels → Email** (step 3). |
+    | Nylas rejected the key | Check the key, then click **Detect**: a key only works in its own region. |
+    | This Nylas application is a sandbox | Create a production application and use its key. |
+    | Set `APP_ORIGIN` | Set it to Curia's public `https://` address and restart. |
+    | Register the callback | Click **Register callback** (step 4). |
+    | Create the Google connector | Fill in the client ID and secret above. |
+    | Nylas did not answer | Wait a moment and click **Check** again. |
+  </Step>
+
+  <Step title="If the Google account is on Workspace: ask the admin to trust the app">
+    A Workspace admin can block apps they haven't approved, and a blocked sign-in fails for the person signing in. To avoid that, ask the admin to trust the OAuth client **before** anyone signs in:
+
+    **Admin console → Security → Access and data control → API controls → Manage Third-Party App Access → Add app → OAuth App Name or Client ID**, enter the client ID from the previous step and set it to **Trusted**. It can take up to 24 hours to apply.
+
+    If you skip this and the account is blocked, the sign-in page tells the person to ask their admin to mark Curia's app as Trusted, so it's recoverable. It's just quicker to do first.
+  </Step>
+
+  <Step title="Add Curia's mailbox">
+    Go to **Settings → Channels**, open the **email** row and scroll to **Email accounts**. Click **Connect with Google**. Google asks you to sign in and approve access. Sign in as **Curia's mailbox**, not your principal's, and leave both the mail and calendar boxes ticked.
+
+    When it's done, the page says **Connected**. Curia adds the account (named `curia` if that name is free) and saves its grant in the vault. **Curia then restarts itself a few seconds later** to start using the mailbox, and the page says when it's back (about a minute). You don't need to run anything.
+
+    The link the button opens lasts 60 minutes and works once. If it expires or you close the page, click **Connect with Google** again.
+  </Step>
+
+  <Step title="Enable the channel">
+    Still on the **email** row, click **Enable**. The button stays disabled until the API key is saved and at least one enabled email account has a grant, which the previous step has just given you.
+
+    Enabling a channel takes effect on the next restart, which is the usual rule for channels. Restart Curia once from the folder where you ran the installer:
 
     ```bash
     docker compose restart curia
     ```
+
+    You only need this the first time you set the channel up. Adding more accounts afterwards restarts Curia by itself.
   </Step>
 </Steps>
 
 For more mailboxes, field details and troubleshooting, see the [email channel reference](/channels/email-setup).
 
+## Why an unverified app is OK
+
+Google classes `gmail.modify` and `gmail.compose` as **restricted** scopes. Fully verifying an app for restricted scopes requires a paid security assessment, which makes no sense for one executive's assistant. You don't need it.
+
+- **Google allows it for small, known groups.** Its restricted-scope verification page says verification isn't needed "if you are the only user of your app or if your app is used by only a few users, all of whom are known personally to you". Those users click through an "unverified app" warning instead ([Google, restricted-scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification), read 2026-11-17). Google's policies describe a personal-use app as one used by fewer than 100 people, all known to you ([OAuth policies](https://developers.google.com/identity/protocols/oauth2/policies), updated 2026-08-05).
+- **The 100-user cap is per project, for the life of the project** ([Google Cloud, Audience](https://support.google.com/cloud/answer/15549945), read 2026-11-17). One Curia install uses two or three accounts, so it never gets close.
+- **It works in practice.** On 2026-11-17, a Curia production install's Google Drive client was External, In production and unverified, and Google's own Verification Center said its data access was not verified. Its restricted `drive` scope had kept working for more than 7 days. So an unverified production app is neither blocked nor on 7-day tokens.
+
+What can still go wrong, so you aren't surprised:
+
+- **Google can revoke tokens "at any time without notice"** for an app that is no longer approved (same policies page). Nothing on Curia's side can prevent that. If it happens, Curia's health check notices that a mailbox stopped working and alerts by email. For your principal's mailboxes the alert carries a reconnect link that lasts 7 days.
+- **A password change on a Google account invalidates its Gmail tokens.** Reconnect the mailbox. Tokens also lapse after 6 months unused.
+- **Google deletes OAuth clients inactive for 6 months**, after an email warning ([Google Cloud, OAuth client management](https://support.google.com/cloud/answer/15549257), read 2026-11-17). A live install uses its client daily, but a test install you leave alone might lose it.
+- **An Advanced Protection account can't use an unverified External app.** Use an Internal app, or ask whether your admin can trust the client.
+- **A Workspace admin can block unapproved apps** for their users. That's what step 8 is for.
+- **Nylas's own cookbook says** restricted-scope apps can get `access_denied` for external users until verified, and elsewhere describes the same click-through warning (its "Fix Google access_denied" cookbook, updated 2026-10-07). Our evidence is the production run above. If your first sign-in is hard-blocked, see [Troubleshooting](#troubleshooting).
+
 ## Check it works
 
-- **Logs.** After the restart, run `docker compose logs curia | grep -i "email channel"`. You should see `Email channel: 1 account(s) configured`. If you see `email channel disabled` instead, the message says what's missing.
-- **Health.** `curl https://<your-domain>/api/health` shows `"email": "ok"`. `"skipped"` means the email channel didn't start. `"fail"` means it started but can't reach the mailbox: check the grant in the Nylas dashboard.
-- **Console.** On the dashboard, the **Setup ·** line no longer lists the email channel. The email row in **Settings → Channels** shows **enabled**.
+- **The page.** After you connect, the result page says **Connected**, then that Curia is back and using the mailbox.
+- **Logs.** After the channel restart, run `docker compose logs curia | grep -i "email channel"`. You should see `Email channel: 1 account(s) configured`. If you see `email channel disabled` instead, the message says what's missing.
+- **Health.** `curl https://<your-domain>/api/health` shows `"email": "ok"`. `"skipped"` means the email channel didn't start. `"fail"` means it started but can't reach the mailbox: reconnect it.
+- **Console.** On the dashboard, the **Setup ·** line no longer lists the email channel, and the email row in **Settings → Channels** shows **enabled**.
 - **A real message.** Send a short email to Curia's address from your own mailbox. Curia checks every 30 seconds, so give it a minute.
 
-## What your principal will notice
+## Troubleshooting
 
-Nothing until Curia writes to them. When it does, the email comes from Curia's address, signed with the signature you set in the setup form.
+When a sign-in doesn't finish, the page it ends on says why:
 
-Tell your principal Curia's address. They can then CC Curia on threads or forward messages to it, and they'll recognise its emails.
+| The page says | What happened and what to do |
+|---|---|
+| Link expired, not valid or already used | Links last 60 minutes and work once. Click **Connect with Google** for a new one. |
+| Sign-in cancelled | The Google sign-in was closed or cancelled. Open the link again. |
+| Blocked by your Google admin | The Workspace admin blocks unapproved apps. Ask them to mark the client ID **Trusted** (step 8), then try again. |
+| Account not allowed | The Google app is **Internal** to one organisation, and the account is outside it. Sign in with an account from that organisation, or switch the app to External. |
+| Wrong account | You signed in with a different Google account than the one requested. Open the link again and pick the right one. |
+| Permissions missing | Google asks for mail and calendar access, sometimes on two screens. Leave **every** box ticked, then try again. |
+| Not a Google account | Only Google accounts connect this way. |
+| Not connected | Curia couldn't accept this mailbox. Check the address and the console settings. |
+| Reconnected | The mailbox was already set up. Its access was refreshed with this new sign-in. Nothing else to do. |
+
+A hard "This app is blocked" screen from Google, or `access_denied` even after you accept the unverified-app warning, means Google is applying a stricter policy to your project than described above. Try an **Internal** app inside a Workspace organisation instead.

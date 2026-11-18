@@ -21,14 +21,19 @@ Everything is entered in the console under **Settings → Channels → email**. 
 | Field | Whose value | Vault key |
 |---|---|---|
 | **Nylas API key** | Your Nylas application's | `channel.email.nylas_api_key` |
+| **Nylas region** (optional) | `us` or `eu`, the data centre your Nylas application is in. Blank means `us`. | `channel.email.nylas_region` (not secret; `NYLAS_REGION` is the fallback) |
 
-**Email accounts** (one entry per Curia mailbox): an account name, the mailbox address and its Nylas grant ID. Each entry's grant is stored in the vault as `channel.email.<name>.nylas_grant_id`. These entries are the mailboxes Curia reads and sends from.
+An API key only works in its own region. You can set the region here, or on **Settings → Behaviour → Email & Calendar** with **Detect**, which finds it from the key. The sign-in setup reads the key and region live, so saving them there needs no restart.
 
-**Enable** becomes available once the API key is saved and at least one enabled account has a grant. The setup assistant marks email done when the same check passes and the channel is enabled.
+**Email accounts** (one entry per Curia mailbox): an account name, the mailbox address and its Nylas grant. Each entry's grant is stored in the vault as `channel.email.<name>.nylas_grant_id`. These entries are the mailboxes Curia reads and sends from.
+
+**Add an account with Connect with Google.** Under **Email accounts**, click **Connect with Google** and sign in as Curia's mailbox. Curia adds the account (named `curia` if that's free), stores the grant and **restarts itself a few seconds later** to start using it. Nothing is copied from the Nylas dashboard. This needs mailbox sign-in set up first, which is covered in [2. Curia's own email](/get-started/curia-email): the Nylas callback and Google connector, an `https://` `APP_ORIGIN`, and a Google Cloud **Web** OAuth client. Only Google accounts work for now; Microsoft 365 isn't supported yet. Signing in again as an address that's already an account refreshes its grant instead of adding a second account. Under **Paste a grant ID instead**, the older route (name, address, grant ID) still works.
+
+**Enable** becomes available once the API key is saved and at least one enabled account has a grant. Signing in a first mailbox gives it one. The setup assistant marks email done when the same check passes and the channel is enabled.
 
 **Your principal's own mailboxes** are not set up here. They have their own page, **Settings → Behaviour → Email & Calendar**, which needs the Nylas API key above. Each grant is stored as `principal.mailbox.<id>.nylas_grant_id`. See [5. Your principal's email and calendar](/get-started/principal-email-calendar).
 
-Saved credentials, enabling the channel and adding or removing accounts all take effect on the next restart:
+Saved credentials, enabling the channel and removing accounts take effect on the next restart. Adding an account with **Connect with Google** restarts Curia by itself; adding one by pasting a grant ID does not:
 
 ```bash
 docker compose restart curia
@@ -42,7 +47,7 @@ docker compose restart curia
 
 ## More than one mailbox
 
-Curia can work from several mailboxes of its own, for example a general address and a scheduling address. Connect each one to Nylas as its own grant, then add it under **Email accounts** with a different account name. All accounts share the one Nylas API key. Restart Curia after adding one.
+Curia can work from several mailboxes of its own, for example a general address and a scheduling address. Add each one under **Email accounts** with **Connect with Google**, signing in as that mailbox. All accounts share the one Nylas API key. Curia restarts itself after each sign-in; if you pasted a grant ID instead, restart it yourself.
 
 Each Nylas grant counts as a connected account on your Nylas plan.
 
@@ -85,8 +90,14 @@ Outbound email tools (`email-send`, `email-reply`, and their CEO-inbox counterpa
     The **Nylas API key** must show **configured**, and at least one enabled account under **Email accounts** must have a grant ID. Save whichever is missing.
   </Accordion>
 
+  <Accordion title="Connect with Google is greyed out, or a sign-in failed">
+    The line under the button says what's missing. The usual causes are no saved API key, a wrong region, a Sandbox application, an `APP_ORIGIN` that isn't `https://`, the callback not registered or no Google connector. The fixes are in the table in [2. Curia's own email](/get-started/curia-email#steps). If a finished sign-in ends on an error page, [that page's troubleshooting table](/get-started/curia-email#troubleshooting) explains each message.
+
+    Links last 60 minutes and work once. A link in an outage email lasts 7 days.
+  </Accordion>
+
   <Accordion title="Messages not appearing">
-    Curia polls Nylas every 30 seconds by default. If messages are slow to appear, check that the mailbox's grant is active in the Nylas dashboard and that the grant ID under **Email accounts** matches the one Nylas shows.
+    Curia polls Nylas every 30 seconds by default. If messages are slow to appear, check that the mailbox's grant is active in the Nylas dashboard. If it isn't, for example after a password change, click **Connect with Google** again for that address.
 
     `/api/health` reports `"email": "fail"` when polling has stopped succeeding.
 

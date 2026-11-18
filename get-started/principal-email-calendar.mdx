@@ -16,44 +16,44 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
 
 ## What you'll need
 
-- **Curia's own email working,** from page 2. This step uses the same Nylas application.
-- **Your principal, or their Google sign-in,** for each account. Connecting a mailbox means signing in to that Google account, so do it with them.
+- **Mailbox sign-in set up,** from page 2: the Nylas API key, region, callback and Google connector, and the section reading **Ready**. This step uses the same Nylas application and Google client, so there is no new Google Cloud work.
+- **Your principal, or their Google sign-in,** for each account. Connecting a mailbox means signing in to that Google account, so do it with them, or send them the link.
 
-**Time:** about 20 minutes for the first account, plus finding a moment with your principal. Each extra account takes about 5 minutes.
+**Time:** about 5 minutes per account, plus finding a moment with your principal.
 
 **Cost** (checked 2026-11-01): each principal mailbox is one more connected account on your Nylas plan. Nylas Free covers up to 5 accounts (Nylas describes it as "for proving it works" and doesn't say whether it covers production use). Essentials is $15/month for up to 10.
 
 ## Steps
 
 <Steps>
-  <Step title="Connect each of your principal's Google accounts to Nylas">
-    In the Nylas dashboard, open the same application you used for Curia's mailbox. Go to **Grants** and add a grant, the same way you connected Curia's mailbox, but sign in as your **principal's** Google account. Allow access to both mail and calendar.
+  <Step title="Check the Google side is ready for this account">
+    Two things from page 2 matter here:
 
-    Copy the new **grant ID**. Repeat for each account your principal wants Curia to work in.
+    - If your principal's account is on **Google Workspace** and the Google app is **External**, ask their admin to mark the OAuth client ID **Trusted** first (page 2, step 8). Otherwise a blocked sign-in just tells them to ask their admin, which wastes a moment.
+    - Your principal will see Google's **unverified app** screen. This is expected: see [Why an unverified app is OK](/get-started/curia-email#why-an-unverified-app-is-ok). Tell them to click **Advanced**, then **Go to (app name) (unsafe)**. [Connecting your email](/onboarding/connecting-your-email) is a short page you can send them that explains it.
   </Step>
 
-  <Step title="Add each mailbox in the console">
+  <Step title="Connect each of your principal's Google accounts">
     In the console, go to **Settings → Behaviour → Email & Calendar**. This page is only for your principal's own mail and calendars; Curia's own email accounts stay under **Settings → Channels → Email**.
 
-    If the page shows **Finish setting up the email channel first**, the Nylas API key from page 2 isn't saved yet. Save it under **Settings → Channels → Email** and come back. Until then, the page lists any mailboxes already connected but can't add or change them.
+    If the page shows **Finish setting up the email channel first**, the Nylas API key from page 2 isn't saved yet. Save it under **Settings → Channels → Email** and come back. Until then, the page lists any mailboxes already connected but can't add or change them. If the **Connect with Google** button is greyed out, the line under it says what's missing.
 
-    For each account, enter:
+    Click **Connect with Google** and sign in as your **principal's** Google account. Google asks for access to mail and calendar, sometimes on two separate screens. **Leave every box ticked on both.** If any is unticked, the sign-in finishes with **Permissions missing** and nothing is connected.
 
-    | Field | Value |
-    |---|---|
-    | **Mailbox id** | A short, permanent name such as `work` or `personal` (lowercase letters, digits and hyphens). It can't be changed or reused later. |
-    | **Label** | How Curia names the account to your principal, such as `Work`. You can rename it any time. |
-    | **Grant ID** | The grant ID from the previous step |
+    When it's done, the page says **Connected**. Curia reads the address from the sign-in itself, adds the mailbox to the list with a short id and a label, and connects its calendar. There's no address, id or grant ID to type, and **no restart**.
 
-    Click **Test** first: it shows the address and provider Nylas reports for that grant, so you can check it's the right account. Then click **Add mailbox**.
+    You can also add the account in other ways:
 
-    Curia reads the address from the grant itself, so there's no address to type. It refuses a grant that isn't a Google account, that's already connected, or that belongs to one of Curia's own email accounts. The grant is stored in the vault as `principal.mailbox.<id>.nylas_grant_id`.
+    - **Let your principal connect it.** Your principal can ask Curia to connect or reconnect their Gmail, and Curia replies with a sign-in link for one of their verified email addresses. A link lasts 60 minutes and works once, and must be used with the account it was made for. A brand-new account that isn't one of their verified addresses yet is added from the console, as above.
+    - **Paste a grant ID.** Under **Paste a grant ID instead**, enter a **Mailbox id** (a short permanent name such as `work`; lowercase letters, digits and hyphens; it can't be changed or reused), a **Label** and the **Grant ID** from the Nylas dashboard. Click **Test** to check the address first, then **Add mailbox**. This is the older route and still works.
 
-    If you add more than one, click **Make default** on the one Curia should list first. Being the default doesn't decide where mail is sent from: Curia picks the account from the message, draft or meeting it's working on.
+    Curia refuses a grant that isn't a Google account, that's already connected, or that belongs to one of Curia's own email accounts. The grant is stored in the vault as `principal.mailbox.<id>.nylas_grant_id`.
+
+    Repeat for each account. If you add more than one, click **Make default** on the one Curia should list first. Being the default doesn't decide where mail is sent from: Curia picks the account from the message, draft or meeting it's working on. You can rename a mailbox's label any time.
 
     Adding a mailbox also connects its calendar, so Curia can read and book on it straight away. Mailbox changes apply at once, with no restart.
 
-    If an account's access stops working (a changed password, or access revoked in Google), reconnect it in Nylas, then click **Replace grant** on that mailbox and paste the new grant ID. It must be for the same address.
+    **If an account's access stops working** (a changed password, or access revoked in Google), click **Connect with Google** again for that account. It refreshes the existing mailbox rather than adding a second one. Curia's outage email to your principal includes a reconnect link that lasts 7 days, so they can do it from their phone. Pasting a new grant ID under **Edit** also still works.
   </Step>
 
   <Step title="Turn on the inbox and calendar specialists">
@@ -76,15 +76,11 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
   **Upgrading from a single mailbox?** There's nothing to do. On its first start after the upgrade, Curia moves the existing principal mailbox into the list as the default, named after its address's domain (for example `gmail`). Rename it in the console if you like. Older vault keys for the mailbox and the Nylas key move to their new names at the same time. If email or the mailboxes then report the Nylas API key missing, save it again under **Settings → Channels → Email**.
 </Note>
 
-<Note>
-  **Coming soon:** your principal will connect their own mailboxes by signing in from a link Curia sends, with no grant ID to copy.
-</Note>
-
 ## Check it works
 
 1. On **Settings → Behaviour → Email & Calendar**, each mailbox should be listed with the right address.
 2. Open `/api/health` on your Curia address. `nylas_calendar` should read `ok`; it fails if any mailbox's calendars can't be reached. Once the inbox specialist is running, `principal_mailbox_triage` should read `ok` too.
-3. Each mailbox also has its own daily check, named `principal_mailbox:<id>`. It runs with the daily canary and is logged as a `Health canary result` line with `"canary":"principal_mailbox:<id>"`. If a mailbox's access stops working, Curia alerts your principal once. Replace its grant, or remove the mailbox if the account is gone.
+3. Each mailbox also has its own daily check, named `principal_mailbox:<id>`. It runs with the daily canary and is logged as a `Health canary result` line with `"canary":"principal_mailbox:<id>"`. If a mailbox's access stops working, Curia alerts your principal once, with a reconnect link. Reconnect it from that link or with **Connect with Google**, or remove the mailbox if the account is gone.
 4. In the console chat, ask "What's on my calendar tomorrow?" and check the answer against the real calendars.
 
 Console chat counts as your principal, so keep test questions to reading, not changing.
