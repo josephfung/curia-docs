@@ -36,7 +36,8 @@ curia-docs/
 ├── security/               # Autonomy engine, approval workflow, audit log, redaction
 ├── references/             # Configuration schema, API reference, memory schemas
 │
-└── assets/                 # Logo files and images
+├── assets/                 # Logo files, images and generated diagram SVGs
+└── diagrams/               # Python scripts that generate the diagram SVGs (not published)
 ```
 
 Content is written in [MDX](https://mdxjs.com/) with Mintlify components (`<Card>`, `<Note>`, `<Steps>`, etc.). The navigation structure is declared in `docs.json` — adding a new page requires both a file and an entry there.
@@ -55,6 +56,8 @@ All changes go through pull requests — pushes directly to `main` are not allow
 4. Open a PR — Mintlify will generate a deploy preview automatically
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for writing guidelines.
+
+**For diagrams:** the SVG diagrams in `assets/` are generated. Edit the script in `diagrams/` and run `python3 diagrams/build.py`; never edit the SVG by hand. See [diagrams/README.md](diagrams/README.md).
 
 ## Deployment
 
