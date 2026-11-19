@@ -15,12 +15,14 @@ Both mailboxes connect the same way: you click **Connect with Google**, sign in 
 ## What you'll need
 
 - **A new mailbox just for Curia,** such as `curia@yourcompany.com`, on **Google Workspace or Gmail**. Don't reuse a person's inbox: Curia reads and acts on everything that arrives. Microsoft 365 and other providers aren't supported for sign-in yet.
-- **A Nylas account,** with a **production** application (not Sandbox). Use this application only for Curia: Curia removes Google connections in it that it created but doesn't use. Curia talks to email through [Nylas](https://nylas.com). Sandbox applications can't create the Google connector this page needs.
-- **A Google Cloud account** to create one OAuth client. This is the part that takes longest.
+- **A Nylas account and application.** Curia talks to email through [Nylas](https://nylas.com). Use the application only for Curia: Curia removes Google connections in it that it created but doesn't use. Either kind works:
+  - **Sandbox** (free): comes with Nylas's own Google connector, so there's no Google Cloud setup. It allows **5 connected accounts**, enough for Curia's mailbox and a few of your principal's. Nylas positions it for development, so it may change its terms.
+  - **Production:** for more than 5 accounts, or to sign in through your own Google app. It needs the Google Cloud steps below.
+- **A Google Cloud account,** for a production application only, to create one OAuth client. This is the part that takes longest.
 - **An HTTPS address for Curia.** Set `APP_ORIGIN` to Curia's public `https://` address (see [Deployment](/get-started/deployment)). The sign-in callback must be reachable from the browser you sign in with, and sign-in stays unavailable while `APP_ORIGIN` isn't `https://`.
 - **The console,** signed in as in [1. Install Curia](/get-started/installation).
 
-**Time:** about an hour for the Nylas and Google Cloud setup, plus however long it takes to create the mailbox.
+**Time:** about 15 minutes with a sandbox application, or about an hour with a production one (most of it is Google Cloud), plus however long it takes to create the mailbox.
 
 **Cost** (checked 2026-11-01):
 
@@ -38,23 +40,24 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
   </Step>
 
   <Step title="Create a Nylas application and copy its API key">
-    Sign up at [nylas.com](https://www.nylas.com) and, in the Nylas dashboard, create a **production** application. Choose its data region, **US** or **EU**, and remember which. Copy its **API key**.
+    Sign up at [nylas.com](https://www.nylas.com). Use the **sandbox** application Nylas creates for you, or create a **production** application (see [What you'll need](#what-youll-need)). Copy its **API key**.
   </Step>
 
   <Step title="Save the API key in the console">
     In the Curia console, go to **Settings → Channels** and click the **email** row. If its state is **not installed**, click **Install**. Under **Credentials**, enter your **Nylas API key** and click **Save**. It's stored in the vault as `channel.email.nylas_api_key`.
   </Step>
 
-  <Step title="Choose the region and register the callback">
-    Go to **Settings → Behaviour → Email & Calendar**. At the top is **Sign in with Google (Nylas)**, which reads Nylas live using the key you just saved.
+  <Step title="Open the Nylas section">
+    Go to **Settings → Behaviour → Email & Calendar**. At the top is the **Nylas** section, which reads Nylas live using the key you just saved. It has three steps, each marked ✓ when done:
 
-    1. Set **Region** to the one your Nylas application lives in, or click **Detect** and Curia finds it. It's saved as `channel.email.nylas_region` and defaults to US.
-    2. Click **Register callback**. This adds Curia's sign-in callback, `https://<your-domain>/api/mailbox-signin/callback`, to your Nylas application.
+    1. **Region.** Curia detects the region your application lives in (US or EU) and saves it as `channel.email.nylas_region`. Use **Change** to set it by hand.
+    2. **Callback.** Curia registers its sign-in callback, `https://<your-domain>/api/mailbox-signin/callback`, with your Nylas application. A **Register callback** button appears only if that fails.
+    3. **Google connector.** A sandbox application has one built in, so this is already ✓ and the section reads **Ready**: skip to **Add Curia's mailbox** below. A production application needs the next three steps.
 
-    Until both are done the section reads **Not ready** and says what's missing. Registering the callback needs no restart. Saving the API key or the region for the first time, or changing either later, needs one restart: until then the section reads **Restart Curia to finish setting up sign-in.** Restart from **Settings → System → About**, or run `docker compose restart curia`. After that, connecting a principal mailbox needs no restart.
+    Until every step is done the section reads **Not ready** and says what's missing. Registering the callback needs no restart. Saving the API key or the region for the first time, or changing either later, needs one restart: until then the section reads **Restart Curia to finish setting up sign-in.** Restart from **Settings → System → About**, or run `docker compose restart curia`. After that, connecting a principal mailbox needs no restart.
   </Step>
 
-  <Step title="Create the Google Cloud project and consent screen">
+  <Step title="Production application only: create the Google Cloud project and consent screen">
     In [Google Cloud](https://console.cloud.google.com), create a project, or use one you already have for Curia. Then open **APIs & Services → OAuth consent screen** and choose the user type. This decision matters:
 
     | Situation | Choose |
@@ -75,7 +78,7 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
     Enable the **Gmail API** and **Google Calendar API** for the project, under **APIs & Services → Library**.
   </Step>
 
-  <Step title="Create a Web OAuth client with Nylas's redirect">
+  <Step title="Production application only: create a Web OAuth client with Nylas's redirect">
     Under **APIs & Services → Credentials**, click **Create credentials → OAuth client ID**. Set the application type to **Web application**. A Desktop client won't work.
 
     Under **Authorised redirect URIs**, add Nylas's address for your region:
@@ -83,31 +86,31 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
     - US: `https://api.us.nylas.com/v3/connect/callback`
     - EU: `https://api.eu.nylas.com/v3/connect/callback`
 
-    The console shows the exact address for your region in the same **Sign in with Google (Nylas)** section. Copy it from there. Then click **Create**.
+    The console shows the exact address for your region under step 3 of the **Nylas** section. Copy it from there. Then click **Create**.
 
     <Warning>
       Google shows the **client secret only once**, when you create the client. Copy it straight into Curia in the next step. If you miss it, create a new secret.
     </Warning>
   </Step>
 
-  <Step title="Create the Google connector">
-    Back in the console's **Sign in with Google (Nylas)** section, paste the **Client ID** and **Client secret** and click **Create connector**. Curia passes the secret to Nylas and doesn't keep it. The fields clear once Nylas has it. The Pub/Sub topic field is optional and only matters for Nylas mail push notifications.
+  <Step title="Production application only: create the Google connector">
+    Back in the console's **Nylas** section, under step 3, paste the **Client ID** and **Client secret** and click **Create connector**. Curia passes the secret to Nylas and doesn't keep it. The fields clear once Nylas has it. The Pub/Sub topic field is optional and only matters for Nylas mail push notifications.
 
-    Click **Check**. When the section reads **Ready. Mailbox sign-in is set up.**, you can add mailboxes. If it doesn't, the message names the next thing to fix:
+    When the section reads **Ready.**, you can add mailboxes. If it doesn't, the message after **Not ready.** names the next thing to fix, and **Check again** re-reads Nylas:
 
-    | The section says (after "Not ready:") | What to do |
+    | The section says (after "Not ready.") | What to do |
     |---|---|
     | Save the Nylas API key under Channels → Email first. | Save it under **Settings → Channels → Email** (step 3). |
     | Restart Curia to finish setting up sign-in. | The API key or region was saved or changed since Curia started. Restart once from **Settings → System → About**. |
-    | Nylas rejected the key. Check the key, then use Detect to find its region. | Check the key, then click **Detect**: a key only works in its own region. |
-    | This Nylas application is a sandbox. Use a production application and its API key. | Create a production application and use its key. |
+    | Nylas rejected the API key. Check the key under Channels → Email, then detect its region. | Check the key, then use **Detect**: a key only works in its own region. |
     | Set APP_ORIGIN to this console's public https:// address and restart Curia. | Set it to Curia's public `https://` address and restart. |
-    | Click Register callback to add the sign-in callback URL to Nylas. | Click **Register callback** (step 4). |
-    | Create the Google connector below with your Google Cloud OAuth client. | Fill in the client ID and secret above. |
-    | Nylas did not answer. Try Check again in a moment. | Wait a moment and click **Check** again. |
+    | Register the sign-in callback with Nylas (step 2). | Click **Register callback** in step 2. |
+    | Create the Google connector (step 3). | Fill in the client ID and secret in step 3 (production applications only). |
+    | Nylas did not answer. Check again in a moment. | Wait a moment and click **Check again**. |
+    | Curia could not read its saved Nylas settings. … | Click **Check again**; if it persists, check the server logs. |
   </Step>
 
-  <Step title="If the Google account is on Workspace: ask the admin to trust the app">
+  <Step title="Production application, Workspace accounts: ask the admin to trust the app">
     A Workspace admin can block apps they haven't approved, and a blocked sign-in fails for the person signing in. To avoid that, ask the admin to trust the OAuth client **before** anyone signs in:
 
     **Admin console → Security → Access and data control → API controls → Manage Third-Party App Access → Add app → OAuth App Name or Client ID**, enter the client ID from the previous step and set it to **Trusted**. It can take up to 24 hours to apply.
@@ -174,13 +177,14 @@ When a sign-in doesn't finish, the page it ends on says why:
 | Link already used | Links work once. If the mailbox isn't connected, click **Connect with Google** for a new one. |
 | Sign-in failed | Something went wrong while connecting. Try again, and if it keeps failing, ask for help. |
 | Something went wrong | Curia couldn't tell what happened. Get a new link and try again. |
-| Sign-in cancelled | The Google sign-in was closed or cancelled. Open the link again. |
+| Sign-in cancelled | The Google sign-in was closed or cancelled. The link is now used: click **Connect with Google** for a new one. |
 | Blocked by your Google admin | The Workspace admin blocks unapproved apps. Ask them to mark the client ID **Trusted** (step 8), then try again. |
 | Account not allowed | The Google app is **Internal** to one organisation, and the account is outside it. Switch the app's audience to External, then get a fresh sign-in link (the old one is used). |
-| Wrong account | You signed in with a different Google account than the one requested. Open the link again and pick the right one. |
+| Wrong account | You signed in with a different Google account than the one requested. The link is now used: get a new one and pick the right account. |
 | Permissions missing | Google asks for mail and calendar access, sometimes on two screens. Leave **every** box ticked, then try again. |
 | Not a Google account | Only Google accounts connect this way. |
 | Not connected | Curia couldn't accept this mailbox. Check the address and the console settings. |
+| Account limit reached | Nylas's account limit is reached. A sandbox allows 5 connected accounts. Remove an unused mailbox, or move to a production application. |
 | Reconnected | The mailbox was already set up. Its access was refreshed with this new sign-in. Nothing else to do. |
 
 A hard "This app is blocked" screen from Google, or `access_denied` even after you accept the unverified-app warning, means Google is applying a stricter policy to your project than described above. Try an **Internal** app inside a Workspace organisation instead.
