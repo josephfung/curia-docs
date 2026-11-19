@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 690" width="1100" height="690" role="img" aria-labelledby="t d">
 <title id="t">Curia's multi-agent architecture</title>
-<desc id="d">You and your contacts reach Curia over its channels, and only the Coordinator talks to people. Inside the Bullpen, the Coordinator delegates to specialists: Calendar, Contacts, CEO Inbox, Research analyst, Meeting debrief, Diagnostics, Setup guide, and any you add. Agents ask the execution layer to run tools, sending tool.invoke and getting tool.result back; it checks each call against the tool's manifest and the autonomy score. It holds about 150 tools: Curia's bundles such as calendar, email, contacts, memory and web, plus Google Workspace tools from an MCP server. Every agent shares one knowledge graph, and every delegation and tool call is in the audit log.</desc>
+<desc id="d">You and your contacts reach Curia over its channels, and only the Coordinator talks to people. Inside the Bullpen, the Coordinator delegates to specialists: Calendar, Contacts, CEO Inbox, Research analyst, Meeting debrief, Diagnostics, Setup guide, and any you add. Agents ask the execution layer to run tools, sending tool.invoke and getting tool.result back; it checks each call against the tool's manifest and the autonomy score. It holds about 150 tools: Curia's bundles such as calendar, email, contacts, memory and web, plus Google Workspace tools from an MCP server. Every agent shares one knowledge graph and one store of OKF documents, and every delegation and tool call is in the audit log.</desc>
 <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#265058"/></marker><marker id="arrs" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10,1 L1,5 L10,9 z" fill="#265058"/></marker></defs>
 <rect x="0" y="0" width="1100" height="690" rx="16" fill="#ECE5D6" stroke="none" stroke-width="1"/>
 <rect x="30" y="26" width="28" height="16" rx="4" fill="#265058" stroke="#265058" stroke-width="1"/>
@@ -79,7 +79,7 @@
 <rect x="580" y="536" width="120" height="28" rx="6" fill="#265058" stroke="#265058" stroke-width="1"/>
 <text x="640.0" y="554.5" font-size="12" fill="#F4EFE6" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="600">web</text>
 <rect x="52" y="574" width="120" height="28" rx="6" fill="#265058" stroke="#265058" stroke-width="1"/>
-<text x="112.0" y="592.5" font-size="12" fill="#F4EFE6" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="600">documents</text>
+<text x="112.0" y="592.5" font-size="12" fill="#F4EFE6" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="600">secrets</text>
 <rect x="184" y="574" width="120" height="28" rx="6" fill="#265058" stroke="#265058" stroke-width="1"/>
 <text x="244.0" y="592.5" font-size="12" fill="#F4EFE6" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="600">scheduler</text>
 <rect x="316" y="574" width="120" height="28" rx="6" fill="#265058" stroke="#265058" stroke-width="1"/>
@@ -89,10 +89,13 @@
 <text x="52" y="630" font-size="11.5" fill="#6E6A62" text-anchor="start" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">About 150 tools in all, grouped in skill bundles. Agents only ask: the execution layer is what acts.</text>
 <text x="925.0" y="488" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700" letter-spacing="0.12em">SHARED BY EVERY AGENT</text>
 <path d="M925.0,430 L925.0,472" fill="none" stroke="#265058" stroke-width="1.5"/>
-<rect x="780" y="498" width="290" height="72" rx="10" fill="#1F2622" stroke="#1F2622" stroke-width="1"/>
-<text x="925.0" y="528" font-size="16" fill="#F4EFE6" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Knowledge graph</text>
-<text x="925.0" y="548" font-size="11" fill="#C9C4B8" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">one memory: the boundary is skills, not data</text>
-<rect x="780" y="582" width="290" height="72" rx="8" fill="#FFFDF8" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
-<text x="925.0" y="612" font-size="16" fill="#1F1F1F" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Audit log</text>
-<text x="925.0" y="632" font-size="11" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">every delegation and every tool call</text>
+<rect x="780" y="498" width="290" height="46" rx="10" fill="#1F2622" stroke="#1F2622" stroke-width="1"/>
+<text x="925.0" y="518" font-size="15" fill="#F4EFE6" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Knowledge graph</text>
+<text x="925.0" y="534" font-size="10.5" fill="#C9C4B8" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">people, facts and relationships</text>
+<rect x="780" y="552" width="290" height="46" rx="10" fill="#1F2622" stroke="#1F2622" stroke-width="1"/>
+<text x="925.0" y="572" font-size="15" fill="#F4EFE6" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">OKF documents</text>
+<text x="925.0" y="588" font-size="10.5" fill="#C9C4B8" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">projects, meetings, shared notes</text>
+<rect x="780" y="606" width="290" height="46" rx="8" fill="#FFFDF8" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
+<text x="925.0" y="626" font-size="15" fill="#1F1F1F" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Audit log</text>
+<text x="925.0" y="642" font-size="10.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">every delegation and every tool call</text>
 </svg>
