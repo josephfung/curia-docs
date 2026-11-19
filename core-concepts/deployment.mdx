@@ -1,0 +1,117 @@
+---
+title: "What gets deployed"
+description: "What the installer actually puts on your server: six containers, the ports they open, the volumes they keep, and the outside services they call. Also what it leaves to you."
+---
+
+<Note>
+  This page describes the install as of **v0.46**, which adds local speech and turns voice on by default. Earlier releases have no `speech` container and need only 4 GB of RAM.
+</Note>
+
+A Curia install is one server running a Docker Compose stack. Most of it isn't Curia's own code. Curia ships open-source pieces alongside its runtime: a database, a browser, a call server, speech models and an MCP server. This page shows every piece, where it comes from, and what it can reach.
+
+[Architecture](/core-concepts/architecture) describes how Curia works inside its own process. This page describes what runs on the box.
+
+<img
+  src="/assets/deployment-architecture.svg"
+  alt="Deployment diagram. One server runs six containers. caddy terminates HTTPS on ports 80 and 443 and forwards to curia and, for calls, to livekit. livekit also takes call audio on ports 7881 and 7882/udp. curia holds the runtime, the console and phone app, the workspace-mcp Google Workspace MCP server and the bundled embedding model, and connects to postgres, speech and browser. Only curia can read secrets. The console, the phone app and Telnyx SMS webhooks connect in; email, Slack and Signal connect out and need no open port. curia calls an AI model provider, Nylas, Google Workspace, Slack, Tavily and Web Push. The browser reaches the open web. Volumes: pgdata needs backing up; speech models, browser profile, Google tokens and Caddy certificates can be recreated. Not deployed by the installer: signal-cli, your own agents and skills, a VPN or proxy for the browser's traffic, single sign-on in front of the console, and pgdata backups."
+  style={{ width: '100%', height: 'auto', borderRadius: '8px', marginTop: '8px', marginBottom: '8px' }}
+/>
+
+## The containers
+
+| Container | Image | What runs in it | Reaches |
+|---|---|---|---|
+| **caddy** | `caddy` (upstream) | Caddy, terminating HTTPS with a Let's Encrypt certificate | curia, and livekit for call signaling (`/rtc`) |
+| **curia** | `curia` | Curia's runtime (agents, channels, scheduler), the console and phone app, **workspace-mcp** (the Google Workspace MCP server, run as a subprocess) and the **all-MiniLM-L6-v2** embedding model, run in-process | Every other container, and every outside service |
+| **postgres** | `curia-postgres` | PostgreSQL 16 with pgvector and pgAudit. Holds memory, the encrypted vault and the audit log | Nothing |
+| **speech** | `curia-speech` | Curia's speech service, running Parakeet (speech to text), Pocket TTS (text to speech) and Silero (detecting when someone is speaking) | Nothing: it has no internet access |
+| **browser** | `curia-browser` | Chromium, run headful on Xvfb, behind Curia's egress guard, which refuses private and local addresses | The open web only |
+| **livekit** | `livekit-server` (upstream) | LiveKit, the real-time server that carries call audio | Curia's voice agent |
+
+Images named `curia-*` are built and published with each Curia release, from the same commit and under the same tag. Upgrading Curia upgrades them. `caddy` and `livekit-server` come from their projects unchanged.
+
+### What can read your secrets
+
+Only the **curia** container. It holds `SECRET_ENCRYPTION_KEY`, the key that decrypts the vault. The vault itself lives encrypted in Postgres. The browser runs page code from the open web, so it is kept apart on purpose:
+
+- It gets no environment file.
+- It joins its own network, shared only with curia, so it has no route to Postgres.
+- Its DevTools port isn't published.
+
+The speech container has no internet access once its models are downloaded.
+
+## Ports to open
+
+| Port | Container | Why |
+|---|---|---|
+| `80`, `443` | caddy | The console, the phone app, call signaling and SMS webhooks from Telnyx, over HTTPS |
+| `7881/tcp`, `7882/udp` | livekit | Call audio over WebRTC. Without these, calls connect with no sound |
+
+Nothing else is published on a public interface. Postgres listens on `127.0.0.1:5432`, and Curia's own port `3000` on `127.0.0.1`, behind Caddy. Docker's published ports bypass host firewalls such as UFW, so open these in your cloud provider's firewall. [Deployment](/get-started/deployment) covers the other network setups.
+
+### How channels reach Curia
+
+Most channels don't need an open port: Curia connects out to them. Turning one on doesn't change your firewall, except SMS.
+
+| Channel | How it connects | Open port |
+|---|---|---|
+| Console, phone app | The person's browser or phone connects in | `443`, plus LiveKit's ports for calls |
+| SMS (Telnyx) | Telnyx posts each message to Curia as a webhook | `443` |
+| Email (Nylas) | Curia checks Nylas for new mail | None |
+| Slack | Curia holds an outbound connection to Slack (Socket Mode) | None |
+| Signal | Curia talks to signal-cli on the same host, which connects out to Signal | None |
+
+## Volumes and backups
+
+| Volume | Holds | If you lose it |
+|---|---|---|
+| `pgdata` | Memory, the vault, the audit log, everything Curia knows | **Gone.** Back this up |
+| speech models | Speech model weights | Re-downloaded |
+| `browser_profile` | The browser's sign-ins and cookies | Sign in to those sites again |
+| `google_workspace_tokens` | Curia's Google Workspace sign-in | Sign Curia in to Google again |
+| `caddy-data` | Caddy's certificates | Caddy requests new ones |
+
+Back up `pgdata` together with `.env`. The vault can't be decrypted without the `SECRET_ENCRYPTION_KEY` in `.env`.
+
+## Outside services
+
+| Service | Used for | Needed? |
+|---|---|---|
+| AI model provider (Anthropic, OpenRouter and others) | Every agent's reasoning | Yes |
+| Nylas | Curia's mailbox, and the principal's mail and calendar | For email and calendar |
+| Google Workspace | Docs, Sheets and Drive, through workspace-mcp | For Google Docs |
+| Slack | The Slack channel | For Slack |
+| Telnyx | The SMS channel | For SMS |
+| Tavily | Web search. Works without a key; a key raises the limits | Built in |
+| Web Push (the phone's push service) | Notifications to the phone app | For the phone app |
+| Let's Encrypt | Caddy's HTTPS certificate | For the HTTPS install |
+| Deepgram, Cartesia | Cloud speech, instead of the local speech container | Optional |
+
+The installer also downloads the speech models from Hugging Face once, at install time.
+
+## What the installer doesn't deploy
+
+Some things are up to you:
+
+- **signal-cli.** The Signal channel needs a signal-cli daemon you run on the same host. Curia connects to its socket. See [Signal](/channels/signal-setup).
+- **Your own agents and skills.** The image ships the built-in ones. Yours live in your own config and code. See [Building custom agents](/agents/building-custom-agents) and [Building tools](/tools-and-skills/building).
+- **Backups.** Nothing backs up `pgdata` for you.
+
+Some additions are worth considering on a server:
+
+- **A VPN or proxy for the browser's traffic.** Set `BROWSER_PROXY` to send the browser out through another IP, for sites that block cloud servers. See [Web browser](/integrations/web-browser).
+- **Single sign-on in front of the console.** An identity-aware proxy, in front of Caddy or in place of it, adds your organisation's sign-in on top of Curia's own.
+- **Host monitoring.** Watch `/api/health` from outside. See [Health monitoring](/get-started/health-monitoring).
+
+## Sizing
+
+The stack is sized for **4 vCPU and 8 GB of RAM**. The speech container holds about 2.6 GB of models in memory, and that sets the minimum. See [System requirements](/get-started/system-requirements).
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/core-concepts/architecture">
+    How a message moves through Curia's layers, inside the curia container.
+  </Card>
+  <Card title="Deploy on a server" icon="server" href="/get-started/deployment">
+    Network setups, upgrades, and running the stack day to day.
+  </Card>
+</CardGroup>

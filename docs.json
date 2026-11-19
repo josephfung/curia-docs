@@ -113,6 +113,7 @@
             "pages": [
               "core-concepts/introduction",
               "core-concepts/architecture",
+              "core-concepts/deployment",
               "core-concepts/layers-model",
               "core-concepts/memory",
               "core-concepts/console",
