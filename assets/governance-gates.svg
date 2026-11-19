@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 448" width="1100" height="448" role="img" aria-labelledby="t d">
+<title id="t">Curia's five governance gates</title>
+<desc id="d">A message passes five gates in order before Curia acts or replies. 1, channel trust: how strong the channel's proof of identity is; a weak channel starts with lower trust. 2, dispatch policy: trust score, rate limits and an injection scan; an unknown sender gets read-only handling and a flood is dropped and logged. 3, agent autonomy: the autonomy band and a review of each send; if the band doesn't allow it, Curia asks you first. 4, tool action risk: the score must meet the tool's floor (none 0, low 60, medium 70, high 80, critical 90); if not, the call is blocked and an approval request is filed. 5, outbound safety: PII redaction, content rules and a leak check; unsafe content is redacted or held. A message must pass every gate to become an action.</desc>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#265058"/></marker><marker id="arra" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#8A3B2E"/></marker></defs>
+<rect x="0" y="0" width="1100" height="448" rx="16" fill="#ECE5D6" stroke="none" stroke-width="1"/>
+<rect x="32" y="104" width="188" height="222" rx="10" fill="#FFFDF8" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
+<circle cx="56" cy="131" r="9" fill="#265058"/>
+<text x="56" y="135" font-size="11" fill="#F4EFE6" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700">1</text>
+<text x="72" y="136" font-size="15.5" fill="#1F1F1F" text-anchor="start" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Channel trust</text>
+<text x="126.0" y="164" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">How strong is the channel's</text>
+<text x="126.0" y="180" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">proof of who's writing?</text>
+<rect x="46" y="200" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="126.0" y="218.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">Signal, CLI: high</text>
+<rect x="46" y="234" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="126.0" y="252.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">HTTP API: medium</text>
+<rect x="46" y="268" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="126.0" y="286.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">Email: low</text>
+<path d="M126.0,326 L126.0,356" fill="none" stroke="#8A3B2E" stroke-width="1.5" marker-end="url(#arra)"/>
+<rect x="32" y="360" width="188" height="62" rx="8" fill="none" stroke="#8A3B2E" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="126.0" y="386" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">Starts with lower</text>
+<text x="126.0" y="403" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">trust, and goes on</text>
+<path d="M220,215.0 L240,215.0" fill="none" stroke="#265058" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="244" y="104" width="188" height="222" rx="10" fill="#FFFDF8" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
+<circle cx="268" cy="131" r="9" fill="#265058"/>
+<text x="268" y="135" font-size="11" fill="#F4EFE6" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700">2</text>
+<text x="284" y="136" font-size="15.5" fill="#1F1F1F" text-anchor="start" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Dispatch policy</text>
+<text x="338.0" y="164" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">Who sent it, and is it</text>
+<text x="338.0" y="180" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">safe to handle?</text>
+<rect x="258" y="200" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="338.0" y="218.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">Trust score</text>
+<rect x="258" y="234" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="338.0" y="252.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">Rate limits</text>
+<rect x="258" y="268" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="338.0" y="286.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">Injection scan</text>
+<path d="M338.0,326 L338.0,356" fill="none" stroke="#8A3B2E" stroke-width="1.5" marker-end="url(#arra)"/>
+<rect x="244" y="360" width="188" height="62" rx="8" fill="none" stroke="#8A3B2E" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="338.0" y="386" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">Unknown sender: read-only.</text>
+<text x="338.0" y="403" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">Flood: dropped and logged.</text>
+<path d="M432,215.0 L452,215.0" fill="none" stroke="#265058" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="456" y="104" width="188" height="222" rx="10" fill="#FFFDF8" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
+<circle cx="480" cy="131" r="9" fill="#265058"/>
+<text x="480" y="135" font-size="11" fill="#F4EFE6" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700">3</text>
+<text x="496" y="136" font-size="15.5" fill="#1F1F1F" text-anchor="start" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Agent autonomy</text>
+<text x="550.0" y="164" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">What may Curia do on</text>
+<text x="550.0" y="180" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">its own right now?</text>
+<rect x="470" y="200" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="550.0" y="218.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">Autonomy band</text>
+<rect x="470" y="234" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="550.0" y="252.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">Review of each send</text>
+<path d="M550.0,326 L550.0,356" fill="none" stroke="#8A3B2E" stroke-width="1.5" marker-end="url(#arra)"/>
+<rect x="456" y="360" width="188" height="62" rx="8" fill="none" stroke="#8A3B2E" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="550.0" y="386" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">Curia asks</text>
+<text x="550.0" y="403" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">you first</text>
+<path d="M644,215.0 L664,215.0" fill="none" stroke="#265058" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="668" y="104" width="188" height="222" rx="10" fill="#FFFDF8" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
+<circle cx="692" cy="131" r="9" fill="#265058"/>
+<text x="692" y="135" font-size="11" fill="#F4EFE6" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700">4</text>
+<text x="708" y="136" font-size="15.5" fill="#1F1F1F" text-anchor="start" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Tool action risk</text>
+<text x="762.0" y="164" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">Does the score meet</text>
+<text x="762.0" y="180" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">this tool's floor?</text>
+<rect x="682" y="200" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="762.0" y="218.14" font-size="11.5" fill="#1F1F1F" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="600">none 0 · low 60</text>
+<rect x="682" y="234" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="762.0" y="252.14" font-size="11.5" fill="#1F1F1F" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="600">medium 70 · high 80</text>
+<rect x="682" y="268" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="762.0" y="286.14" font-size="11.5" fill="#1F1F1F" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="600">critical 90</text>
+<path d="M762.0,326 L762.0,356" fill="none" stroke="#8A3B2E" stroke-width="1.5" marker-end="url(#arra)"/>
+<rect x="668" y="360" width="188" height="62" rx="8" fill="none" stroke="#8A3B2E" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="762.0" y="386" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">Blocked, and an approval</text>
+<text x="762.0" y="403" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">request is filed</text>
+<path d="M856,215.0 L876,215.0" fill="none" stroke="#265058" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="880" y="104" width="188" height="222" rx="10" fill="#FFFDF8" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
+<circle cx="904" cy="131" r="9" fill="#265058"/>
+<text x="904" y="135" font-size="11" fill="#F4EFE6" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700">5</text>
+<text x="920" y="136" font-size="15.5" fill="#1F1F1F" text-anchor="start" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Outbound safety</text>
+<text x="974.0" y="164" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">Is the reply safe</text>
+<text x="974.0" y="180" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">to send?</text>
+<rect x="894" y="200" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="974.0" y="218.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">PII redaction</text>
+<rect x="894" y="234" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="974.0" y="252.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">Content rules</text>
+<rect x="894" y="268" width="160" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="974.0" y="286.32" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">Leak check</text>
+<path d="M974.0,326 L974.0,356" fill="none" stroke="#8A3B2E" stroke-width="1.5" marker-end="url(#arra)"/>
+<rect x="880" y="360" width="188" height="62" rx="8" fill="none" stroke="#8A3B2E" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="974.0" y="386" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">Redacted,</text>
+<text x="974.0" y="403" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">or held</text>
+<text x="26" y="348" font-size="10.5" fill="#8A3B2E" text-anchor="start" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">if it doesn't pass</text>
+<rect x="32" y="20" width="188" height="46" rx="23.0" fill="none" stroke="#6E6A62" stroke-width="1.2"/>
+<text x="126.0" y="48.0" font-size="14" fill="#1F1F1F" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">A message arrives</text>
+<path d="M126.0,66 L126.0,100" fill="none" stroke="#265058" stroke-width="1.5" marker-end="url(#arr)"/>
+<rect x="880" y="20" width="188" height="46" rx="23.0" fill="none" stroke="#6E6A62" stroke-width="1.2"/>
+<text x="974.0" y="48.0" font-size="14" fill="#1F1F1F" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Curia acts or replies</text>
+<path d="M974.0,104 L974.0,70" fill="none" stroke="#265058" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="550.0" y="50" font-size="12" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">A message must pass every gate to become an action. No single gate is “the security layer”.</text>
+</svg>
