@@ -113,7 +113,6 @@
             "pages": [
               "core-concepts/introduction",
               "core-concepts/architecture",
-              "core-concepts/deployment",
               "core-concepts/layers-model",
               "core-concepts/memory",
               "core-concepts/console",
@@ -124,8 +123,7 @@
               "core-concepts/dreaming",
               "core-concepts/scheduling",
               "core-concepts/ant-farm",
-              "core-concepts/registry",
-              "core-concepts/releases"
+              "core-concepts/registry"
             ]
           }
         ]
@@ -229,6 +227,14 @@
     ]
   },
   "redirects": [
+    {
+      "source": "/core-concepts/deployment",
+      "destination": "/get-started/deployment"
+    },
+    {
+      "source": "/core-concepts/releases",
+      "destination": "/references/releases"
+    },
     {
       "source": "/references/http-api-messages",
       "destination": "/references/http-api"

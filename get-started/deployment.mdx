@@ -1,91 +1,150 @@
 ---
-title: "Deployment and self-hosting"
-sidebarTitle: "Deployment"
-description: "Run Curia on your own server: the topology choices the installer offers, production considerations, upgrades and restarts."
+title: "Deployment"
+description: "What a Curia install puts on your server, how people reach it, the ports and volumes it uses, the outside services it calls, and how to run it day to day."
 ---
 
-Curia is single-tenant and self-hosted: one instance per principal, running on infrastructure you control. On a server, the [image-based install](/get-started/installation) is the right path — it needs only Docker and curl, pulls the published container image, and requires no source checkout or toolchain on the box. The install steps are in [Install Curia](/get-started/installation). This page covers the choices and upkeep specific to running it on a server.
+<Note>
+  This page describes the install as of **v0.46**, which adds local speech and turns voice on by default. Earlier releases have no `speech` container and need only 4 GB of RAM.
+</Note>
 
-## Topology
+Curia is single-tenant and self-hosted: one instance per principal, on a server you control. The [installer](/get-started/installation) sets it up as a Docker Compose stack. Most of that stack isn't Curia's own code: Curia ships open-source pieces alongside its runtime, including a database, a browser, a call server, speech models and an MCP server. This page shows every piece, where it comes from and what it can reach.
+
+[Architecture](/core-concepts/architecture) describes how Curia works inside its own process. This page describes what runs on the server.
+
+<img
+  src="/assets/deployment-architecture.svg"
+  alt="Deployment diagram. One server runs six containers. caddy terminates HTTPS on ports 80 and 443 and forwards to curia and, for calls, to livekit. livekit also takes call audio on ports 7881 and 7882/udp. curia holds the runtime, the console and phone app, the workspace-mcp Google Workspace MCP server and the bundled embedding model, and connects to postgres, speech and browser. Only curia can read secrets. The console, the phone app and Telnyx SMS webhooks connect in; email, Slack and Signal connect out and need no open port. curia calls an AI model provider, Nylas, Google Workspace, Slack, Tavily and Web Push. The browser reaches the open web. Volumes: pgdata needs backing up; speech models, browser profile, Google tokens and Caddy certificates can be recreated. Not deployed by the installer: signal-cli, your own agents and skills, a VPN or proxy for the browser's traffic, single sign-on in front of the console, and pgdata backups."
+  style={{ width: '100%', height: 'auto', borderRadius: '8px', marginTop: '8px', marginBottom: '8px' }}
+/>
+
+## The containers
+
+| Container | Image | What runs in it | Reaches |
+|---|---|---|---|
+| **caddy** | `caddy` (upstream) | Caddy, terminating HTTPS with a Let's Encrypt certificate | curia, and livekit for call signaling (`/rtc`) |
+| **curia** | `curia` | Curia's runtime (agents, channels, scheduler), the console and phone app, **workspace-mcp** (the Google Workspace MCP server, run as a subprocess) and the **all-MiniLM-L6-v2** embedding model, run in-process | Every other container, and every outside service |
+| **postgres** | `curia-postgres` | PostgreSQL 16 with pgvector and pgAudit. Holds memory, the encrypted vault and the audit log | Nothing |
+| **speech** | `curia-speech` | Curia's speech service, running Parakeet (speech to text), Pocket TTS (text to speech) and Silero (detecting when someone is speaking) | Nothing: it has no internet access |
+| **browser** | `curia-browser` | Chromium, run headful on Xvfb, behind Curia's egress guard, which refuses private and local addresses | The open web only |
+| **livekit** | `livekit-server` (upstream) | LiveKit, the real-time server that carries call audio | Curia's voice agent |
+
+Images named `curia-*` are built and published with each Curia release, from the same commit and under the same tag. Updating Curia updates them. `caddy` and `livekit-server` come from their projects unchanged. The Curia image runs as a non-root `curia` user; see the [security overview](/security/overview) for the container security model.
+
+### What can read your secrets
+
+Only the **curia** container. It holds `SECRET_ENCRYPTION_KEY`, the key that decrypts the [vault](/get-started/secrets-vault), and the vault itself lives encrypted in Postgres. The browser runs page code from the open web, so it is kept apart on purpose:
+
+- It gets no environment file.
+- It joins its own network, shared only with curia, so it has no route to Postgres.
+- Its DevTools port isn't published.
+
+The speech container has no internet access once its models are downloaded.
+
+## How people reach it
 
 The installer asks once, on a fresh install, how you'll reach Curia. Your answer decides whether Curia gets HTTPS.
 
 | Option | What the installer sets up | Use it when |
 |---|---|---|
-| **Public domain + HTTPS** (recommended) | A bundled [Caddy](https://caddyserver.com) reverse proxy on ports 80 and 443 that gets and renews a Let's Encrypt certificate. It sets `DOMAIN`, adds `docker-compose.tls.yml` to `COMPOSE_FILE` and sets `APP_ORIGIN=https://<your-domain>` in `.env`. | Curia runs on a server with a domain. You need a DNS A record pointing at the host, and ports 80 and 443 open, before you start. |
-| **Public IP / my own proxy** | Curia only, serving plain HTTP on port `3000`. | You already terminate TLS at a load balancer or reverse proxy in front of the host. |
-| **Local / evaluation** | The same as above: plain HTTP at `http://localhost:3000`. | A try-out on your own machine. Browsers only allow the microphone on HTTPS or `localhost`, so voice calls from other devices won't work. |
+| **Public domain + HTTPS** (recommended) | The bundled Caddy on ports 80 and 443, with a Let's Encrypt certificate it renews itself. It sets `DOMAIN`, adds `docker-compose.tls.yml` to `COMPOSE_FILE` and sets `APP_ORIGIN=https://<your-domain>` in `.env`. | Curia runs on a server with a domain. You need a DNS A record pointing at the host, and ports 80 and 443 open, before you start. |
+| **Public IP / my own proxy** | No Caddy. Curia serves plain HTTP on port `3000`. | You already terminate TLS at a load balancer or reverse proxy in front of the host. |
+| **Local / evaluation** | The same, at `http://localhost:3000`. | A try-out on your own machine. The phone app and calls from other devices need HTTPS, so they won't work. |
 
-To move an existing install to the domain option, set `DOMAIN=<your domain>`, `COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml` and `APP_ORIGIN=https://<your domain>` in `.env`, then run `docker compose up -d`. Behind your own proxy, set `APP_ORIGIN` to the URL people use to reach Curia. Re-running the installer on a finished install doesn't ask the question again.
+To move an existing install to the domain option, set `DOMAIN=<your domain>`, `COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml` and `APP_ORIGIN=https://<your domain>` in `.env`, then run `docker compose up -d`. Behind your own proxy, set `APP_ORIGIN` to the URL people use to reach Curia, and route `/rtc` to LiveKit for calls (see [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server)). Re-running the installer on a finished install doesn't ask the question again.
 
-The bundled Caddy proxies only Curia. If you add voice, LiveKit needs its own route and ports: see [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server).
+With `APP_ORIGIN` set to an `https://` address, session cookies are marked `Secure` and the API accepts browser requests from that origin alone. Open the console at `https://<your-domain>`, not `http://<server>:3000`.
 
-## Production considerations
+## Ports to open
 
-<Note>
-  The Docker image runs as a non-root `curia` user as part of its security hardening. See the [security overview](/security/overview) for the full container security model.
-</Note>
+| Port | Container | Why |
+|---|---|---|
+| `80`, `443` | caddy | The console, the phone app, call signaling and SMS webhooks from Telnyx, over HTTPS |
+| `7881/tcp`, `7882/udp` | livekit | Call audio over WebRTC. Without these, calls connect with no sound |
 
-- **Size the server first.** See [System requirements](/get-started/system-requirements) for CPU, memory, disk and network.
-- **The stack restarts automatically.** The `postgres`, `curia` and `browser` services use `restart: unless-stopped`, so the instance comes back after a server reboot or a crash without manual intervention.
-- **Secrets live in the encrypted vault.** Application credentials are stored in the [vault](/get-started/secrets-vault), not in `.env`. Only four bootstrap values stay in `.env`: `DB_USER`, `DB_PASSWORD`, `DATABASE_URL`, and `SECRET_ENCRYPTION_KEY`. Treat `.env` as sensitive — back it up securely and keep it out of version control.
-- **Back up `SECRET_ENCRYPTION_KEY` separately and keep it safe.** It is the master key that decrypts the vault. If you lose it, every stored secret becomes unrecoverable and you have to re-seed the vault from scratch. Store a copy somewhere independent of the server (a password manager or secrets store).
-- **Applying configuration changes.** A vault secret added via the console only needs `docker compose restart curia` (Curia re-reads the vault on startup). A changed `.env` value needs `docker compose up -d curia` so the container is recreated with the new environment. If you changed both, `docker compose up -d --force-recreate curia` applies either. See [Initial configuration](/get-started/configuration) for the full breakdown.
-- **Postgres listens on loopback only.** The stock `docker-compose.yml` publishes Postgres on `127.0.0.1:5432`. Curia uses the internal compose network, and the installer runs migrations inside the container, so nothing outside the server needs the port. Remote database access is an explicit opt-in: set `POSTGRES_BIND` in `.env` to `0.0.0.0` (IPv4), `::` (IPv4 and IPv6) or an interface address. Prefer an SSH tunnel instead: `ssh -L 15432:127.0.0.1:5432 <server>`, then connect to `localhost:15432`.
-- **Port 3000 follows your topology.** For the local and HTTPS options, the installer sets `HTTP_BIND=127.0.0.1`, so port `3000` is reachable only from the server itself (Caddy reaches Curia over the compose network). Re-running `install.sh` on an existing HTTPS install sets it too, so anything that used `<server>:3000` directly, such as an uptime probe, should move to `https://<your-domain>`; set `HTTP_BIND=` (empty) in `.env` to keep `3000` public. For the public IP / own proxy option, `HTTP_BIND` is left empty and `3000` is published on every interface. Docker's published ports bypass host firewalls such as UFW, so in that case allow `3000` only from your proxy in your cloud provider's firewall. Leave 80 and 443 open, plus LiveKit's media ports if you run voice.
-- **HTTPS installs sign in over HTTPS only.** With `APP_ORIGIN` set to `https://<your-domain>`, session cookies are marked `Secure` and the API accepts browser requests from that origin alone, so open the console at `https://<your-domain>`, not `http://<server>:3000`. Re-running `install.sh` on an HTTPS install that has no `APP_ORIGIN` (or an empty one) sets it and prints a note; a value you set yourself is never changed.
-- **Upgrading.** Re-run `install.sh` to move to a newer image. It detects the completed install, regenerates nothing, re-applies migrations idempotently, and restarts the stack on the new image. Because no secrets rotate, live sessions and the encrypted vault are preserved. Check the [upgrade notes](#upgrade-notes) for changes a release needs you to make by hand.
+Docker's published ports bypass host firewalls such as UFW, so open these in your cloud provider's firewall. Nothing else is published on a public interface:
+
+- **Postgres listens on `127.0.0.1:5432`.** Curia reaches it over the compose network, and the installer runs migrations inside the container. For remote access, prefer an SSH tunnel (`ssh -L 15432:127.0.0.1:5432 <server>`, then connect to `localhost:15432`). Publishing it is an explicit opt-in: set `POSTGRES_BIND` in `.env` to `0.0.0.0`, `::` or an interface address.
+- **Port `3000` follows your network setup.** On the HTTPS and local options, the installer sets `HTTP_BIND=127.0.0.1`, so `3000` is reachable only from the server and Caddy reaches Curia over the compose network. Anything that used `<server>:3000` directly, such as an uptime probe, should use `https://<your-domain>`. On the own-proxy option, `HTTP_BIND` is empty and `3000` is published on every interface, so allow it only from your proxy.
 
 <Warning>
-  `install.sh` never overwrites an existing `docker-compose.yml`, so an upgrade keeps your old one, hand-edits included. Compose files from earlier releases publish Postgres on **every** network interface. Edit the postgres `ports:` entry to read `- "${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"`, then re-run `install.sh` (or `docker compose up -d postgres`) so the container is recreated; editing the file alone changes nothing. On an HTTPS install, also change the curia entry to `- "${HTTP_BIND:-}:${HTTP_PORT:-3000}:3000"`.
+  `install.sh` never overwrites an existing `docker-compose.yml`, so an update keeps your old one, hand-edits included. Compose files from before v0.45 publish Postgres on **every** network interface. Edit the postgres `ports:` entry to read `- "${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"`, then run `docker compose up -d postgres` so the container is recreated; editing the file alone changes nothing. On an HTTPS install, also change the curia entry to `- "${HTTP_BIND:-}:${HTTP_PORT:-3000}:3000"`.
 
-  `install.sh` checks what Docker actually published. It stops and asks before continuing while Postgres is exposed, and warns when port 3000 ignores `HTTP_BIND`. To check by hand, run `ss -tlnp | grep 5432`: it should show `127.0.0.1:5432`, not `0.0.0.0:5432` or `[::]:5432`.
+  `install.sh` checks what Docker actually published, stops and asks while Postgres is exposed, and warns when port 3000 ignores `HTTP_BIND`. To check by hand, run `ss -tlnp | grep 5432`: it should show `127.0.0.1:5432`.
 </Warning>
 
-## Upgrade notes
+### How channels reach Curia
 
-### Upgrading to v0.45
+Most channels don't need an open port: Curia connects out to them. Turning one on doesn't change your firewall, except SMS.
 
-Back up the database first (see [Updating Curia](/get-started/installation#updating-curia)). Then work through this list. `install.sh` never edits an existing `docker-compose.yml`, so the compose changes are yours to make.
+| Channel | How it connects | Open port |
+|---|---|---|
+| Console, phone app | The person's browser or phone connects in | `443`, plus LiveKit's ports for calls |
+| SMS (Telnyx) | Telnyx posts each message to Curia as a webhook | `443` |
+| Email (Nylas) | Curia checks Nylas for new mail | None |
+| Slack | Curia holds an outbound connection to Slack (Socket Mode) | None |
+| Signal | Curia talks to signal-cli on the same host, which connects out to Signal | None |
 
-1. **Keep Postgres on loopback.** If your compose file predates the change, edit the postgres `ports:` entry as described in the warning above, then recreate the container. An edit alone changes nothing.
-2. **Check LiveKit signaling, if you run voice.** Signaling (port 7880) is now published on `127.0.0.1` only. If browsers connected to `ws://<server>:7880` directly, put a TLS proxy in front of `127.0.0.1:7880` or set `LIVEKIT_HTTP_BIND` in `.env` (with your own keys, never `--dev`). See [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server).
-3. **Add the browser container.** The `web-browser` tool now runs Chrome in its own `browser` service, which needs `docker/seccomp-chrome.json` next to your compose file. Follow [Upgrading from an older install](/integrations/web-browser#upgrading-from-an-older-install); re-running `install.sh` fetches the seccomp profile once your compose file refers to it.
-4. **Decide on autonomy gating.** `autonomy.gating` now defaults to `band`: the autonomy score, not the contact's tier, decides when Curia asks first. To keep the old tier gates for now, set `gating: tier` under `autonomy:` in `config/local.yaml`. `band` needs the escalation judge (`escalation.judge.enabled: true`, the default), and startup fails without it. See [Autonomy](/core-concepts/autonomy).
-5. **Re-save the Nylas key if asked.** Legacy mailbox and Nylas vault keys migrate at boot. If email reports the Nylas key missing afterwards, re-save it in **Settings → Channels → Email**.
-6. **Move off `/api/messages`.** The bearer-token message routes were removed. Anything that called them must use console chat instead. See [HTTP channel](/channels/http).
+## Volumes and backups
 
-`install.sh` checks what Docker actually published after the upgrade, and warns about Postgres, port 3000, LiveKit signaling and a missing browser service.
+| Volume | Holds | If you lose it |
+|---|---|---|
+| `pgdata` | Memory, the vault, the audit log, everything Curia knows | **Gone.** Back this up |
+| speech models | Speech model weights | Re-downloaded |
+| `browser_profile` | The browser's sign-ins and cookies | Sign in to those sites again |
+| `google_workspace_tokens` | Curia's Google Workspace sign-in | Sign Curia in to Google again |
+| `caddy-data` | Caddy's certificates | Caddy requests new ones |
 
-## The System page
+Back up `pgdata` together with `.env`, and keep `.env` out of version control. `.env` holds only bootstrap values (`DB_USER`, `DB_PASSWORD`, `DATABASE_URL` and `SECRET_ENCRYPTION_KEY`); every other credential is in the vault. Keep a separate copy of `SECRET_ENCRYPTION_KEY` somewhere off the server, such as a password manager. Without it the vault can't be decrypted, and every stored secret has to be entered again.
 
-The console's **Settings → System → About** page is a read-only snapshot of the running instance plus one operator control.
+## Outside services
 
-It shows the Curia version, the Node runtime, the configured timezone, how long the process has been up, and which concrete model each capability tier currently routes to. Nothing sensitive appears here — no API keys, no database URL, no vault contents — so it is safe to screenshot when asking for help.
+| Service | Used for | Needed? |
+|---|---|---|
+| AI model provider (Anthropic, OpenRouter and others) | Every agent's reasoning | Yes |
+| Nylas | Curia's mailbox, and the principal's mail and calendar | For email and calendar |
+| Google Workspace | Docs, Sheets and Drive, through workspace-mcp | For Google Docs |
+| Slack | The Slack channel | For Slack |
+| Telnyx | The SMS channel | For SMS |
+| Tavily | Web search. Works without a key; a key raises the limits | Built in |
+| Web Push (the phone's push service) | Notifications to the phone app | For the phone app |
+| Let's Encrypt | Caddy's HTTPS certificate | For the HTTPS install |
+| Deepgram, Cartesia | Cloud speech, instead of the local speech container | Optional |
 
-### Restarting from the console
+The installer also downloads the speech models from Hugging Face once, at install time.
 
-**Restart** performs the same graceful shutdown a `docker compose restart` would: Curia stops accepting new work, lets in-flight tasks finish, closes its connections, and exits. Docker's `restart: unless-stopped` brings it back. This is a *process* restart — no Docker socket is mounted, so the console cannot touch containers, images, or the host.
+## Running it
 
-This is the fastest way to apply a vault change, since Curia reads the vault at startup. A changed `.env` value still needs `docker compose up -d curia`, because the container must be recreated to pick up new environment variables.
+- **It restarts on its own.** Every service uses `restart: unless-stopped`, so the stack comes back after a reboot or a crash.
+- **Applying changes.** A vault secret saved in the console needs only a restart: **Settings → System → About → Restart** ([Console](/core-concepts/console#restarting-curia)) or `docker compose restart curia`. A changed `.env` value needs `docker compose up -d curia`, so the container is recreated with the new environment. If you changed both, `docker compose up -d --force-recreate curia` applies either. See [Initial configuration](/get-started/configuration).
+- **Updating.** See [Updating Curia](/get-started/installation#updating-curia), and read the release's [upgrade notes](/references/releases#upgrade-notes) first: some releases need a change to your compose file or `.env` that an update never makes for you.
+- **Watching it.** See [Health monitoring](/get-started/health-monitoring) for uptime checks on `/api/health`.
 
-<Note>
-  Restarts are capped at **3 per 5 minutes**. The limit is enforced from the audit log rather than in memory, so it survives the very restarts it is limiting. If Curia cannot read that history or cannot record the restart, it refuses to restart at all rather than proceed unrecorded — every operator restart is auditable and distinguishable from a crash.
-</Note>
+## What the installer doesn't deploy
 
-If the process does not come back, the console gives up waiting after 90 seconds and tells you, rather than spinning indefinitely. Check `docker compose logs curia` at that point.
+Some things are up to you:
 
-## Next steps
+- **signal-cli.** The Signal channel needs a signal-cli daemon you run on the same host. Curia connects to its socket. See [Signal](/channels/signal-setup).
+- **Your own agents and skills.** The image ships the built-in ones. Yours live in your own config and code. See [Building custom agents](/agents/building-custom-agents) and [Building tools](/tools-and-skills/building).
+- **Backups.** Nothing backs up `pgdata` for you.
+
+Some additions are worth considering on a server:
+
+- **A VPN or proxy for the browser's traffic.** Set `BROWSER_PROXY` to send the browser out through another IP, for sites that block cloud servers. See [Web browser](/integrations/web-browser).
+- **Single sign-on in front of the console.** An identity-aware proxy, in front of Caddy or in place of it, adds your organisation's sign-in on top of Curia's own.
+
+## Sizing
+
+The stack is sized for **4 vCPU and 8 GB of RAM**. The speech container holds about 2.6 GB of models in memory, and that sets the minimum. See [System requirements](/get-started/system-requirements) for CPU, memory, disk and network.
 
 <CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/core-concepts/architecture">
+    How a message moves through Curia's layers, inside the curia container.
+  </Card>
   <Card title="Initial configuration" icon="sliders" href="/get-started/configuration">
     Environment variables, the vault, and configuration layers.
   </Card>
-  <Card title="Email accounts" icon="envelope" href="/channels/email-setup">
-    Give Curia more than one mailbox of its own, from the console.
-  </Card>
   <Card title="Health monitoring" icon="chart-line" href="/get-started/health-monitoring">
-    Set up uptime monitors and credential canaries so you know immediately when your instance needs attention.
+    Uptime monitors and credential canaries, so you know when your instance needs attention.
   </Card>
   <Card title="Configuration reference" icon="book" href="/references/configuration">
     Every configurable setting: rate limits, security rules, knowledge graph decay, and more.
