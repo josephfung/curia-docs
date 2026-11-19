@@ -48,6 +48,20 @@ The Home page is the first thing you see after signing in. From top to bottom:
   - **Devices**: every signed-in device, phone pairing and notifications.
   - **Retention**: how long Curia keeps conversations, documents and facts. It's read-only, because it's set when Curia is deployed.
 
+**About** shows the Curia version, the Node runtime, the timezone, how long the process has been up, and which model each capability tier routes to. Nothing sensitive appears there (no API keys, database URL or vault contents), so it's safe to screenshot when asking for help.
+
+## Restarting Curia
+
+**Settings → System → About → Restart** does the same graceful shutdown as `docker compose restart`: Curia stops taking new work, lets in-flight tasks finish, closes its connections and exits, and Docker brings it back. It's the quickest way to apply a vault change, because Curia reads the vault at startup. A changed `.env` value still needs `docker compose up -d curia`, because the container has to be recreated.
+
+It restarts the process only. No Docker socket is mounted, so the console can't touch containers, images or the host.
+
+<Note>
+  Restarts are capped at **3 per 5 minutes**. The cap is enforced from the audit log, not from memory, so it survives the restarts it limits. If Curia can't read that history or record the restart, it refuses to restart, so every operator restart is audited and can be told apart from a crash.
+</Note>
+
+If Curia doesn't come back within 90 seconds, the console stops waiting and tells you. Check `docker compose logs curia`.
+
 ## Staying signed in
 
 A sign-in lasts **90 days from when you last used it**, and restarts and updates of Curia don't sign you out. **Settings → System → Devices** lists every signed-in browser and phone. From there you can rename a device, sign one out, or **Sign out all other devices**.

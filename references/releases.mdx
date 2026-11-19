@@ -21,6 +21,23 @@ Each version is published as a GitHub Release with condensed release notes:
   All releases with downloadable artifacts and prose release notes.
 </Card>
 
+## Upgrade notes
+
+Updating Curia pulls new images and runs migrations on startup (see [Updating Curia](/get-started/installation#updating-curia)). Some releases also need a change that an update never makes for you, because `install.sh` never edits an existing `docker-compose.yml`. Those changes are listed here, newest first.
+
+### Upgrading to v0.45
+
+Back up the database first. Then work through this list.
+
+1. **Keep Postgres on loopback.** Edit the postgres `ports:` entry to read `- "${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"`, then run `docker compose up -d postgres` so the container is recreated. An edit alone changes nothing. On an HTTPS install, also change the curia entry to `- "${HTTP_BIND:-}:${HTTP_PORT:-3000}:3000"`. See [Ports to open](/get-started/deployment#ports-to-open).
+2. **Check LiveKit signaling, if you run voice.** Signaling (port 7880) is now published on `127.0.0.1` only. If browsers connected to `ws://<server>:7880` directly, put a TLS proxy in front of `127.0.0.1:7880` or set `LIVEKIT_HTTP_BIND` in `.env` (with your own keys, never `--dev`). See [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server).
+3. **Add the browser container.** The `web-browser` tool now runs Chrome in its own `browser` service, which needs `docker/seccomp-chrome.json` next to your compose file. Follow [Upgrading from an older install](/integrations/web-browser#upgrading-from-an-older-install); re-running `install.sh` fetches the seccomp profile once your compose file refers to it.
+4. **Decide on autonomy gating.** `autonomy.gating` now defaults to `band`: the autonomy score, not the contact's tier, decides when Curia asks first. To keep the old tier gates for now, set `gating: tier` under `autonomy:` in `config/local.yaml`. `band` needs the escalation judge (`escalation.judge.enabled: true`, the default), and startup fails without it. See [Autonomy](/core-concepts/autonomy).
+5. **Re-save the Nylas key if asked.** Legacy mailbox and Nylas vault keys migrate at boot. If email reports the Nylas key missing afterwards, re-save it in **Settings → Channels → Email**.
+6. **Move off `/api/messages`.** The bearer-token message routes were removed. Anything that called them must use console chat instead. See [HTTP channel](/channels/http).
+
+`install.sh` checks what Docker actually published after the update, and warns about Postgres, port 3000, LiveKit signaling and a missing browser service.
+
 ## Planned milestones
 
 Upcoming work is tracked via GitHub Milestones. Priorities are subject to change as the project evolves.

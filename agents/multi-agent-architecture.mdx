@@ -7,7 +7,7 @@ Curia is a team of agents, not a single assistant. The design is deliberate: a s
 
 <img
   src="/assets/multi-agent-architecture.svg"
-  alt="Diagram showing the multi-agent architecture: You connects to the Coordinator inside the Bullpen, which delegates to Calendar, Contacts, CEO Inbox, and Research specialists. All agents draw from an Execution Layer of 65+ tools."
+  alt="Diagram of the multi-agent architecture. You and your contacts reach the Coordinator over Curia's channels; it is the only agent that talks to people. Inside the Bullpen, the Coordinator delegates to specialists: Calendar, Contacts, CEO Inbox, Research analyst, Meeting debrief, Diagnostics, Setup guide, and any you add. Agents send tool.invoke to the execution layer and get tool.result back; it checks each call against the tool's manifest and the autonomy score, and holds about 150 tools in skill bundles plus Google Workspace tools from an MCP server. Every agent shares one knowledge graph, and every delegation and tool call is in the audit log."
   style={{ width: '100%', height: 'auto', borderRadius: '8px', marginTop: '8px', marginBottom: '8px' }}
 />
 
@@ -41,7 +41,7 @@ A timeout doesn't cancel the work. If the specialist finishes late, its result i
 
 ## Extensibility
 
-Specialists are just YAML files. Adding a new one — a contracts analyst, a travel planner, a finance tracker — is a matter of writing a manifest and dropping it in the `agents/` directory. The `add more` slot in the diagram is literal: there's no architectural limit on the number of specialists, and the Coordinator can discover new ones dynamically if `allow_discovery: true` is set.
+Specialists are just YAML files. Adding a new one — a contracts analyst, a travel planner, a finance tracker — is a matter of writing a manifest and dropping it in the `agents/` directory. The "Your own" slot in the diagram is literal: there's no architectural limit on the number of specialists, and the Coordinator can discover new ones dynamically if `allow_discovery: true` is set.
 
 <CardGroup cols={2}>
   <Card title="How agents work" icon="robot" href="/agents/how-agents-work">
