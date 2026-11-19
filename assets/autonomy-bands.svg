@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 430" width="1100" height="430" role="img" aria-labelledby="t d">
+<title id="t">The autonomy dial</title>
+<desc id="d">One score from 0 to 100 sets five bands. Restricted, below 60: proposes and drafts only, and takes no action with an external effect; only read tools run. Draft Only, 60 to 69: drafts and handles internal logistics in confirmed work, asks before anything is sent; low-risk tools such as memory and contacts run. Approval Required, 70 to 79, the default at 75: takes on work and coordinates, asks before speaking or committing for you; sends run. Spot-check, 80 to 89: speaks for you on routine matters, asks before committing you to dates, terms or introductions; calendar writes and commitments run. Full, 90 to 100: speaks and commits for you, asks first on payments, pricing, contracts and legal positions; critical tools run. At every band, an outsider steering Curia is held for you.</desc>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#265058"/></marker><marker id="arra" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#8A3B2E"/></marker></defs>
+<rect x="0" y="0" width="1100" height="430" rx="16" fill="#ECE5D6" stroke="none" stroke-width="1"/>
+<rect x="41.5" y="92" width="201.0" height="62" rx="8" fill="#DCE6E2" stroke="#DCE6E2" stroke-width="1"/>
+<text x="142.0" y="120" font-size="15.5" fill="#1F1F1F" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Restricted</text>
+<text x="142.0" y="139" font-size="11" fill="#6E6A62" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">below 60</text>
+<text x="142.0" y="204" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">proposes and</text>
+<text x="142.0" y="220" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">drafts only</text>
+<text x="142.0" y="270" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">anything with an</text>
+<text x="142.0" y="286" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">external effect</text>
+<rect x="48.0" y="330" width="188.0" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="142.0" y="348.14" font-size="11.5" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">none: reads, search</text>
+<rect x="245.5" y="92" width="201.0" height="62" rx="8" fill="#B8CCC6" stroke="#B8CCC6" stroke-width="1"/>
+<text x="346.0" y="120" font-size="15.5" fill="#1F1F1F" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Draft Only</text>
+<text x="346.0" y="139" font-size="11" fill="#4B5A57" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">60–69</text>
+<text x="346.0" y="204" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">drafts, and internal</text>
+<text x="346.0" y="220" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">logistics in confirmed work</text>
+<text x="346.0" y="270" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">before anything is sent,</text>
+<text x="346.0" y="286" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">and to take on new work</text>
+<rect x="252.0" y="330" width="188.0" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="346.0" y="348.14" font-size="11.5" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">+ low: memory, contacts</text>
+<line x1="244.0" y1="182" x2="244.0" y2="296" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
+<rect x="449.5" y="92" width="201.0" height="62" rx="8" fill="#7E9FA0" stroke="#7E9FA0" stroke-width="1"/>
+<text x="550.0" y="120" font-size="15.5" fill="#1F1F1F" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Approval Required</text>
+<text x="550.0" y="139" font-size="11" fill="#2F3D3D" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">70–79</text>
+<text x="550.0" y="204" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">takes on work</text>
+<text x="550.0" y="220" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">and coordinates</text>
+<text x="550.0" y="270" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">before speaking or</text>
+<text x="550.0" y="286" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">committing for you</text>
+<rect x="456.0" y="330" width="188.0" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="550.0" y="348.14" font-size="11.5" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">+ medium: sends</text>
+<line x1="448.0" y1="182" x2="448.0" y2="296" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
+<rect x="653.5" y="92" width="201.0" height="62" rx="8" fill="#3E6B71" stroke="#3E6B71" stroke-width="1"/>
+<text x="754.0" y="120" font-size="15.5" fill="#F4EFE6" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Spot-check</text>
+<text x="754.0" y="139" font-size="11" fill="#C9D8D4" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">80–89</text>
+<text x="754.0" y="204" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">routine replies and</text>
+<text x="754.0" y="220" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">logistics, for you</text>
+<text x="754.0" y="270" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">before committing you to</text>
+<text x="754.0" y="286" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">dates, terms or intros</text>
+<rect x="660.0" y="330" width="188.0" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="754.0" y="348.14" font-size="11.5" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">+ high: calendar, commitments</text>
+<line x1="652.0" y1="182" x2="652.0" y2="296" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
+<rect x="857.5" y="92" width="201.0" height="62" rx="8" fill="#265058" stroke="#265058" stroke-width="1"/>
+<text x="958.0" y="120" font-size="15.5" fill="#F4EFE6" text-anchor="middle" font-family="Lora, Georgia, 'Times New Roman', serif" font-weight="500">Full</text>
+<text x="958.0" y="139" font-size="11" fill="#C9D8D4" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">90–100</text>
+<text x="958.0" y="204" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">speaks and commits</text>
+<text x="958.0" y="220" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">for you</text>
+<text x="958.0" y="270" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">payments, pricing,</text>
+<text x="958.0" y="286" font-size="12" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">contracts, legal positions</text>
+<rect x="864.0" y="330" width="188.0" height="28" rx="6" fill="#F1E8D6" stroke="#CDBE9F" stroke-width="1"/>
+<text x="958.0" y="348.14" font-size="11.5" fill="#1F1F1F" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">+ critical: money, irreversible</text>
+<line x1="856.0" y1="182" x2="856.0" y2="296" stroke="rgba(31,31,31,0.18)" stroke-width="1"/>
+<text x="40.0" y="84" font-size="11" fill="#6E6A62" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">0</text>
+<text x="244.0" y="84" font-size="11" fill="#6E6A62" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">60</text>
+<text x="448.0" y="84" font-size="11" fill="#6E6A62" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">70</text>
+<text x="652.0" y="84" font-size="11" fill="#6E6A62" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">80</text>
+<text x="856.0" y="84" font-size="11" fill="#6E6A62" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">90</text>
+<text x="1060.0" y="84" font-size="11" fill="#6E6A62" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">100</text>
+<path d="M543.0,66 L557.0,66 L550.0,75 z" fill="#8A3B2E"/>
+<text x="550.0" y="58" font-size="12" fill="#8A3B2E" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="600">Curia starts at 75</text>
+<text x="40" y="182" font-size="11.5" fill="#6E6A62" text-anchor="start" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700" letter-spacing="0.12em">ON ITS OWN</text>
+<text x="40" y="248" font-size="11.5" fill="#6E6A62" text-anchor="start" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700" letter-spacing="0.12em">ASKS YOU FIRST</text>
+<text x="40" y="320" font-size="11.5" fill="#6E6A62" text-anchor="start" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-weight="700" letter-spacing="0.12em">TOOLS IT MAY RUN · A HARD GATE</text>
+<text x="550.0" y="394" font-size="11.5" fill="#6E6A62" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-style="italic">At every band, a send an outsider seems to be steering is held for you, and your own instructions count as approval.</text>
+</svg>

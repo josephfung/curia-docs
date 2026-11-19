@@ -6,6 +6,12 @@ description: "How Curia's governance layers compose — from channel trust to di
 
 Every message that enters Curia passes through multiple governance layers before any action is taken. Each layer adds a different kind of protection, and they compose — a message must satisfy every layer to result in an action. No single layer is the "security layer"; security is the cumulative effect of all five working together.
 
+<img
+  src="/assets/governance-gates.svg"
+  alt="Five gates a message passes, in order, before Curia acts or replies. 1, channel trust: Signal and CLI high, HTTP API medium, email low; a weak channel starts with lower trust and goes on. 2, dispatch policy: trust score, rate limits and injection scan; an unknown sender gets read-only handling, a flood is dropped and logged. 3, agent autonomy: the autonomy band and a review of each send; otherwise Curia asks you first. 4, tool action risk: the score must meet the tool's floor, none 0, low 60, medium 70, high 80, critical 90; otherwise the call is blocked and an approval request is filed. 5, outbound safety: PII redaction, content rules and a leak check; otherwise the reply is redacted or held."
+  style={{ width: '100%', height: 'auto', borderRadius: '8px', marginTop: '8px', marginBottom: '8px' }}
+/>
+
 ## Layer-by-layer governance
 
 ### Layer 1: Channel trust

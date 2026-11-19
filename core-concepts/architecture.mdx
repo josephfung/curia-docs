@@ -5,6 +5,12 @@ description: "How a message flows through Curia — from inbound channel to coor
 
 Curia is built around a central message bus that connects five layers. Four domain layers — Channel, Dispatch, Agent, and Execution — have hard security boundaries enforced at registration time. A fifth System layer provides trusted cross-cutting infrastructure (audit logger, memory engine, scheduler). All communication between layers flows through typed events on the bus, backed by Postgres for persistence.
 
+<img
+  src="/assets/architecture-message-flow.svg"
+  alt="How a message flows through Curia. Someone writes on any channel. 1: the channel layer publishes inbound.message. 2: the dispatch layer checks trust, rate limits and prompt injection, then publishes agent.task. 3: the agent layer, the Coordinator and specialists, publishes tool.invoke. 4: the execution layer checks permissions, runs the tool and publishes tool.result. 5: the agent publishes agent.response. 6: dispatch applies PII redaction and publishes outbound.message. 7: the channel delivers the reply. Every arrow is an event on the message bus, recorded in Postgres, and each layer may publish only its own event types. The system layer, with the audit logger, memory engine, scheduler and dream engine, may publish and read every event type."
+  style={{ width: '100%', height: 'auto', borderRadius: '8px', marginTop: '8px', marginBottom: '8px' }}
+/>
+
 ## The five layers
 
 | Layer | Responsibility | Example components |
