@@ -1,7 +1,7 @@
 ---
 title: "Google Docs"
-sidebarTitle: "6. Google Docs"
-description: "Connect Curia's own Google account so it can create, edit and share Google Docs, Sheets and Drive files with your principal."
+sidebarTitle: "Google Docs"
+description: "The Setup page's Google Workspace extra: connect Curia's own Google account so it can create, edit and share Google Docs, Sheets and Drive files with your principal."
 ---
 
 ## What this is for
@@ -10,10 +10,12 @@ Curia often hands work over as a document: a briefing, a draft plan, a research 
 
 This is **Curia's** Google account, not your principal's. Curia only sees your principal's files if they share them with it.
 
+On the [Setup page](/get-started/check-your-setup) this is the **Google Workspace** optional extra. It's optional: it never blocks Start onboarding, and you can set it up after Setup too.
+
 ## What you'll need
 
-- **A Google account for Curia.** If Curia's mailbox from [2. Curia's own email](/get-started/curia-email) is on Gmail or Google Workspace, use that account.
-- **A Google account of your own** to create a Google Cloud project. Use your account, not Curia's.
+- **A Google account for Curia.** If Curia's mailbox from [Curia's own email](/get-started/curia-email) is on Gmail or Google Workspace, use that account.
+- **A Google account of your own** to create a Google Cloud project. Use your account, not Curia's. If you made a Google Cloud project for a production Nylas application, you can reuse it; this step still needs its own OAuth client.
 - **A computer with a web browser,** and [`uv`](https://docs.astral.sh/uv/) installed on it, for a one-time sign-in as Curia. This step also needs a copy of Curia's source code (see step 5).
 - **Shell access to the Curia host,** to copy the sign-in token across.
 
@@ -25,7 +27,7 @@ This is **Curia's** Google account, not your principal's. Curia only sees your p
 
 <Steps>
   <Step title="Create a Google Cloud project">
-    Sign in to [console.cloud.google.com](https://console.cloud.google.com) with **your own** account and create a project, for example `curia-workspace`.
+    Sign in to [console.cloud.google.com](https://console.cloud.google.com) with **your own** account and create a project, for example `curia-workspace`, or open the one you made for Curia's email.
 
     Under **APIs & Services → Library**, enable:
 
@@ -33,7 +35,7 @@ This is **Curia's** Google account, not your principal's. Curia only sees your p
     - Google Docs API
     - Google Sheets API
 
-    Don't enable the Calendar or Gmail APIs. Curia reaches mail and calendar through Nylas, and doesn't use them here.
+    This step doesn't need the Calendar or Gmail APIs: Curia reaches mail and calendar through Nylas. A project reused from Curia's email already has them on, which is fine.
   </Step>
 
   <Step title="Set up the consent screen and publish it">
@@ -53,20 +55,22 @@ This is **Curia's** Google account, not your principal's. Curia only sees your p
     Copy the **client ID** and **client secret**.
   </Step>
 
-  <Step title="Enter the credentials in the console">
-    In the console, go to **Settings → MCP Skills** and open **google-workspace**. Under **Credentials**, enter:
+  <Step title="Enter the credentials in the Google Workspace extra">
+    On the Setup page, open **Google Workspace** under **Optional extras** and fill in:
 
     | Field | Value |
     |---|---|
-    | Google OAuth client ID | The client ID from step 3 |
-    | Google OAuth client secret | The client secret from step 3 |
-    | Curia Google account email | Curia's Google address |
+    | Curia's Google address | Curia's Google address, such as `curia@example.com` |
+    | OAuth client ID | The client ID from step 3 |
+    | OAuth client secret | The client secret from step 3 |
 
-    Then click **Enable**. The values are stored in the encrypted [vault](/get-started/secrets-vault).
+    Each saves when you leave it, and shows **Saved**. The values are stored in the encrypted [vault](/get-started/secrets-vault). The extra is ticked once all three are saved.
+
+    Then turn the Google Workspace server on: open **Settings → MCP Skills** (open during Setup too), open **google-workspace** and click **Enable**. The same page shows the three credentials, for changing them after Setup.
   </Step>
 
   <Step title="Sign in as Curia's Google account">
-    Today this sign-in runs a script from Curia's source code, on a computer with a browser. You don't need Node.js or a full development setup, only `git` and `uv`.
+    The Setup page's **Sign in as Curia** button shows as coming soon. Until it arrives, this sign-in runs a script from Curia's source code, on a computer with a browser. You don't need Node.js or a full development setup, only `git` and `uv`.
 
     ```bash
     git clone https://github.com/josephfung/curia.git
@@ -93,7 +97,7 @@ This is **Curia's** Google account, not your principal's. Curia only sees your p
   </Step>
 
   <Step title="Restart Curia">
-    Curia connects to Google when it starts. Restart from the console's **Settings → System → About** page, or run:
+    Curia connects to Google when it starts. During Setup, use **Apply & restart**. After Setup, restart from the console's **Settings → System → About** page, or run:
 
     ```bash
     docker compose restart curia

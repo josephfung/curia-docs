@@ -1,22 +1,23 @@
 ---
 title: "Voice"
-sidebarTitle: "4. Voice"
-description: "Turn on spoken conversations with Curia: run LiveKit, add Deepgram and Cartesia keys, and choose the voice Curia speaks in."
+sidebarTitle: "Voice"
+description: "The Setup page's Voice step: choose how your principal talks to Curia, add the Deepgram and Cartesia keys, and choose the voice Curia speaks in."
 ---
 
 ## What this is for
 
-Voice lets your principal talk to Curia out loud, in a live two-way call, instead of typing. Curia listens, works the same way it does in chat, and answers in a spoken voice that you choose here. A call is placed from the **console chat**, in a web browser or in the [phone app](/channels/phone-app).
+Voice lets your principal talk to Curia out loud, in a live two-way call, instead of typing. Curia listens, works the same way it does in chat, and answers in a spoken voice that you choose here.
 
-This page walks you through setup in order. For ports, settings and troubleshooting, see the [Voice reference](/channels/voice-setup).
+This page covers the **Voice** step on the [Setup page](/get-started/check-your-setup). Voice is a required step, so your principal can choose a call or chat for any session. For ports, settings and troubleshooting, see the [Voice reference](/channels/voice-setup).
 
 ## What you'll need
 
-- **LiveKit,** the server that carries call audio. It is bundled with Curia: the install's `docker-compose.yml` includes a `livekit` service, but the installer doesn't start it. You'll start it in step 3.
 - **A Deepgram account** for speech-to-text (turning speech into words).
 - **A Cartesia account** for text-to-speech (Curia's spoken voice).
+- **LiveKit,** the server that carries call audio. It comes with Curia: the install's `docker-compose.yml` includes a `livekit` service. The Setup page doesn't ask for LiveKit's keys, but an install that doesn't have them yet needs the extra step below.
 - **HTTPS for the console** on any host other than `localhost`. Browsers only allow the microphone on a secure page.
 - **For a server install:** an HTTPS route to LiveKit's signaling port, and two ports open to the internet for call audio (`7881/tcp` and `7882/udp`). See [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server).
+- **For Signal calls only:** the Signal channel, and server-side pieces the standard install doesn't include. See [Signal calls](/channels/voice-setup#signal-calls).
 
 **Time:** about 20 minutes to try it on a laptop. Allow an hour on a server, mostly for LiveKit's config and firewall.
 
@@ -33,8 +34,18 @@ This page walks you through setup in order. For ports, settings and troubleshoot
 ## Steps
 
 <Steps>
+  <Step title="Choose how your principal will call">
+    On the Setup page, open the **Voice** step and pick one. The choice saves as soon as you pick it.
+
+    - **In the Curia app:** your principal taps to call from the phone app or the console chat, in a web browser or in the [phone app](/channels/phone-app).
+    - **Signal call:** your principal calls Curia's Signal number. Experimental: see [Signal calls](/channels/voice-setup#signal-calls).
+    - **Phone:** a dedicated phone line. Shown as coming soon; it can't be picked yet.
+
+    The step marks the choice that matches your Messaging route.
+  </Step>
+
   <Step title="Get a Deepgram API key">
-    Sign up at [deepgram.com](https://deepgram.com) and create an API key. Keep it for step 4.
+    Sign up at [deepgram.com](https://deepgram.com) and create an API key.
   </Step>
 
   <Step title="Get a Cartesia API key and choose Curia's voice">
@@ -42,11 +53,23 @@ This page walks you through setup in order. For ports, settings and troubleshoot
 
     Then choose the voice your principal will hear. Browse and preview voices at [play.cartesia.ai](https://play.cartesia.ai), and copy the **voice ID** (a UUID) of the one you want. It's worth choosing with your principal in mind: they'll hear this voice on every call.
 
-    The voice ID is required. Voice stays off until it's set. To change voices later, replace the value in step 4 and restart.
+    The voice ID is required. Voice stays off until it's set.
   </Step>
 
-  <Step title="Start LiveKit">
-    Run these commands from the directory you installed Curia into.
+  <Step title="Enter them in the Voice step">
+    Fill in the three fields. Each saves when you leave it, and shows **Saved** once it's in the [vault](/get-started/secrets-vault):
+
+    | Field | What to enter |
+    |---|---|
+    | Deepgram API key | From Deepgram |
+    | Cartesia API key | From Cartesia |
+    | Curia's voice | The Cartesia voice ID |
+
+    Once these and LiveKit's keys are in, the voice channel turns on by itself and starts at **Apply & restart**. To change the keys or the voice after Setup, use **Settings → Channels → Voice**, then restart.
+  </Step>
+
+  <Step title="If the step asks for LiveKit's keys: start LiveKit and add them">
+    If the step says **Voice also needs LiveKit's keys, which come with Curia's install; this install doesn't have them yet**, start LiveKit and enter its three values yourself. Run these commands from the directory you installed Curia into.
 
     **To try voice on the machine you're sitting at** (`http://localhost:3000`), start LiveKit in development mode:
 
@@ -56,38 +79,29 @@ This page walks you through setup in order. For ports, settings and troubleshoot
 
     Development mode uses the well-known key `devkey` and secret `secret`, and its signaling URL is `ws://localhost:7880`.
 
-    **On a server,** don't use development mode: anyone who can reach the ports could use those well-known credentials. Give LiveKit its own key and secret, put HTTPS in front of its signaling port, and open the media ports. Follow [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server), then come back here.
-  </Step>
+    **On a server,** don't use development mode: anyone who can reach the ports could use those well-known credentials. Give LiveKit its own key and secret, put HTTPS in front of its signaling port, and open the media ports. Follow [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server).
 
-  <Step title="Enter the six values in the console">
-    In the console, go to **Settings → Channels → Voice** and fill in:
+    Then open **Settings → Channels → Voice** (the Settings pages stay open during Setup) and fill in:
 
     | Field | What to enter |
     |---|---|
     | LiveKit signaling URL | `ws://localhost:7880` for the laptop try-out, or `wss://<your-domain>` on a server |
     | LiveKit API key | `devkey`, or your own key on a server |
     | LiveKit API secret | `secret`, or your own secret on a server |
-    | Deepgram API key | From step 1 |
-    | Cartesia API key | From step 2 |
-    | Cartesia voice ID | From step 2 |
 
-    The values are stored in the encrypted [vault](/get-started/secrets-vault). Voice has no `.env` fallback.
-
-    Then install the Voice channel if it isn't already, and enable it.
+    Voice has no `.env` fallback: these live in the vault too. Then go back to the **Voice** step and click **Save and continue**; the channel turns on once every key is there.
   </Step>
 
-  <Step title="Restart Curia">
-    Curia reads the voice settings when it starts. Restart from the console's **Settings → System → About** page, or run:
+  <Step title="For a Signal call: add Signal too">
+    A Signal call needs the Signal channel. If your Messaging route is Signal, it's already set up. Otherwise the **Voice** step asks for **Curia's Signal number**, the **Signal server socket** and **your principal's Signal number**, as in [Reach your principal](/get-started/reach-your-principal).
 
-    ```bash
-    docker compose restart curia
-    ```
+    Signal calls also need `SIGNAL_VOICE_CALLS_ENABLED=true` and `SIGNAL_PULSE_SOCKET_PATH` in the server's `.env`, plus a newer signal-cli, a call tunnel and PulseAudio. The step's status line names what's missing. See [Signal calls](/channels/voice-setup#signal-calls).
+  </Step>
+
+  <Step title="Apply and restart">
+    Click **Save and continue**. Voice starts at the next **Apply & restart**, which you can leave until you've finished the other steps. The **Voice** step then reads **Done.**
   </Step>
 </Steps>
-
-<Note>
-  **Signal calls.** Curia can also answer calls to its Signal number. This is experimental, off by default, and needs extra pieces (a newer signal-cli, a call tunnel and PulseAudio) that the standard install doesn't include. See [Signal calls](/channels/voice-setup#signal-calls).
-</Note>
 
 ## Check it works
 
@@ -95,7 +109,7 @@ This page walks you through setup in order. For ports, settings and troubleshoot
 2. Open the console **Chat**. A **Voice** button (with a phone icon) appears once voice is running. If it's missing, see [The Voice button doesn't appear](/channels/voice-setup#troubleshooting).
 3. Click **Voice**, allow the microphone, and say something. Curia greets you first, then answers out loud. Hang up from the call bar. The transcript appears in the chat history. If the console shows **Curia couldn't join the call**, see [Troubleshooting](/channels/voice-setup#troubleshooting).
 
-If the setup assistant shows **Voice (console)** as done, that only means the six values are saved. The test call is the real check.
+The **Voice** step reading **Done.** means the voice channel is running. The test call is the real check. Console chat opens after Start onboarding.
 
 ## What your principal will notice
 
@@ -106,4 +120,4 @@ If the setup assistant shows **Voice (console)** as done, that only means the si
 - They can have Curia prepare an agenda for their next call, or ask it to take notes on any call. Afterwards Curia writes minutes and sends one follow-up. See [Agendas, notes and minutes](/channels/voice-setup#agendas-notes-and-minutes).
 - In the phone app, locking the phone or switching apps pauses the call instead of dropping it.
 
-Whoever uses the console chat is treated as your principal, so a test call you make during setup is a conversation as them, and an instruction on the call counts as their approval. Keep test calls short and neutral.
+Whoever uses the console chat is treated as your principal, so a test call you make is a conversation as them, and an instruction on the call counts as their approval. Keep test calls short and neutral.

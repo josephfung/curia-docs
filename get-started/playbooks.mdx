@@ -5,39 +5,30 @@ description: "Step-by-step recipes for common Curia workflows — onboarding, co
 
 These playbooks are short, opinionated recipes for common Curia workflows. Each one stands on its own: pick the one that matches what you're trying to do.
 
-## First run after setup
+## First run after install
 
-You've installed Curia, signed in to the console with your bootstrap secret, and filled in the `/setup` form. Here's what happens next.
+You've installed Curia and signed in to the console with your bootstrap secret. Here's what happens next.
 
 <Steps>
-  <Step title="Land in the chat view">
-    Saving the last step of the form (**Confirm & save**) takes you to `/chat`. If email or Signal credentials were waiting for a restart, you'll see a brief **Setting up channels…** screen first while Curia restarts so those channels can come online. This usually takes 10–30 seconds.
+  <Step title="Work through the Setup page">
+    A new install opens on the Setup page at `/setup`. It lists every step in order: who Curia is for, Curia's name, Email, Messaging, Voice, Email & calendar, then Apply & restart. Each step takes its keys on the page and links to its guide. See [The Setup page](/get-started/check-your-setup).
   </Step>
 
-  <Step title="Meet the setup assistant">
-    A kickoff message fires automatically and the **setup-wizard** specialist introduces itself through the Coordinator. It starts with a few quick wins that need no credentials:
-
-    - **Persona:** one open question about tone, priorities and how Curia should communicate.
-    - **Debrief:** whether a regular digest would help, daily at the end of the day or weekly on Fridays. If yes, it schedules the job straight away. You can change or cancel it later from `/jobs` in the console, or by asking Curia.
-    - **How to refer to the principal:** pronouns first, because emails go out in their name, then preferred name and title if the form didn't capture them.
-    - **Capability tour:** the five or six things Curia can already do.
-
-    Then it asks what you'd most like help with and starts that setup.
+  <Step title="Ask the setup guide when you're stuck">
+    The setup guide, Curia's own chat, docks beside the Setup page. Click **Need help? Ask the setup guide** on any step to ask about it. It explains, compares options and checks what's missing; you fill in the steps.
 
     <Note>
-      The setup assistant checks progress against Curia's memory, which runs on the bundled embedding model out of the box. If memory is off, `/api/health` reports `knowledge_graph: "fail"` and the assistant can't tell what you've set up. See [Search and memory](/get-started/search-and-memory).
+      The setup guide checks progress against Curia's memory, which runs on the bundled embedding model out of the box. If memory is off, `/api/health` reports `knowledge_graph: "fail"`. See [Search and memory](/get-started/search-and-memory).
     </Note>
   </Step>
 
-  <Step title="Connect the rest">
-    Work through the Setup pages in order: [Curia's own email](/get-started/curia-email), [Reach your principal](/get-started/reach-your-principal), [Voice](/get-started/voice), [Your principal's email and calendar](/get-started/principal-email-calendar), [Google Docs](/get-started/google-docs) and [Search and memory](/get-started/search-and-memory). Then confirm everything with [Check your setup](/get-started/check-your-setup).
-
-    You can also ask the setup assistant for help at any time: "Help me set up email" or "What can you do?" both route back to it.
+  <Step title="Start onboarding">
+    When the required steps pass, click **Start onboarding**. Setup ends and the console opens on its home page. After that, you can still ask Curia for help: "Help me set up email" reaches the setup guide through Curia's main chat.
   </Step>
 </Steps>
 
 <Note>
-  To revise the assistant's name, signature or tone and style later, go to **Settings → Behaviour → Personality**. You can also visit `/setup` directly: the form stays available after setup and pre-fills with the current values.
+  To revise Curia's name, signature or tone later, go to **Settings → Behaviour → Personality**. The Setup page closes after Start onboarding.
 </Note>
 
 ## Calibrating autonomy

@@ -1,32 +1,157 @@
 ---
-title: "Check your setup"
-description: "The finish line for Setup: a concrete check for every item, then handing Curia over to your principal."
+title: "The Setup page"
+sidebarTitle: "The Setup page"
+description: "The console's Setup page walks you through every step, from who Curia is for to Start onboarding. The steps, what's required, the setup guide, Capabilities, and how to check it all works before you hand over."
 ---
 
 ## What this is for
 
-This page is the finish line for Setup. It lists every Setup item with a check you can run yourself. When every check passes, hand Curia over to your principal using the steps at the end of this page.
+On a new install, the console opens on the **Setup page** (`/setup`), full screen. It lists every step, in order, and takes every key and detail on the step itself, so you never have to leave it. When the required steps pass, **Start onboarding** ends Setup and hands Curia over to your principal.
+
+This page describes the Setup page as a whole. The steps that need outside accounts each have their own page in this section, and each step on the Setup page links to its page with a **Setup guide** link.
+
+An install that was set up before the Setup page existed never sees it.
 
 ## What you'll need
 
-- About 15–20 minutes.
-- The console address and your access key (the bootstrap secret the installer printed).
-- A terminal on the server, for the health endpoint and the logs.
-- The principal's phone and inbox, or the principal sitting with you. Some checks send them a real message.
+- The console address and your access key (the bootstrap secret the installer printed). See [Install Curia](/get-started/installation).
+- The details and keys each step asks for. Each step's page lists them.
+- About 1–2 hours in all, mostly for the email, messaging and voice accounts. You can stop at any point: the Setup page opens again where you left off.
+
+## How the page works
+
+- **The step list.** On the left, every step with its mark: done (✓), waiting for a restart, not done, or locked. The top shows how many of the six required steps are done. Click any step to open it. When you come back, the page opens on the first required step that isn't done.
+- **One button per step.** Each step has one **Save and continue** button, which saves anything still typed and moves to the next step. Key and number fields also save when you leave them; a saved field shows **Saved**, and typing in it again replaces the value. Choices, such as a messaging route or a tone, save as soon as you pick them.
+- **The status line.** Each step shows its live check as one line: **Done.**, what's still missing, or **Saved. Turns on when you apply and restart at the end.**
+- **Channels turn on by themselves.** A channel (email, Signal, text message, Slack, voice) turns on as soon as its keys are in. It starts at **Apply & restart**.
+- **Phone numbers** are saved in international (E.164) format, such as `+14165550100`. Spaces, dashes and brackets you type are dropped; a number without its country code is refused.
+- **The rest of the console waits.** Until Start onboarding, the home page and chat open the Setup page instead. The Settings pages stay open, for anything a step doesn't cover.
+
+## The steps
+
+| # | Step | Required | What it asks for | Details |
+|---|---|---|---|---|
+| 1 | **Who it's for** | Yes | Myself or someone else; your name and email as the operator (someone else only); the principal's name, title, email, timezone and pronouns | [Below](#who-its-for) |
+| 2 | **Curia's name** | Yes | Curia's name, title and email signature | [Below](#curias-name) |
+| 3 | **Email** | Yes | The Nylas API key, then Curia's own mailbox | [Curia's own email](/get-started/curia-email) |
+| 4 | **Messaging** | Yes | How Curia messages the principal: the Curia app, Signal, text message or Slack, with that route's keys and the principal's number or ID on it | [Reach your principal](/get-started/reach-your-principal) |
+| 5 | **Voice** | Yes | How the principal talks to Curia: the Curia app or a Signal call, with the Deepgram and Cartesia keys and Curia's voice | [Voice](/get-started/voice) |
+| 6 | **Email & calendar** | Yes | The Nylas sign-in checks, so the principal can connect their Google accounts | [Your principal's email and calendar](/get-started/principal-email-calendar) |
+| 7 | **Apply & restart** | | Nothing: one restart turns on everything you saved. The channel steps pass only after it | [Below](#apply-and-restart) |
+| 8 | **Start onboarding** | | Locked until steps 1–6 pass. Ends Setup | [Below](#start-onboarding) |
+
+After Start onboarding, the step list shows four **Optional extras**. They never block Start onboarding:
+
+| Extra | What it asks for | Details |
+|---|---|---|
+| **Working style** | A starting tone and how independently Curia acts | [Below](#working-style) |
+| **Google Workspace** | Curia's Google address and an OAuth client ID and secret | [Google Docs](/get-started/google-docs) |
+| **Higher search limit** | A Tavily API key | [Tavily web search](/integrations/tavily) |
+| **Capabilities** | Switches for what Curia does | [Below](#capabilities) |
+
+<Tip>
+  **Google sign-in needs a restart first.** **Connect with Google** works only once Curia has restarted with the Nylas API key saved. On a new install: paste the key in **Email**, then click **Apply & restart**. Open **Email & calendar**, which detects your Nylas region and registers Curia's sign-in callback by itself. Then go back to **Email** and connect Curia's mailbox. Curia restarts itself after that sign-in; apply and restart once more at the end to start the email channel. Pasting a grant ID instead of signing in skips the first restart.
+</Tip>
+
+### Who it's for
+
+Choose **Myself** or **Someone else**.
+
+- **Myself:** you set Curia up, then go straight into your first conversation as the principal.
+- **Someone else:** you set Curia up for an executive you work for. Add **your** name and email first. Curia treats you as its operator, the person who looks after setup and admin, and later brings admin and support questions to you rather than to the principal.
+
+Then add the principal's details: full name, email and timezone (required), and title and pronouns (optional). The timezone starts as your browser's. If you're setting Curia up for someone else, the principal can correct any of these later.
+
+Click **Save and continue**.
+
+### Curia's name
+
+The name, title and email signature Curia uses in the emails and messages it sends. On a new install, the page suggests a first name and a title such as "Executive Assistant to Dana Okafor". The signature is optional.
+
+Click **Save and continue**. You can change these later under **Settings → Behaviour → Personality**.
+
+### Apply and restart
+
+Curia restarts once to turn on everything you saved, then checks every step again. It takes about a minute, and the page reconnects by itself. Before you click, the step lists what's waiting for a restart.
+
+Click **Apply and restart**, then **Continue** once it says **Restarted**. You can come back and apply again after more changes.
+
+- **"Too many restarts in a row."** Wait a few minutes and try again.
+- **"Curia hasn't come back yet."** Check that the container restarted (`docker compose ps`), then reload the page.
+
+### Start onboarding
+
+Locked until steps 1–6 pass. While it's locked, the step says which steps are left.
+
+Click **Start onboarding** to end Setup. The console leaves the Setup page and loads its home page. Console chat starts a fresh conversation, so your principal never sees the Setup chat. If a check stopped passing since the page loaded, the step says so and locks again.
+
+Before you click, read [Check it all works](#check-it-all-works) and [Handing over to your principal](#handing-over-to-your-principal).
+
+## Optional extras
+
+Each extra is listed after Start onboarding, without a number. **Save and continue** walks them in order and returns to Start onboarding. Do them before you click Start onboarding: the Setup page closes after it. Each extra's settings are also under **Settings**, for later.
+
+### Working style
+
+A starting point for how Curia sounds and how much it does on its own. Leave the defaults and the principal chooses both in their first conversation. Anything you pick here is offered to them there as a starting point. Each choice saves as soon as you pick it.
+
+- **Tone:** Dry & understated, Warm & personable (the default), Crisp & direct, or Formal.
+- **Independence:**
+  - **Draft only:** Curia prepares drafts and summaries; the principal sends, schedules and commits.
+  - **Ask first** (the default): Curia carries out the principal's instructions, and asks before acting on its own initiative.
+  - **Spot-check:** Curia goes ahead with most things and flags a few for the principal to review.
+
+Later, change them under **Settings → Behaviour → Personality** and **Settings → Behaviour → Autonomy**. See [Autonomy](/core-concepts/autonomy).
+
+### Google Workspace
+
+Lets Curia work in Google Docs, Sheets, Slides and Drive from its own Google account. The extra saves Curia's Google address and the OAuth client ID and secret. Signing in as Curia isn't on the Setup page yet (the **Sign in as Curia** button shows as coming soon), so follow [Google Docs](/get-started/google-docs) for that part.
+
+### Higher search limit
+
+Web search works without a key, at a few dozen searches an hour. A free Tavily key raises the limit. See [Tavily web search](/integrations/tavily).
+
+### Capabilities
+
+Switches for what Curia does for the principal. Most people keep the defaults.
+
+| Capability | What it does | On a new install |
+|---|---|---|
+| **Meetings** | Agendas before a meeting, notes during it, minutes after. The principal's onboarding sessions run on it. | Always on: no switch |
+| **Meeting debriefs** | After a meeting, Curia asks the principal a few quick questions and files the follow-ups. | On |
+| **Web research** | Searches and reads the web, and hands bigger questions to a research analyst who writes up the findings. | On |
+| **Projects and tasks** | Keeps track of work the principal hands off, and follows up until it's done. | On |
+| **Diagnostics** | The principal can ask Curia why something didn't work, and get a plain answer. It reads Curia's audit log and working records, and uses Curia's most capable model, which costs more. | Off: turn it on if you want it |
+| **Email triage** | Sorts and labels the principal's inbox, and archives what doesn't need attention. | Off. On the Setup page it's locked: it acts on the principal's own inbox, so it's left for them to choose later in Settings. |
+
+- **A change applies at the next restart.** During Setup, that's **Apply & restart**.
+- **Some capabilities depend on others.** Meeting debriefs files its follow-ups with Projects and tasks, so turning it on asks to turn Projects and tasks on too.
+- **Turning one off can affect other parts of Curia.** The page names them and asks first. Web research and Projects and tasks always ask, because Curia's main agent uses them.
+- **Other states.** **Partly on** means some of a capability's parts are on: switching it sets them all. **Not available** means a part is missing from this install or broken; the line names it.
+
+After Setup, the same switches are under **Settings → Behaviour → Capabilities**, where Email triage can be switched too. Each capability is a group of agents and tools; the **Agents** and **Tools** pages show them one by one. See [Registry](/core-concepts/registry).
+
+## The setup guide
+
+The setup guide is Curia's own chat, docked on the right of the Setup page. Ask it to explain a step, compare options ("Signal or text message?") or work out why a check isn't passing. It reads the same live checks as the step list, and it knows which step you have open.
+
+- **Opening it.** It opens by itself the first time you open the Setup page (except on a phone). After that, click **Need help? Ask the setup guide** at the bottom of any step. It opens with "I'm on the Email step." (or whichever step) in the message box, ready for you to finish and send.
+- **It follows you.** When you open another step, a **Now on:** line marks the change in the conversation.
+- **It doesn't fill in steps.** It explains and checks; you enter the keys and details on the steps.
+- **Kept out of Curia's memory.** Curia doesn't learn facts about the principal from the Setup chat, and the principal's chat starts fresh at Start onboarding.
+- **Smaller screens.** On a narrow window, the step list hides while the guide is open; click **Steps** to bring it back. On a phone, the guide fills the screen.
+
+If the guide says its messages may reach Curia's usual chat, Setup couldn't start properly, or the install was set up outside the Setup page. Then your messages go to Curia's main chat instead.
+
+After Setup, you can still ask Curia for help with something it hasn't set up: "Help me set up voice" reaches the setup guide through Curia's main chat.
+
+## Check it all works
+
+The marks on the Setup page are live checks: a channel's step reads **Done.** only once that channel is running. Two further checks need nothing but a terminal. The end-to-end tests that follow happen in console chat, which opens after Start onboarding.
 
 <Warning>
-  Some of these checks message the principal's real phone and inbox. If you're setting Curia up for someone else, tell them first, or run those checks together at hand-over.
+  After Start onboarding, the console treats everyone in console chat as the principal. Some tests below message the principal's real phone and inbox. If you're setting Curia up for someone else, run them together with your principal, or skip them and use the terminal checks only.
 </Warning>
-
-## Before you start: restart once
-
-Enabling a channel, and many credential changes, take effect only on the next restart. If you changed anything since the last restart, restart now: in the console, open **Settings → System → About**, click **Restart**, then **Restart now**, or on the server:
-
-```bash
-docker compose restart curia
-```
-
-## The checklist
 
 <Steps>
   <Step title="Curia is up and healthy">
@@ -62,79 +187,15 @@ docker compose restart curia
 
     Check that:
 
-    - `status` is `ok`. `degraded` means one of the checks below reads `fail`. `down` (HTTP 503) means the database or the internal message bus is unreachable.
+    - `status` is `ok`. `degraded` means one of the checks reads `fail`. `down` (HTTP 503) means the database or the internal message bus is unreachable.
     - `db`, `bus` and `scheduler` are `ok`.
-    - The fields for the items you set up read `ok`. The steps below say which field goes with which item.
+    - `email` and `voice` are `ok`, and so is the field for the messaging route you chose: `signal`, `sms` or `slack`.
 
-    `skipped` means that service isn't configured. That's fine for a route you didn't choose: if Curia reaches the principal by Signal, `sms` reads `skipped`, and the other way round. See [Health monitoring](/get-started/health-monitoring) for what each check probes.
-  </Step>
-
-  <Step title="The dashboard shows no setup gaps">
-    Open the console dashboard. Under **System health**, look for a line starting with **Setup ·**. It lists any channel that's installed but not enabled ("email channel not enabled") and any mailbox without a Nylas grant ("… missing grant"). Click it to go to the Channels page.
-
-    When nothing is left, the line disappears. It doesn't cover channels you never installed, so keep going with the checks below.
-  </Step>
-
-  <Step title="The channels are enabled">
-    Open **Settings → Channels**. Check that each channel you set up shows **enabled**:
-
-    - **email**. Open it and look under **Email accounts**: Curia's mailbox is listed, without a "⚠ no grant" warning.
-    - **signal** or **sms**, whichever route reaches the principal.
-    - **voice**.
-
-    A channel that shows **installed** isn't running yet. Open it, check its credentials, click **Enable**, then restart.
-  </Step>
-
-  <Step title="Curia's own email sends and receives">
-    In `/api/health`, `email` reads `ok`. That means Curia polled its mailbox successfully, recently.
-
-    Then try it end to end. In console chat, ask Curia: "Send me a test email." It arrives in the principal's inbox, from Curia's own address. Reply to it from the principal's address. Curia answers in the same thread.
-
-    Details: [Curia's own email](/get-started/curia-email).
-  </Step>
-
-  <Step title="Curia can reach your principal">
-    In `/api/health`, `signal` reads `ok` (for Signal) or `sms` reads `ok` (for SMS). The `sms` check only confirms the Telnyx webhook handler is installed, so the test message below matters more.
-
-    Check that the principal's number is on their contact: open **Contacts**, open the principal, and confirm their Signal number or mobile number is listed as a channel identity. Without it, Curia can't address messages to them on that channel.
-
-    Then, in console chat, ask Curia: "Send me a test message on Signal" (or "by SMS"). It should arrive on the principal's phone from Curia's number. Reply from that phone, and Curia answers.
-
-    Details: [Reach your principal](/get-started/reach-your-principal).
-  </Step>
-
-  <Step title="Voice calls work">
-    In `/api/health`, `voice` reads `ok`. That means Curia can reach LiveKit.
-
-    Then make a test call. Open console chat. A **Voice** button appears above the message box when voice is available. Click it and allow the microphone. The bar shows "Greeting…" while Curia says hello, then "Listening…". Say something, hear the answer, then click **Hang up**.
-
-    No **Voice** button means voice isn't available: check the voice channel is enabled and LiveKit is running. Details: [Voice](/get-started/voice).
-  </Step>
-
-  <Step title="The principal's calendar is connected">
-    In `/api/health`, `nylas_calendar` reads `ok`.
-
-    - `skipped` means no principal mailbox is connected yet. Add one under **Settings → Behaviour → Email & Calendar**; no restart is needed.
-    - `fail` means Curia couldn't list the calendars of at least one connected mailbox.
-
-    `principal_mailbox_triage` should also read `ok`. It covers the regular inbox triage across the principal's mailboxes.
-
-    The daily health check also tests each connected mailbox on its own. Look for a `Health canary result` log line with `"canary":"principal_mailbox:<id>"` and `"status":"ok"` for each one. Details: [Your principal's email and calendar](/get-started/principal-email-calendar).
-  </Step>
-
-  <Step title="Google Docs works">
-    In `/api/health`, `mcp.google_workspace` reads `ok`. That only shows the Google Workspace server is running.
-
-    - No `google_workspace` key at all means the server isn't enabled. Check **Settings → MCP Skills**.
-    - `fail` means it's enabled but didn't start, usually because a credential is missing.
-
-    Then check that Google actually accepts Curia's sign-in. In console chat, ask Curia: "List the five newest files in your Google Drive." A list (even an empty one) means it works. An error about authorisation means Curia's Google sign-in has failed or expired.
-
-    Curia also runs a daily check that makes a real Drive call. Look for a `Health canary result` log line with `"canary":"google_workspace"` and `"status":"ok"`. Details: [Google Docs](/get-started/google-docs).
+    `skipped` means that service isn't configured. That's fine for a route you didn't choose. See [Health monitoring](/get-started/health-monitoring) for what each check probes.
   </Step>
 
   <Step title="Memory is on">
-    In `/api/health`, `knowledge_graph` reads `ok`. If it reads `fail`, memory is off, and so is most of the setup assistant; `details.knowledge_graph` names the reason. The startup logs say the same in words:
+    In `/api/health`, `knowledge_graph` reads `ok`. If it reads `fail`, memory is off, and so is most of the setup guide; `details.knowledge_graph` names the reason. The startup logs say the same in words:
 
     ```bash
     docker compose logs curia | grep -i "entity memory"
@@ -143,24 +204,38 @@ docker compose restart curia
     You want `Entity memory initialized with knowledge graph`. A line ending in `knowledge graph unavailable` says what's wrong and how to fix it. Details: [Embedding models](/integrations/embeddings-endpoint#see-which-model-is-active).
   </Step>
 
-  <Step title="Web search works">
-    Ask Curia in console chat to search the web for something recent. Web search works without a Tavily key, capped at a few dozen searches an hour. If you added a key, a daily check also tests it; look for a `Health canary result` log line with `"canary":"tavily"` and `"status":"ok"`. Without a key, that check reports `skipped`.
-  </Step>
-
   <Step title="The web browser works">
-    In `/api/health`, `browser` reads `ok`. The browser runs in its own container, which `docker compose up` starts with everything else. On the server, `docker compose ps browser` should say `healthy`.
-
-    Details: [Web browser](/integrations/web-browser).
+    In `/api/health`, `browser` reads `ok`. On the server, `docker compose ps browser` should say `healthy`. Details: [Web browser](/integrations/web-browser).
   </Step>
 
-  <Step title="Optional: the phone app">
-    If your principal will use Curia on their phone, Curia must be on an `https://` address with a real hostname. Pair a phone under **Settings → System → Devices** and turn on its notifications. The setup assistant counts this item done once any signed-in device has notifications on. Details: [Use Curia on your phone](/channels/phone-app).
+  <Step title="Curia's own email sends and receives">
+    In console chat, ask Curia: "Send me a test email." It arrives in the principal's inbox, from Curia's own address. Reply to it from the principal's address. Curia answers in the same thread. Details: [Curia's own email](/get-started/curia-email).
+  </Step>
+
+  <Step title="Curia can reach your principal">
+    In console chat, ask Curia: "Send me a test message on Signal" (or "by text message", or "on Slack"). It should arrive on the principal's phone from Curia. Reply from that phone, and Curia answers.
+
+    If you chose the Curia app, install it on the principal's phone first; see [Use Curia on your phone](/channels/phone-app). Details: [Reach your principal](/get-started/reach-your-principal).
+  </Step>
+
+  <Step title="Voice calls work">
+    Open console chat. A **Voice** button appears above the message box when voice is available. Click it and allow the microphone. The bar shows "Greeting…" while Curia says hello, then "Listening…". Say something, hear the answer, then click **Hang up**.
+
+    No **Voice** button means voice isn't available. Details: [Voice](/get-started/voice).
+  </Step>
+
+  <Step title="The principal's calendar is connected">
+    Once the principal has connected a mailbox, `nylas_calendar` in `/api/health` reads `ok`. `skipped` means no principal mailbox is connected yet. In console chat, ask "What's on my calendar tomorrow?" and check the answer. Details: [Your principal's email and calendar](/get-started/principal-email-calendar).
+  </Step>
+
+  <Step title="Optional: Google Docs works">
+    In `/api/health`, `mcp.google_workspace` reads `ok`. Then, in console chat, ask Curia: "List the five newest files in your Google Drive." A list (even an empty one) means it works. Details: [Google Docs](/get-started/google-docs).
+  </Step>
+
+  <Step title="Optional: web search">
+    Ask Curia in console chat to search the web for something recent. If you added a Tavily key, a daily check also tests it; look for a `Health canary result` log line with `"canary":"tavily"` and `"status":"ok"`.
   </Step>
 </Steps>
-
-<Tip>
-  You can also ask Curia in console chat: "What's left to set up?" The setup assistant lists the items it thinks are pending. It only checks that credentials are saved, not that a channel works, so use it alongside the checks above, not instead of them.
-</Tip>
 
 ## Handing over to your principal
 
@@ -171,16 +246,13 @@ If you set it up for someone else, tell your principal:
 - **How to open the console:** its address and the access key.
 - **How to get Curia on their phone:** create an invitation link under **Settings → System → Devices → Invite your principal** and send it to them yourself. It works once and lasts 48 hours. See [Invite someone else's phone](/channels/phone-app#invite-someone-elses-phone).
 - **Curia's email address,** so they can forward mail and write to Curia.
-- **Curia's Signal or SMS number,** so they can save it as a contact and message Curia.
-- **How to call Curia:** open console chat and click **Voice**.
+- **How to message Curia:** Curia's Signal or text-message number to save as a contact, or Curia in Slack, depending on the route you chose.
+- **How to call Curia:** open console chat or the phone app and click **Voice**, or call Curia's Signal number if you chose Signal calls.
+- **How to connect their email and calendar:** they sign in with Google. [Connecting your email](/onboarding/connecting-your-email) is a short page you can send them.
 - **Where to save passwords and cards:** they can hand Curia a website password or a payment card through the one-time link it sends, or add one under **Memory → Secrets**. See [Secrets vault](/get-started/secrets-vault).
 
 ### After hand-over, use Settings, not chat
 
-The console treats everyone in console chat as the principal. Anything typed there after hand-over, including by you, is taken as the principal speaking, and Curia may remember it as their preference. Console chat is also one shared thread, so your principal will see your setup conversation in its history.
+The console treats everyone in console chat as the principal. Anything typed there after Start onboarding, including by you, is taken as the principal speaking, and Curia may remember it as their preference.
 
-After hand-over, make changes through the console's pages instead: **Settings → Channels**, **Settings → MCP Skills**, **Settings → System**, **Memory → Contacts** and **Memory → Secrets**.
-
-<Note>
-  **Coming soon.** A **Start onboarding** step in the console. Once every Setup item passes, it gives you a link to send your principal, valid for 48 hours, and Curia starts its first conversation with them.
-</Note>
+After hand-over, make changes through the console's pages instead: **Settings → Channels**, **Settings → Behaviour** (including **Capabilities**), **Settings → MCP Skills**, **Settings → System**, **Memory → Contacts** and **Memory → Secrets**.

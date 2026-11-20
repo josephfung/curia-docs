@@ -1,26 +1,26 @@
 ---
 title: "Curia's own email"
-sidebarTitle: "2. Curia's own email"
-description: "Give Curia a dedicated mailbox, connected through Nylas and Google sign-in, so it can send, receive and reply to email as itself."
+sidebarTitle: "Curia's own email"
+description: "The Setup page's Email step: give Curia a dedicated mailbox, connected through Nylas and Google sign-in, so it can send, receive and reply to email as itself."
 ---
 
 ## What this is for
 
 Curia needs an email address of its own, the way an assistant has their own inbox. People write to it, your principal forwards or CCs it, and Curia replies from it, signed as Curia.
 
-This page connects **Curia's** mailbox. It is not your principal's mailbox. Giving Curia access to your principal's email and calendar is a separate step: [5. Your principal's email and calendar](/get-started/principal-email-calendar). That step reuses the Google sign-in you set up here, so most of the work is done once, on this page.
+This page covers the **Email** step on the [Setup page](/get-started/check-your-setup). It connects **Curia's** mailbox, not your principal's. Giving Curia access to your principal's email and calendar is the **Email & calendar** step: [Your principal's email and calendar](/get-started/principal-email-calendar). That step reuses the Nylas key and Google sign-in you set up here, so most of the work is done once.
 
-Both mailboxes connect the same way: you click **Connect with Google**, sign in as that Google account, and Curia stores the access itself. There is no grant ID to copy. (Pasting a grant ID from the Nylas dashboard still works as a fallback.)
+Both kinds of mailbox connect the same way: you click **Connect with Google**, sign in as that Google account, and Curia stores the access itself. There is no grant ID to copy. (Pasting a grant ID from the Nylas dashboard still works as a fallback.)
 
 ## What you'll need
 
-- **A new mailbox just for Curia,** such as `curia@yourcompany.com`, on **Google Workspace or Gmail**. Don't reuse a person's inbox: Curia reads and acts on everything that arrives. Microsoft 365 and other providers aren't supported for sign-in yet.
+- **A new mailbox just for Curia,** such as `curia@example.com`, on **Google Workspace or Gmail**. Don't reuse a person's inbox: Curia reads and acts on everything that arrives. Microsoft 365 and other providers aren't supported for sign-in yet.
 - **A Nylas account and application.** Curia talks to email through [Nylas](https://nylas.com). Use the application only for Curia: Curia removes Google connections in it that it created but doesn't use. Either kind works:
   - **Sandbox** (free): comes with Nylas's own Google connector, so there's no Google Cloud setup. It allows **5 connected accounts**, enough for Curia's mailbox and a few of your principal's. Nylas positions it for development, so it may change its terms.
   - **Production:** for more than 5 accounts, or to sign in through your own Google app. It needs the Google Cloud steps below.
 - **A Google Cloud account,** for a production application only, to create one OAuth client. This is the part that takes longest.
 - **An HTTPS address for Curia.** Set `APP_ORIGIN` to Curia's public `https://` address (see [Deployment](/get-started/deployment)). The sign-in callback must be reachable from the browser you sign in with, and sign-in stays unavailable while `APP_ORIGIN` isn't `https://`.
-- **The console,** signed in as in [1. Install Curia](/get-started/installation).
+- **The console,** signed in as in [Install Curia](/get-started/installation), open on the Setup page.
 
 **Time:** about 15 minutes with a sandbox application, or about an hour with a production one (most of it is Google Cloud), plus however long it takes to create the mailbox.
 
@@ -30,7 +30,7 @@ Both mailboxes connect the same way: you click **Connect with Google**, sign in 
 - Nylas Essentials: $15/month for up to 10 accounts.
 - Plus whatever your email provider charges for one more mailbox.
 
-Plan for at least two Nylas accounts: this one, and your principal's mailbox on page 5.
+Plan for at least two Nylas accounts: this one, and your principal's mailbox in the Email & calendar step.
 
 ## Steps
 
@@ -40,21 +40,27 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
   </Step>
 
   <Step title="Create a Nylas application and copy its API key">
-    Sign up at [nylas.com](https://www.nylas.com). Use the **sandbox** application Nylas creates for you, or create a **production** application (see [What you'll need](#what-youll-need)). Copy its **API key**.
+    Sign up at [nylas.com](https://www.nylas.com) and open the dashboard at [dashboard-v3.nylas.com](https://dashboard-v3.nylas.com). Use the **sandbox** application Nylas creates for you, or create a **production** application (see [What you'll need](#what-youll-need)). Copy its **API key**.
   </Step>
 
-  <Step title="Save the API key in the console">
-    In the Curia console, go to **Settings → Channels** and click the **email** row. If its state is **not installed**, click **Install**. Under **Credentials**, enter your **Nylas API key** and click **Save**. It's stored in the vault as `channel.email.nylas_api_key`.
+  <Step title="Paste the API key in the Email step">
+    On the Setup page, open the **Email** step and paste the key into **Nylas API key**. It saves when you leave the field, and then shows **Saved**. It's stored in the vault as `channel.email.nylas_api_key`.
+
+    The **Email & calendar** step shows the same field. It's one key, so it reads **Saved** there too. To change the key after Setup, use **Settings → Channels → email**.
   </Step>
 
-  <Step title="Open the Nylas section">
-    Go to **Settings → Behaviour → Email & Calendar**. At the top is the **Nylas** section, which reads Nylas live using the key you just saved. It has three steps, each marked ✓ when done:
+  <Step title="Apply and restart, then check the Nylas section">
+    Google sign-in works only once Curia has restarted with the key saved. Open **Apply & restart** and click **Apply and restart**.
+
+    Then open the **Email & calendar** step. Its **Nylas** section reads Nylas live using the key you saved. It has three steps, each marked ✓ when done:
 
     1. **Region.** Curia detects the region your application lives in (US or EU) and saves it as `channel.email.nylas_region`. Use **Change** to set it by hand.
     2. **Callback.** Curia registers its sign-in callback, `https://<your-domain>/api/mailbox-signin/callback`, with your Nylas application. A **Register callback** button appears only if that fails.
-    3. **Google connector.** A sandbox application has one built in, so this is already ✓ and the section reads **Ready**: skip to **Add Curia's mailbox** below. A production application needs the next three steps.
+    3. **Google connector.** A sandbox application has one built in, so this is already ✓ and the section reads **Ready**: skip to **Connect Curia's mailbox** below. A production application needs the next three steps.
 
-    Until every step is done the section reads **Not ready** and says what's missing. Registering the callback needs no restart. Saving the API key or the region for the first time, or changing either later, needs one restart: until then the section reads **Restart Curia to finish setting up sign-in.** Restart from **Settings → System → About**, or run `docker compose restart curia`. After that, connecting a principal mailbox needs no restart.
+    Until every step is done the section reads **Not ready** and says what's missing. Registering the callback needs no restart. A region other than the one Curia started with (an EU application, say), or a key or region changed later, needs one more: until then the section reads **Restart Curia to finish setting up sign-in.** Use **Apply & restart** again. After that, connecting a mailbox needs no restart of yours.
+
+    After Setup, the same section is under **Settings → Behaviour → Email & Calendar**.
   </Step>
 
   <Step title="Production application only: create the Google Cloud project and consent screen">
@@ -94,14 +100,14 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
   </Step>
 
   <Step title="Production application only: create the Google connector">
-    Back in the console's **Nylas** section, under step 3, paste the **Client ID** and **Client secret** and click **Create connector**. Curia passes the secret to Nylas and doesn't keep it. The fields clear once Nylas has it. The Pub/Sub topic field is optional and only matters for Nylas mail push notifications.
+    Back in the **Nylas** section of the **Email & calendar** step, under step 3, paste the **Client ID** and **Client secret** and click **Create connector**. Curia passes the secret to Nylas and doesn't keep it. The fields clear once Nylas has it. The Pub/Sub topic field is optional and only matters for Nylas mail push notifications.
 
     When the section reads **Ready.**, you can add mailboxes. If it doesn't, the message after **Not ready.** names the next thing to fix, and **Check again** re-reads Nylas:
 
     | The section says (after "Not ready.") | What to do |
     |---|---|
-    | Save the Nylas API key under Channels → Email first. | Save it under **Settings → Channels → Email** (step 3). |
-    | Restart Curia to finish setting up sign-in. | The API key or region was saved or changed since Curia started. Restart once from **Settings → System → About**. |
+    | Save the Nylas API key under Channels → Email first. | Paste it in the **Email** step, or under **Settings → Channels → email** after Setup. |
+    | Restart Curia to finish setting up sign-in. | The API key or region was saved or changed since Curia started. Use **Apply & restart** (after Setup: **Settings → System → About**). |
     | Nylas rejected the API key. Check the key under Channels → Email, then detect its region. | Check the key, then use **Detect**: a key only works in its own region. |
     | Set APP_ORIGIN to this console's public https:// address and restart Curia. | Set it to Curia's public `https://` address and restart. |
     | Register the sign-in callback with Nylas (step 2). | Click **Register callback** in step 2. |
@@ -118,24 +124,20 @@ Plan for at least two Nylas accounts: this one, and your principal's mailbox on 
     If you skip this and the account is blocked, the sign-in page tells the person to ask their admin to mark Curia's app as Trusted, so it's recoverable. It's just quicker to do first.
   </Step>
 
-  <Step title="Add Curia's mailbox">
-    Go to **Settings → Channels**, open the **email** row and scroll to **Email accounts**. Click **Connect with Google**. Google asks you to sign in and approve access. Sign in as **Curia's mailbox**, not your principal's, and leave both the mail and calendar boxes ticked.
+  <Step title="Connect Curia's mailbox">
+    Go back to the **Email** step. Under **Curia's mailbox**, click **Connect with Google**. If the button is greyed out, the line under it says what's missing. Google asks you to sign in and approve access. Sign in as **Curia's mailbox**, not your principal's, and leave both the mail and calendar boxes ticked.
 
-    When it's done, the page says **Connected**. Curia adds the account (named `curia` if that name is free) and saves its grant in the vault. **Curia then restarts itself a few seconds later** to start using the mailbox, and the page says when it's back (about a minute). You don't need to run anything.
+    When it's done, the page says **Connected**. Curia adds the account (named `curia` if that name is free) and saves its grant in the vault. **Curia then restarts itself a few seconds later**, and the page says when it's back (about a minute). You don't need to run anything.
 
     The link the button opens lasts 60 minutes and works once. If it expires or you close the page, click **Connect with Google** again.
+
+    To use a grant ID from the Nylas dashboard instead, open **Paste a grant ID instead**, and enter an account name, Curia's address and the grant ID.
   </Step>
 
-  <Step title="Enable the channel">
-    Still on the **email** row, click **Enable**. The button stays disabled until the API key is saved and at least one enabled email account has a grant, which the previous step has just given you.
+  <Step title="Apply and restart">
+    Once the key and a mailbox are both there, the Setup page turns the email channel on by itself; the step reads **Saved. Turns on when you apply and restart at the end.** The channel starts at the next **Apply & restart**, which you can leave until you've finished the other steps. The **Email** step then reads **Done.**
 
-    Enabling a channel takes effect on the next restart, which is the usual rule for channels. Restart Curia once from the folder where you ran the installer:
-
-    ```bash
-    docker compose restart curia
-    ```
-
-    You only need this the first time you set the channel up. Adding more accounts afterwards restarts Curia by itself.
+    After Setup, add more mailboxes under **Settings → Channels → email**. Adding one with **Connect with Google** restarts Curia by itself.
   </Step>
 </Steps>
 
@@ -163,7 +165,7 @@ What can still go wrong, so you aren't surprised:
 - **The page.** After you connect, the result page says **Connected**, then that Curia is back and using the mailbox.
 - **Logs.** After the channel restart, run `docker compose logs curia | grep -i "email channel"`. You should see `Email channel: 1 account(s) configured`. If you see `email channel disabled` instead, the message says what's missing.
 - **Health.** `curl https://<your-domain>/api/health` shows `"email": "ok"`. `"skipped"` means the email channel didn't start. `"fail"` means it started but can't reach the mailbox: reconnect it.
-- **Console.** On the dashboard, the **Setup ·** line no longer lists the email channel, and the email row in **Settings → Channels** shows **enabled**.
+- **Console.** After **Apply & restart**, the Setup page's **Email** step reads **Done.** After Setup, the email row in **Settings → Channels** shows **enabled**.
 - **A real message.** Send a short email to Curia's address from your own mailbox. Curia checks every 30 seconds, so give it a minute.
 
 ## Troubleshooting

@@ -60,13 +60,13 @@
             "pages": [
               "get-started/system-requirements",
               "get-started/installation",
+              "get-started/check-your-setup",
               "get-started/curia-email",
               "get-started/reach-your-principal",
               "get-started/voice",
               "get-started/principal-email-calendar",
               "get-started/google-docs",
-              "get-started/search-and-memory",
-              "get-started/check-your-setup"
+              "get-started/search-and-memory"
             ]
           },
           {
