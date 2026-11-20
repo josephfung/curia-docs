@@ -1,7 +1,7 @@
 ---
 title: "Google Docs"
 sidebarTitle: "Google Docs"
-description: "The Setup page's Google Workspace extra: connect Curia's own Google account so it can create, edit and share Google Docs, Sheets and Drive files with your principal."
+description: "The Setup page's Google Workspace step: sign Curia's own Google account in from the console so it can create, edit and share Google Docs, Sheets and Drive files with your principal."
 ---
 
 ## What this is for
@@ -10,24 +10,23 @@ Curia often hands work over as a document: a briefing, a draft plan, a research 
 
 This is **Curia's** Google account, not your principal's. Curia only sees your principal's files if they share them with it.
 
-On the [Setup page](/get-started/check-your-setup) this is the **Google Workspace** optional extra. It's optional: it never blocks Start onboarding, and you can set it up after Setup too.
+On the [Setup page](/get-started/check-your-setup) this is the **Google Workspace** step, under **Business Apps** after **Email & calendar**. It's **required**: in your principal's first conversation Curia delivers its drafts as Google Docs, so Start onboarding waits until Curia is signed in.
 
 ## What you'll need
 
 - **A Google account for Curia.** If Curia's mailbox from [Curia's own email](/get-started/curia-email) is on Gmail or Google Workspace, use that account.
-- **A Google account of your own** to create a Google Cloud project. Use your account, not Curia's. If you made a Google Cloud project for a production Nylas application, you can reuse it; this step still needs its own OAuth client.
-- **A computer with a web browser,** and [`uv`](https://docs.astral.sh/uv/) installed on it, for a one-time sign-in as Curia. This step also needs a copy of Curia's source code (see step 5).
-- **Shell access to the Curia host,** to copy the sign-in token across.
+- **A Google account of your own** to set up Google Cloud. Use your account, not Curia's. You can reuse the Google Cloud project from Curia's email, and its **Web application** OAuth client (you'll add a second secret to it for Curia; see step 3).
+- **Curia on its public https:// address** (`APP_ORIGIN`). Google sends the sign-in back there.
 
-**Time:** about 45 minutes.
+**Time:** about 20 minutes.
 
 **Cost:** nothing beyond Curia's Google account itself.
 
 ## Steps
 
 <Steps>
-  <Step title="Create a Google Cloud project">
-    Sign in to [console.cloud.google.com](https://console.cloud.google.com) with **your own** account and create a project, for example `curia-workspace`, or open the one you made for Curia's email.
+  <Step title="Open or create a Google Cloud project">
+    Sign in to [console.cloud.google.com](https://console.cloud.google.com) with **your own** account. Open the project you made for Curia's email, or create one, for example `curia-workspace`.
 
     Under **APIs & Services → Library**, enable:
 
@@ -49,14 +48,23 @@ On the [Setup page](/get-started/check-your-setup) this is the **Google Workspac
     </Warning>
   </Step>
 
-  <Step title="Create an OAuth client">
-    Under **APIs & Services → Credentials**, choose **Create credentials → OAuth client ID**. Set the application type to **Desktop app** and give it a name, such as `curia`.
+  <Step title="Add Curia's callback to a Web application OAuth client">
+    Under **APIs & Services → Credentials**, open the **Web application** OAuth client you use for Curia's email, or choose **Create credentials → OAuth client ID** with the application type **Web application**.
 
-    Copy the **client ID** and **client secret**.
+    Under **Authorized redirect URIs**, add the **Callback URL** shown in the Google Workspace step. It's your Curia address followed by `/api/google-workspace/callback`, for example `https://curia.example.com/api/google-workspace/callback`. Keep any Nylas redirect URI that's already there.
+
+    Copy the **client ID**. For the secret:
+
+    - **A client you just created:** copy the **client secret** now. Google shows it only once.
+    - **The client from Curia's email:** its secret can't be viewed again. Choose **Add secret**, copy the new secret, and leave the original one enabled: Nylas still uses it.
+
+    <Note>
+      A **Desktop app** client can't be used here: Google lets it return only to `localhost`.
+    </Note>
   </Step>
 
-  <Step title="Enter the credentials in the Google Workspace extra">
-    On the Setup page, open **Google Workspace** under **Optional extras** and fill in:
+  <Step title="Enter the details in the Google Workspace step">
+    On the Setup page, open **Google Workspace** under **Business Apps** and fill in:
 
     | Field | Value |
     |---|---|
@@ -64,54 +72,51 @@ On the [Setup page](/get-started/check-your-setup) this is the **Google Workspac
     | OAuth client ID | The client ID from step 3 |
     | OAuth client secret | The client secret from step 3 |
 
-    Each saves when you leave it, and shows **Saved**. The values are stored in the encrypted [vault](/get-started/secrets-vault). The extra is ticked once all three are saved.
-
-    Then turn the Google Workspace server on: open **Settings → MCP Skills** (open during Setup too), open **google-workspace** and click **Enable**. The same page shows the three credentials, for changing them after Setup.
+    Click **Save** (or go straight to the next step: **Sign in as Curia** turns on once all three are filled in, and saves them first). Saved fields show **Saved**. The values are stored in the encrypted [vault](/get-started/secrets-vault).
   </Step>
 
-  <Step title="Sign in as Curia's Google account">
-    The Setup page's **Sign in as Curia** button shows as coming soon. Until it arrives, this sign-in runs a script from Curia's source code, on a computer with a browser. You don't need Node.js or a full development setup, only `git` and `uv`.
+  <Step title="Sign in as Curia">
+    Click **Sign in as Curia**. Google opens in the same tab. Sign in as **Curia's** Google account, not your own, and leave every permission ticked.
 
-    ```bash
-    git clone https://github.com/josephfung/curia.git
-    cd curia
-    GOOGLE_OAUTH_CLIENT_ID=<client ID> \
-    GOOGLE_OAUTH_CLIENT_SECRET=<client secret> \
-    CURIA_GOOGLE_EMAIL=<Curia's Google address> \
-      uv run --with mcp scripts/gdrive-auth.py
-    ```
+    Google sends you back to a page that says how it went. On success, Curia saves the sign-in, turns its Google Workspace tools on, and restarts once; the page waits for it and then links back to Setup. The step then reads **Signed in as Curia**.
 
-    A browser window opens. Sign in as **Curia's** Google account, not your own, and approve access. When the script finishes, the token is saved to `~/.google_workspace_mcp/credentials/<Curia's Google address>.json`.
-  </Step>
-
-  <Step title="Copy the token to the Curia host">
-    Copy the token file to the server (for example with `scp`). Then, from the directory you installed Curia into, write it into Curia's token volume:
-
-    ```bash
-    docker compose exec -T curia sh -c \
-      'mkdir -p /tmp/.google_workspace_mcp/credentials; cat > "/tmp/.google_workspace_mcp/credentials/<Curia's Google address>.json"' \
-      < "<Curia's Google address>.json"
-    ```
-
-    The volume keeps the token across restarts and upgrades, and Curia refreshes it on its own from then on.
-  </Step>
-
-  <Step title="Restart Curia">
-    Curia connects to Google when it starts. During Setup, use **Apply & restart**. After Setup, restart from the console's **Settings → System → About** page, or run:
-
-    ```bash
-    docker compose restart curia
-    ```
+    If the page says **Wrong Google account** or **Permissions missing**, nothing was saved: go back and sign in again.
   </Step>
 </Steps>
 
+After Setup, the same **Sign in as Curia** panel is under **Settings → MCP Skills → google-workspace**, with the three values.
+
+### Signing in by hand (fallback)
+
+If Curia isn't on a public address yet, you can still sign it in from a computer with a browser and copy the token across. This uses Google's `localhost` redirect, so it needs a **Desktop app** client (or `http://localhost:8000/oauth2callback` on a Web client). You need `git` and [`uv`](https://docs.astral.sh/uv/) on that computer:
+
+```bash
+git clone https://github.com/josephfung/curia.git
+cd curia
+GOOGLE_OAUTH_CLIENT_ID=<client ID> \
+GOOGLE_OAUTH_CLIENT_SECRET=<client secret> \
+CURIA_GOOGLE_EMAIL=<Curia's Google address> \
+  uv run --with mcp scripts/gdrive-auth.py
+```
+
+Copy the token file to the server. Open **Settings → MCP Skills → google-workspace** and click **Enable** (the console sign-in does this for you; copying a token doesn't). Then, from the directory you installed Curia into, write the token into Curia's token volume and restart:
+
+```bash
+docker compose exec -T curia sh -c \
+  'mkdir -p /tmp/.google_workspace_mcp/credentials; cat > "/tmp/.google_workspace_mcp/credentials/<Curia's Google address>.json"' \
+  < "<Curia's Google address>.json"
+docker compose restart curia
+```
+
+The Google Workspace step reads **Signed in** once Google accepts that token; no need to sign in again from the console.
+
 ## Check it works
 
-1. In the logs (`docker compose logs curia`), look for `MCP server tools registered` with `"server":"google-workspace"` and a `registered` count above zero. A count of zero means the sign-in token is missing: repeat steps 5 and 6.
+1. In the logs (`docker compose logs curia`), look for `MCP server tools registered` with `"server":"google-workspace"` and a `registered` count above zero. A count of zero means the sign-in token is missing: sign in as Curia again.
 2. Open `/api/health` on your Curia address. `checks.mcp.google_workspace` should read `ok`.
 3. In the console chat, ask Curia to create a Google Doc called "Curia test". It should reply with a link that opens.
 
-If Drive calls fail with `403`, the file isn't shared with Curia's account. If they fail with `401`, the token was revoked or expired: repeat steps 5 and 6.
+If Drive calls fail with `403`, the file isn't shared with Curia's account. If they fail with `401`, the token was revoked or expired: the Google Workspace step reads **token rejected**. Sign in as Curia again.
 
 ## What your principal will notice
 
