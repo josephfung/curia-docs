@@ -33,7 +33,7 @@ Gather these before you start. You don't need them all at once: each Setup page 
 - **A way for Curia to message the principal.** The Curia app needs no number. Otherwise, a number registered with Signal (you run `signal-cli` yourself), a Telnyx number for text messages, or a Slack app in the principal's workspace.
 - **Voice keys.** LiveKit comes bundled with Curia. You also need a Deepgram key (speech-to-text) and a Cartesia key (Curia's spoken voice).
 - **Access to the principal's email and calendar.** The principal signs in with Google for each of their mailboxes (work and personal, say), through the same Nylas application. Google accounts only, for now.
-- **Optional: a Google account for Curia**, plus a Google Cloud OAuth client, so Curia can create and share Google Docs.
+- **A Google account for Curia**, plus a Google Cloud OAuth client, so Curia can create and share Google Docs. Curia delivers its first drafts to the principal this way, so this is required.
 - **Optional: a Tavily key.** Web search works without one, but is capped at a few dozen searches an hour. A free key raises the limit.
 
 ## What it costs
@@ -76,8 +76,11 @@ After install, the console opens on the Setup page, which lists every step in or
   <Step title="Email & calendar">
     Get Google sign-in ready for the principal's mailboxes and calendars. [Your principal's email and calendar](/get-started/principal-email-calendar)
   </Step>
+  <Step title="Google Workspace">
+    Sign Curia's own Google account in, so it can create and share Google Docs. [Google Docs](/get-started/google-docs)
+  </Step>
   <Step title="Optional extras">
-    Connect Curia's Google account, raise the web search limit, and set a working style and capabilities. [Google Docs](/get-started/google-docs), [Tavily web search](/integrations/tavily), [Search and memory](/get-started/search-and-memory)
+    Raise the web search limit, and set a working style and capabilities. [Tavily web search](/integrations/tavily), [Search and memory](/get-started/search-and-memory)
   </Step>
 </Steps>
 

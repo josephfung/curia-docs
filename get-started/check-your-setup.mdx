@@ -20,7 +20,7 @@ An install that was set up before the Setup page existed never sees it.
 
 ## How the page works
 
-- **The step list.** On the left, every step with its mark: done (✓), waiting for a restart, not done, or locked. The top shows how many of the six required steps are done. Click any step to open it. When you come back, the page opens on the first required step that isn't done.
+- **The step list.** On the left, every step with its mark: done (✓), waiting for a restart, not done, or locked. The top shows how many of the seven required steps are done. Click any step to open it. When you come back, the page opens on the first required step that isn't done.
 - **One button per step.** Each step has one **Save and continue** button, which saves anything still typed and moves to the next step. Key and number fields also save when you leave them; a saved field shows **Saved**, and typing in it again replaces the value. Choices, such as a messaging route or a tone, save as soon as you pick them.
 - **The status line.** Each step shows its live check as one line: **Done.**, what's still missing, or **Saved. Turns on when you apply and restart at the end.**
 - **Channels turn on by themselves.** A channel (email, Signal, text message, Slack, voice) turns on as soon as its keys are in. It starts at **Apply & restart**.
@@ -37,15 +37,17 @@ An install that was set up before the Setup page existed never sees it.
 | 4 | **Messaging** | Yes | How Curia messages the principal: the Curia app, Signal, text message or Slack, with that route's keys and the principal's number or ID on it | [Reach your principal](/get-started/reach-your-principal) |
 | 5 | **Voice** | Yes | How the principal talks to Curia: the Curia app or a Signal call, with the Deepgram and Cartesia keys and Curia's voice | [Voice](/get-started/voice) |
 | 6 | **Email & calendar** | Yes | The Nylas sign-in checks, so the principal can connect their Google accounts | [Your principal's email and calendar](/get-started/principal-email-calendar) |
-| 7 | **Apply & restart** | | Nothing: one restart turns on everything you saved. The channel steps pass only after it | [Below](#apply-and-restart) |
-| 8 | **Start onboarding** | | Locked until steps 1–6 pass. Ends Setup | [Below](#start-onboarding) |
+| 7 | **Google Workspace** | Yes | Curia's Google address and an OAuth client ID and secret, then **Sign in as Curia** | [Google Docs](/get-started/google-docs) |
+| 8 | **Apply & restart** | | Nothing: one restart turns on everything you saved. The channel steps pass only after it | [Below](#apply-and-restart) |
+| 9 | **Start onboarding** | | Locked until steps 1–7 pass. Ends Setup | [Below](#start-onboarding) |
 
-After Start onboarding, the step list shows four **Optional extras**. They never block Start onboarding:
+Steps 6 and 7 are grouped as **Business Apps**: the business applications Curia is authorized to use.
+
+After Start onboarding, the step list shows three **Optional extras**. They never block Start onboarding:
 
 | Extra | What it asks for | Details |
 |---|---|---|
 | **Working style** | A starting tone and how independently Curia acts | [Below](#working-style) |
-| **Google Workspace** | Curia's Google address and an OAuth client ID and secret | [Google Docs](/get-started/google-docs) |
 | **Higher search limit** | A Tavily API key | [Tavily web search](/integrations/tavily) |
 | **Capabilities** | Switches for what Curia does | [Below](#capabilities) |
 
@@ -81,7 +83,7 @@ Click **Apply and restart**, then **Continue** once it says **Restarted**. You c
 
 ### Start onboarding
 
-Locked until steps 1–6 pass. While it's locked, the step says which steps are left.
+Locked until steps 1–7 pass. While it's locked, the step says which steps are left.
 
 Click **Start onboarding** to end Setup. The console leaves the Setup page and loads its home page. Console chat starts a fresh conversation, so your principal never sees the Setup chat. If a check stopped passing since the page loaded, the step says so and locks again.
 
@@ -102,10 +104,6 @@ A starting point for how Curia sounds and how much it does on its own. If you le
   - **Spot-check:** Curia goes ahead with most things and flags a few for the principal to review.
 
 Later, change them under **Settings → Behaviour → Personality** and **Settings → Behaviour → Autonomy**. See [Autonomy](/core-concepts/autonomy).
-
-### Google Workspace
-
-Lets Curia work in Google Docs, Sheets, Slides and Drive from its own Google account. The extra saves Curia's Google address and the OAuth client ID and secret. Signing in as Curia isn't on the Setup page yet (the **Sign in as Curia** button shows as coming soon), so follow [Google Docs](/get-started/google-docs) for that part.
 
 ### Higher search limit
 
