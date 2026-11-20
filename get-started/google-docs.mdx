@@ -99,7 +99,7 @@ CURIA_GOOGLE_EMAIL=<Curia's Google address> \
   uv run --with mcp scripts/gdrive-auth.py
 ```
 
-Copy the token file to the server, then, from the directory you installed Curia into, write it into Curia's token volume and restart:
+Copy the token file to the server. Open **Settings → MCP Skills → google-workspace** and click **Enable** (the console sign-in does this for you; copying a token doesn't). Then, from the directory you installed Curia into, write the token into Curia's token volume and restart:
 
 ```bash
 docker compose exec -T curia sh -c \
