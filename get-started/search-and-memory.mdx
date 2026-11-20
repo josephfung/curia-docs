@@ -1,6 +1,6 @@
 ---
 title: "Search and memory"
-sidebarTitle: "7. Search and memory"
+sidebarTitle: "Search and memory"
 description: "Turn on fact extraction so Curia builds its memory, optionally swap the bundled embedding model, and optionally add a Tavily key to raise web search limits."
 ---
 
@@ -8,7 +8,7 @@ description: "Turn on fact extraction so Curia builds its memory, optionally swa
 
 Two capabilities this page covers:
 
-- **Memory (works out of the box).** Curia's memory, the knowledge graph of people, organisations and facts, runs on an embedding model bundled in the Curia image. It needs no key and sends nothing off your server. The setup assistant, working hours from setup and the sensitivity classifier that flags confidential content all depend on it. What's left for you is to turn on the tools that build memory from conversations, and optionally to [swap the model](/integrations/embeddings-endpoint) for a larger one or OpenAI.
+- **Memory (works out of the box).** Curia's memory, the knowledge graph of people, organisations and facts, runs on an embedding model bundled in the Curia image. It needs no key and sends nothing off your server. The setup guide, working hours from setup and the sensitivity classifier that flags confidential content all depend on it. What's left for you is to turn on the tools that build memory from conversations, and optionally to [swap the model](/integrations/embeddings-endpoint) for a larger one or OpenAI.
 - **Web search (works out of the box).** Curia searches the web through [Tavily](https://tavily.com) for research and news. With no key, searches are free but capped at a few dozen an hour. A free Tavily key raises the limit.
 
 ## What you'll need
@@ -71,7 +71,7 @@ Two capabilities this page covers:
     Sign up at [tavily.com](https://tavily.com) and copy your API key (it starts with `tvly-`). Then either:
 
     - In the console, go to **Settings → Tools → web-search → Optional secrets** and save the key in `tavily_api_key`.
-    - Or ask Curia in chat to "add my Tavily key". The setup assistant sends a one-time secure link that saves the key to the same place.
+    - Or ask Curia in chat to "add my Tavily key". Curia sends a one-time secure link that saves the key to the same place. During Setup, the Setup page's **Higher search limit** extra takes the key too.
 
     The key is used from the next search. No restart needed.
   </Step>

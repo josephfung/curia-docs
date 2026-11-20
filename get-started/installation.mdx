@@ -1,6 +1,6 @@
 ---
 title: "Install Curia"
-sidebarTitle: "1. Install Curia"
+sidebarTitle: "Install Curia"
 description: "Run Curia from the published container image on a host with its own domain and HTTPS. One script, no source checkout."
 ---
 
@@ -102,28 +102,15 @@ A local install on `http://localhost:3000` is fine for a try-out on your own mac
     Save the bootstrap secret in a password manager now. It's how you sign in, and the installer won't show it again.
   </Step>
 
-  <Step title="Sign in and fill in the setup form">
+  <Step title="Sign in and open the Setup page">
     Open the address from the summary and paste the bootstrap secret into the **Access key** field.
 
-    Curia opens its setup form at `/setup`. It has six steps:
+    On a new install, the console opens on the **Setup page** at `/setup`. It walks you through every step, from who Curia is for to **Start onboarding**, and takes every key on the step itself. The setup guide, Curia's own chat, opens beside it the first time, to answer questions as you go.
 
-    1. **About you:** a name.
-    2. **Your details:** timezone, email, preferred name, title and working hours.
-    3. **Assistant identity:** Curia's name, title and email signature.
-    4. **Tone & style:** how Curia sounds, started from a template, plus a detail level.
-    5. **Autonomy & preferences:** how independently Curia acts, and any standing preferences.
-    6. **Review:** check everything, then **Confirm & save**.
-
-    The form speaks to "you" as the executive Curia works for: the name, email and timezone are your principal's. If you're setting Curia up for someone else, enter their details.
-
-    When you save, Curia restarts if it needs to bring channels online ("Setting up channels…"), then opens the chat view at `/chat`.
-  </Step>
-
-  <Step title="Meet the setup agent">
-    At `/chat`, the setup agent greets you. It starts with a few quick wins that need no credentials: Curia's persona, a scheduled debrief, how Curia refers to your principal, and a tour of what's ready. Then it helps you connect the rest, one item at a time. You can stop at any point and pick up in a later session.
+    See [The Setup page](/get-started/check-your-setup) for the steps and what each needs.
 
     <Note>
-      Curia's memory, which the setup agent uses to track what you've set up, works out of the box on the bundled embedding model. To build memory from conversations, turn on fact extraction later: see [Search and memory](/get-started/search-and-memory).
+      Curia's memory, which the setup guide uses, works out of the box on the bundled embedding model. To build memory from conversations, turn on fact extraction later: see [Search and memory](/get-started/search-and-memory).
     </Note>
   </Step>
 </Steps>
@@ -149,7 +136,7 @@ A local install on `http://localhost:3000` is fine for a try-out on your own mac
   ```
 
   `"status"` should be `"ok"`, and `"knowledge_graph"` should read `"ok"` (Curia's memory is on). Channel checks such as `email`, `signal` and `sms` read `"skipped"` until you connect them. That's expected. See [Health monitoring](/get-started/health-monitoring) for every field.
-- The setup form saved and you're in `/chat` with the setup agent.
+- You're signed in and the console shows the Setup page.
 
 ## What your principal will notice
 
@@ -224,19 +211,19 @@ Some releases also need a change to your `docker-compose.yml` or `.env`, which a
 
 ## Next: connect Curia
 
-Curia is running, but it can't reach anyone yet. Work through the Setup pages in order:
+Curia is running, but it can't reach anyone yet. Work through the steps on the Setup page:
 
 <CardGroup cols={2}>
-  <Card title="2. Curia's own email" icon="envelope" href="/get-started/curia-email">
+  <Card title="The Setup page" icon="list-check" href="/get-started/check-your-setup">
+    Every step, what's required, and how to check it all works.
+  </Card>
+  <Card title="Curia's own email" icon="envelope" href="/get-started/curia-email">
     Give Curia a mailbox of its own.
   </Card>
-  <Card title="3. Reach your principal" icon="comment" href="/get-started/reach-your-principal">
-    Choose Signal or SMS, and link your principal's number.
+  <Card title="Reach your principal" icon="comment" href="/get-started/reach-your-principal">
+    Choose the Curia app, Signal, text message or Slack, and add your principal's number or ID.
   </Card>
-  <Card title="4. Voice" icon="microphone" href="/get-started/voice">
+  <Card title="Voice" icon="microphone" href="/get-started/voice">
     Let your principal talk to Curia.
-  </Card>
-  <Card title="8. Check your setup" icon="list-check" href="/get-started/check-your-setup">
-    Confirm every item works.
   </Card>
 </CardGroup>

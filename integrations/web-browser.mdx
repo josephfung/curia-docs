@@ -8,7 +8,7 @@ Curia reads most pages with `web-fetch`. Pages that need JavaScript, a sign-in o
 
 ## Works out of the box
 
-The shipped `docker-compose.yml` runs the browser as its own service, `browser`, from the `ghcr.io/josephfung/curia-browser` image. `docker compose up` starts it with everything else, on amd64 and arm64. There is no key to add and nothing to configure.
+The shipped `docker-compose.yml` runs the browser as its own service, `browser`, from the `ghcr.io/josephfung/curia-browser` image. `docker compose up` starts it with everything else, on amd64 and arm64. There is no key to add and nothing to configure, so the Setup page has no step for it.
 
 Sign-ins stay signed in: the browser's profile lives in the `browser_profile` volume, so cookies survive restarts and upgrades.
 
@@ -28,7 +28,7 @@ The browser loads pages from anywhere, so it is kept apart from the rest of Curi
 
 When Curia fills a stored password into a form, the value is filled inside the browser and never shown to the model. A fill is refused if the page frame changed while the value was being fetched.
 
-Curia starts even when the browser container is down. While it is down, the health check reports `browser: fail` and the browser task in the setup assistant shows as not done. Curia reconnects on its own as soon as the container is back, including after a crash.
+Curia starts even when the browser container is down. While it is down, the health check reports `browser: fail`, and the setup guide on the Setup page reports the browser as not ready. Curia reconnects on its own as soon as the container is back, including after a crash.
 
 ## Settings
 

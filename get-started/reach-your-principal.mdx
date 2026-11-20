@@ -1,73 +1,104 @@
 ---
 title: "Reach your principal"
-sidebarTitle: "3. Reach your principal"
-description: "Choose how Curia and your principal message each other, Signal or SMS, and link your principal's number so Curia knows it's them."
+sidebarTitle: "Reach your principal"
+description: "The Setup page's Messaging step: choose how Curia and your principal message each other (the Curia app, Signal, text message or Slack), enter that route's keys, and add your principal's number or ID so Curia knows it's them."
 ---
 
 ## What this is for
 
-Curia needs a direct line to your principal's phone: to send them updates and questions, and to take their instructions wherever they are. This page sets up **Signal** or **SMS**. You choose the route, set up the channel, then tell Curia which number is your principal's.
+Curia needs a direct line to your principal: to send them updates and questions, and to take their instructions wherever they are. This page covers the **Messaging** step on the [Setup page](/get-started/check-your-setup). You choose one route, enter its keys, then tell Curia your principal's number or ID on it.
+
+Pick the one your principal will use day to day. You can add more routes later under **Settings → Channels**.
 
 <Note>
-  **The phone app is another route.** Once your principal installs Curia's [phone app](/channels/phone-app) and turns on notifications, Curia can message them there as well. When the principal hasn't said which channel they prefer, Curia tries Signal first, then SMS, then the phone app.
+  **When your principal hasn't said which channel they prefer,** Curia tries Signal first, then SMS, then the phone app.
 </Note>
 
 ## What you'll need
 
-- **Your principal's mobile number,** and to know whether they use Signal.
-- **For Signal:** a phone number for Curia, and [signal-cli](https://github.com/AsamK/signal-cli) running on the same host as Curia. Your principal needs the Signal app.
-- **For SMS:** a [Telnyx](https://telnyx.com) account with a funded balance, Curia on a public HTTPS address (for the Telnyx webhook) and, for a US number, 10DLC brand and campaign registration. Your principal needs nothing beyond their phone.
+- **For the Curia app:** Curia on an `https://` address with a real hostname, such as `https://office.example.com`, and push notifications working. Your principal needs a current phone browser. See [Use Curia on your phone](/channels/phone-app#what-you-need).
+- **For Signal:** a phone number for Curia, registered with [signal-cli](https://github.com/AsamK/signal-cli), which runs as a daemon Curia can reach. Your principal needs the Signal app and their Signal number.
+- **For text message (SMS):** a [Telnyx](https://telnyx.com) account with a funded balance and a number, Curia on a public HTTPS address (for the Telnyx webhook) and, for a US number, 10DLC brand and campaign registration. You'll need your principal's mobile number.
+- **For Slack:** a Slack workspace your principal uses, where you or an admin can create apps. You'll need your principal's Slack member ID.
 
 **Cost** (checked 2026-11-01):
 
 | Route | Cost |
 |---|---|
+| Curia app | Free. |
 | Signal | Free. Curia's number costs whatever your carrier charges. |
-| SMS (Telnyx) | $0.004 per message part, plus carrier fees. Number rent and 10DLC fees vary by country and number type. |
+| Text message (Telnyx) | $0.004 per message part, plus carrier fees. Number rent and 10DLC fees vary by country and number type. |
+| Slack | Nothing beyond your Slack plan. |
 
-**Time:** Signal takes as long as it takes to get signal-cli running on your host. SMS on a US number waits on 10DLC registration, which needs approval before you can send.
+**Time:** the Curia app takes a few minutes once Curia has an HTTPS address. Signal takes as long as it takes to get signal-cli running on your host. Text message on a US number waits on 10DLC registration, which needs approval before you can send.
 
 ## Steps
 
 <Steps>
   <Step title="Choose the route">
-    | | Signal | SMS |
-    |---|---|---|
-    | **Trust** | High: Signal verifies the number, so your principal can approve sensitive actions | Medium: carrier sender IDs can be spoofed and texts aren't end-to-end encrypted |
-    | **Your principal needs** | The Signal app | Any phone |
-    | **You run** | signal-cli on the Curia host | Nothing extra; Telnyx calls Curia's webhook |
-    | **Curia's number** | Any number that can receive a verification code | A Telnyx number you buy for the office |
+    On the Setup page, open the **Messaging** step and pick one. The choice saves as soon as you pick it.
 
-    Pick Signal if your principal already uses it. Pick SMS if they don't, or would rather not. You can set up both.
+    | | Curia app | Signal | Text message (SMS) | Slack |
+    |---|---|---|---|---|
+    | **Best for** | Most people: it's the recommended route | Someone who already uses Signal | Any phone | Someone who lives in Slack |
+    | **Trust** | High: only devices signed in to Curia's console can use it | High: Signal verifies the number, so your principal can approve sensitive actions | Medium: carrier sender IDs can be spoofed and texts aren't end-to-end encrypted | Medium floor, principal-level once their member ID is linked |
+    | **Your principal needs** | The app on their phone, installed from a link | The Signal app | Any phone | Slack |
+    | **You run** | Nothing extra | signal-cli on the Curia host | Nothing extra; Telnyx calls Curia's webhook | Nothing extra; Curia's Slack app connects out |
+    | **Curia's number** | None needed | Any number that can receive a verification code | A Telnyx number you buy for the office | None needed |
+
+    Picking a route also sets the **Voice** step to match (a Signal call for Signal, otherwise the Curia app), until you choose there yourself.
   </Step>
 
-  <Step title="Set up the channel">
-    Follow the guide for the route you chose, up to the point where the channel is enabled and Curia has restarted:
+  <Step title="Get the route's keys">
+    Follow the provider steps for your route, then come back:
 
-    - [Signal setup](/channels/signal-setup), Steps 1 to 3
-    - [SMS setup](/channels/sms-setup), Steps 1 and 2
+    - **Curia app:** nothing to get. Your principal installs the app after Setup, from an invitation link you send them. See [Invite someone else's phone](/channels/phone-app#invite-someone-elses-phone).
+    - **Signal:** [Signal setup](/channels/signal-setup), Steps 1 and 2: register Curia's number and run signal-cli as a daemon with a shared socket.
+    - **Text message:** [SMS setup](/channels/sms-setup), Step 1: buy a number, point its webhook at Curia, and copy the three credentials.
+    - **Slack:** [Slack setup](/channels/slack-setup), Steps 1 and 2: create the app from Curia's manifest, turn on Socket Mode and copy both tokens.
   </Step>
 
-  <Step title="Link your principal's number to their contact">
-    This is the step people miss. Curia only knows a message is from your principal if their number is on your principal's contact. Without it, Curia treats your principal as a stranger: it answers them warily and won't act on their instructions. Messages Curia sends them can also be held back by its outbound filter.
+  <Step title="Enter them in the Messaging step">
+    The step shows the fields for the route you picked. Each saves when you leave it, and shows **Saved** once it's in the vault.
 
-    In the console, open **Contacts →** your principal and add their number under **Channel identities**, with the channel **signal** or **sms** to match the route. Use **your principal's** number, never Curia's. The details are in [Signal setup, Step 4](/channels/signal-setup#step-4-link-your-principals-signal-number) and [SMS setup, Step 3](/channels/sms-setup#step-3-link-your-principals-mobile).
+    | Route | Fields |
+    |---|---|
+    | Curia app | None. The step says there's nothing else to set up. |
+    | Signal | **Curia's Signal number** (such as `+14165550142`) and **Signal server socket**, where signal-cli listens (such as `/var/run/signal-cli/socket`) |
+    | Text message | **Telnyx API key**, **Curia's number** (such as `+14165550188`) and **Telnyx webhook public key** |
+    | Slack | **Slack bot token** (`xoxb-…`) and **Slack app-level token** (`xapp-…`) |
 
-    Adding the number doesn't send your principal anything.
+    Enter phone numbers with their country code. They're saved in international format, such as `+14165550100`.
+
+    Once every key is in, the channel turns on by itself and starts at **Apply & restart**. To change a key after Setup, use **Settings → Channels**.
+  </Step>
+
+  <Step title="Add your principal's number or ID">
+    This is the step people miss. Curia only knows a message is from your principal if their number or ID is on your principal's contact. Without it, Curia treats your principal as a stranger: it answers them warily and won't act on their instructions. Messages Curia sends them can also be held back by its outbound filter.
+
+    Below the keys, fill in **your principal's** Signal number, mobile number or Slack member ID (such as `U0123ABCD`), to match the route. Use **your principal's**, never Curia's. It saves when you leave the field, and is linked to your principal's contact.
+
+    Adding it doesn't send your principal anything. To add another number later, open **Contacts →** your principal, under **Channel identities**.
+  </Step>
+
+  <Step title="Apply and restart">
+    Click **Save and continue**. The step reads **Saved. Turns on when you apply and restart at the end.** The channel starts at the next **Apply & restart**, which you can leave until you've finished the other steps. The **Messaging** step then reads **Done.**
   </Step>
 </Steps>
 
 ## Check it works
 
-- **Health.** `curl https://<your-domain>/api/health` shows `"signal": "ok"` or `"sms": "ok"` for the route you chose.
-- **Console.** The channel's row in **Settings → Channels** shows **enabled**. Your principal's contact lists a verified **signal** or **sms** identity with their number.
-- **A real message.** Message Curia's number from your own phone, and Curia replies. (Unless you're the principal, Curia treats you as an unknown sender, which is expected.) Don't test on your principal's phone before they know Curia is coming.
+- **Setup page.** After **Apply & restart**, the **Messaging** step reads **Done.** If it doesn't, the line in the step says what's missing, such as **Add the principal's mobile number.** For the Curia app, it names what stops the app installing on this address.
+- **Health.** `curl https://<your-domain>/api/health` shows `"signal": "ok"`, `"sms": "ok"` or `"slack": "ok"` for the route you chose.
+- **A real message.** Message Curia from your own phone or Slack account, and Curia replies. (Unless you're the principal, Curia treats you as an unknown sender, which is expected.) Don't test on your principal's phone before they know Curia is coming.
 
 ## What your principal will notice
 
 Nothing until Curia messages them. Then:
 
+- **In the Curia app,** messages arrive as notifications once they've installed the app and turned notifications on.
 - **On Signal,** the first message arrives from a number they don't know, so Signal shows it as a message request to accept.
-- **On SMS,** texts come from the office number.
+- **By text message,** texts come from the office number.
+- **On Slack,** messages come from Curia's Slack app.
 
-Either way, give your principal Curia's number to save as a contact before Curia first gets in touch.
+Give your principal Curia's number or Slack name to save before Curia first gets in touch.

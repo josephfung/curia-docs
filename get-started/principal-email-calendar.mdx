@@ -1,7 +1,7 @@
 ---
 title: "Your principal's email and calendar"
-sidebarTitle: "5. Your principal's email and calendar"
-description: "Give Curia delegated access to your principal's Google mailboxes and calendars, such as a personal Gmail and a work Google Workspace account, so it can triage their inboxes, draft replies and manage their schedule."
+sidebarTitle: "Your principal's email and calendar"
+description: "The Setup page's Email & calendar step, and connecting your principal's accounts: give Curia delegated access to your principal's Google mailboxes and calendars, such as a personal Gmail and a work Google Workspace account, so it can triage their inboxes, draft replies and manage their schedule."
 ---
 
 ## What this is for
@@ -10,13 +10,15 @@ Much of an assistant's work happens in the executive's own inbox and calendar. D
 
 Your principal can connect **more than one account**, for example a personal Gmail and a work Google Workspace account. Curia then triages both inboxes, drafts and sends from the right account, puts meetings on the right calendar, and checks availability across every calendar.
 
-These are your **principal's** mailboxes, not Curia's. Curia's own address is set up in [2. Curia's own email](/get-started/curia-email). Don't add the principal's mailboxes there: email accounts in that list are mailboxes Curia owns and answers from.
+These are your **principal's** mailboxes, not Curia's. Curia's own address is set up in the **Email** step: [Curia's own email](/get-started/curia-email). Don't add the principal's mailboxes there: email accounts in that list are mailboxes Curia owns and answers from.
+
+On the [Setup page](/get-started/check-your-setup), the **Email & calendar** step gets Google sign-in ready for your principal's accounts: the Nylas region, Curia's sign-in callback and, for a production Nylas application, the Google connector. That's all the step needs to pass. Connecting a mailbox isn't required to finish Setup: you can connect your principal's accounts with them during Setup, or they can connect them in their first conversation.
 
 Only **Google** accounts (Gmail or Google Workspace) are supported for the principal today. The inbox tools use Gmail's search syntax and labels.
 
 ## What you'll need
 
-- **Mailbox sign-in set up,** from page 2: the Nylas API key, region, callback and Google connector, and the section reading **Ready**. Saving the key or region the first time needs one restart before it reads **Ready**; connecting mailboxes after that needs none. This step uses the same Nylas application and Google client, so there is no new Google Cloud work.
+- **Mailbox sign-in set up,** as in [Curia's own email](/get-started/curia-email): the Nylas API key, region, callback and Google connector, and the **Nylas** section reading **Ready**. Saving the key the first time needs one restart (**Apply & restart**) before it reads **Ready**; connecting mailboxes after that needs none. This step uses the same Nylas application and Google client, so there is no new Google Cloud work.
 - **Your principal, or their Google sign-in,** for each account. Connecting a mailbox means signing in to that Google account, so do it with them, or send them the link.
 
 **Time:** about 5 minutes per account, plus finding a moment with your principal.
@@ -26,17 +28,25 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
 ## Steps
 
 <Steps>
-  <Step title="Check the Google side is ready for this account">
-    Two things from page 2 matter here:
+  <Step title="Get Google sign-in ready">
+    On the Setup page, open the **Email & calendar** step. It shows the same **Nylas API key** field as the **Email** step (one key, so it reads **Saved** if you entered it there), then the **Nylas** section. On its first check the section detects your Nylas region and registers Curia's sign-in callback by itself. A sandbox application then reads **Ready**. A production application also needs its Google connector: see [Curia's own email](/get-started/curia-email), steps 5 to 7.
 
-    - If your principal's account is on **Google Workspace** and the Google app is **External**, ask their admin to mark the OAuth client ID **Trusted** first (page 2, step 8). Otherwise a blocked sign-in just tells them to ask their admin, which wastes a moment.
+    If the section reads **Restart Curia to finish setting up sign-in.**, use **Apply & restart**, then come back. The step reads **Done.** once sign-in is ready. After Setup, the same section is at the top of **Settings → Behaviour → Email & Calendar**.
+  </Step>
+
+  <Step title="Check the Google side is ready for this account">
+    Two things from [Curia's own email](/get-started/curia-email) matter here:
+
+    - If your principal's account is on **Google Workspace** and the Google app is **External**, ask their admin to mark the OAuth client ID **Trusted** first (the admin step in Curia's own email, step 8). Otherwise a blocked sign-in just tells them to ask their admin, which wastes a moment.
     - Your principal will see Google's **unverified app** screen. This is expected: see [Why an unverified app is OK](/get-started/curia-email#why-an-unverified-app-is-ok). Tell them to open **Advanced** and choose to continue to the app. [Connecting your email](/onboarding/connecting-your-email) is a short page you can send them that explains it.
   </Step>
 
   <Step title="Connect each of your principal's Google accounts">
-    In the console, go to **Settings → Behaviour → Email & Calendar**. This page is only for your principal's own mail and calendars; Curia's own email accounts stay under **Settings → Channels → Email**.
+    Once sign-in is ready, the **Email & calendar** step shows a **Connect with Google** button. Use it with your principal beside you, or leave it for them to do in their first conversation.
 
-    If the page shows **Finish setting up the email channel first**, the Nylas API key from page 2 isn't saved yet. Save it under **Settings → Channels → Email** and come back. Until then, the page lists any mailboxes already connected but can't add or change them. If the **Connect with Google** button is greyed out, the line under it says what's missing.
+    To see and manage the list of mailboxes, use **Settings → Behaviour → Email & Calendar**. It's open during Setup too. This page is only for your principal's own mail and calendars; Curia's own email accounts stay under **Settings → Channels → Email**.
+
+    If the page shows **Finish setting up the email channel first**, the Nylas API key isn't saved yet. Paste it in the Setup page's **Email** step (or, after Setup, under **Settings → Channels → Email**) and come back. Until then, the page lists any mailboxes already connected but can't add or change them. If the **Connect with Google** button is greyed out, the line under it says what's missing.
 
     Click **Connect with Google** and sign in as your **principal's** Google account. Google asks for access to mail and calendar, sometimes on two separate screens. **Leave every box ticked on both.** If any is unticked, the sign-in finishes with **Permissions missing** and nothing is connected.
 
@@ -56,19 +66,24 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
     **If an account's access stops working** (a changed password, or access revoked in Google), click **Connect with Google** again for that account. It refreshes the existing mailbox rather than adding a second one. Curia's outage email to your principal includes a reconnect link that lasts 7 days, so they can do it from their phone. Pasting a new grant ID under **Edit** also still works.
   </Step>
 
-  <Step title="Turn on the inbox and calendar specialists">
-    These are off on a new install. In the console:
+  <Step title="Turn on the calendar specialist">
+    The `calendar` agent is off on a new install. On the console's **Agents** page (open during Setup too), install and enable `calendar`.
+  </Step>
 
-    - On **Agents**, install and enable `calendar` and `ceo-inbox`.
-    - On **Tools**, install and enable the `ceo-inbox` bundle, plus `voice-learn`, `task-completion-from-sent`, `list-learning-digest` and `resolve-learning-digest`. These four let Curia learn from what your principal actually sends.
+  <Step title="Let your principal choose Email triage">
+    Inbox triage is the **Email triage** capability: the `ceo-inbox` agent, the `ceo-inbox` tools, and the learning tools that let Curia learn from what your principal actually sends. It's off on a new install. Because it acts on your principal's own inbox, the Setup page leaves it for them to choose: its switch there is locked.
+
+    After Setup, turn it on under **Settings → Behaviour → Capabilities → Email triage**, once your principal has agreed. See [Capabilities](/get-started/check-your-setup#capabilities).
   </Step>
 
   <Step title="Restart Curia">
-    Curia reads the agent and tool changes from the previous step only when it starts. Adding or removing a mailbox later doesn't need a restart. Restart from the console's **Settings → System → About** page, or run:
+    Curia reads agent and capability changes only when it starts. During Setup, use **Apply & restart**. After Setup, restart from the console's **Settings → System → About** page, or run:
 
     ```bash
     docker compose restart curia
     ```
+
+    Adding or removing a mailbox doesn't need a restart.
   </Step>
 </Steps>
 
