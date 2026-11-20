@@ -15,7 +15,7 @@ On the [Setup page](/get-started/check-your-setup) this is the **Google Workspac
 ## What you'll need
 
 - **A Google account for Curia.** If Curia's mailbox from [Curia's own email](/get-started/curia-email) is on Gmail or Google Workspace, use that account.
-- **A Google account of your own** to set up Google Cloud. Use your account, not Curia's. You can reuse the Google Cloud project from Curia's email, and its **Web application** OAuth client.
+- **A Google account of your own** to set up Google Cloud. Use your account, not Curia's. You can reuse the Google Cloud project from Curia's email, and its **Web application** OAuth client (you'll add a second secret to it for Curia; see step 3).
 - **Curia on its public https:// address** (`APP_ORIGIN`). Google sends the sign-in back there.
 
 **Time:** about 20 minutes.
@@ -53,7 +53,10 @@ On the [Setup page](/get-started/check-your-setup) this is the **Google Workspac
 
     Under **Authorized redirect URIs**, add the **Callback URL** shown in the Google Workspace step. It's your Curia address followed by `/api/google-workspace/callback`, for example `https://curia.example.com/api/google-workspace/callback`. Keep any Nylas redirect URI that's already there.
 
-    Copy the **client ID** and **client secret**.
+    Copy the **client ID**. For the secret:
+
+    - **A client you just created:** copy the **client secret** now. Google shows it only once.
+    - **The client from Curia's email:** its secret can't be viewed again. Choose **Add secret**, copy the new secret, and leave the original one enabled: Nylas still uses it.
 
     <Note>
       A **Desktop app** client can't be used here: Google lets it return only to `localhost`.
