@@ -14,12 +14,12 @@ This page covers the **Voice** step on the [Setup page](/get-started/check-your-
 
 - **A Deepgram account** for speech-to-text (turning speech into words).
 - **A Cartesia account** for text-to-speech (Curia's spoken voice).
-- **LiveKit,** the server that carries call audio. It comes with Curia: the install's `docker-compose.yml` includes a `livekit` service. The Setup page doesn't ask for LiveKit's keys, but an install that doesn't have them yet needs the extra step below.
+- **LiveKit,** the server that carries call audio. It comes with Curia: the installer starts it with keys of its own and saves its address and keys for Curia, so the Setup page doesn't ask for them. An install made before LiveKit came with Curia needs the extra step below.
 - **HTTPS for the console** on any host other than `localhost`. Browsers only allow the microphone on a secure page.
-- **For a server install:** an HTTPS route to LiveKit's signaling port, and two ports open to the internet for call audio (`7881/tcp` and `7882/udp`). See [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server).
+- **For a server install:** two ports open to the internet for call audio (`7881/tcp` and `7882/udp`). Call signaling goes over HTTPS: the installer's own HTTPS option routes it for you, and behind your own proxy you forward it yourself. See [How people reach it](/get-started/deployment#how-people-reach-it).
 - **For Signal calls only:** the Signal channel, and server-side pieces the standard install doesn't include. See [Signal calls](/channels/voice-setup#signal-calls).
 
-**Time:** about 20 minutes to try it on a laptop. Allow an hour on a server, mostly for LiveKit's config and firewall.
+**Time:** about 20 minutes, mostly for the Deepgram and Cartesia accounts and choosing a voice.
 
 **Cost** (checked 2026-11-01):
 
@@ -65,31 +65,11 @@ This page covers the **Voice** step on the [Setup page](/get-started/check-your-
     | Cartesia API key | From Cartesia |
     | Curia's voice | The Cartesia voice ID |
 
-    Once these and LiveKit's keys are in, the voice channel turns on by itself and starts at **Apply & restart**. To change the keys or the voice after Setup, use **Settings → Channels → Voice**, then restart.
+    LiveKit's address and keys are already in from the install, so once these three are saved the voice channel turns on by itself and starts at **Apply & restart**. To change the keys or the voice after Setup, use **Settings → Channels → Voice**, then restart.
   </Step>
 
-  <Step title="If the step asks for LiveKit's keys: start LiveKit and add them">
-    If the step says **Voice also needs LiveKit's keys, which come with Curia's install; this install doesn't have them yet**, start LiveKit and enter its three values yourself. Run these commands from the directory you installed Curia into.
-
-    **To try voice on the machine you're sitting at** (`http://localhost:3000`), start LiveKit in development mode:
-
-    ```bash
-    docker compose --profile voice up -d livekit
-    ```
-
-    Development mode uses the well-known key `devkey` and secret `secret`, and its signaling URL is `ws://localhost:7880`.
-
-    **On a server,** don't use development mode: anyone who can reach the ports could use those well-known credentials. Give LiveKit its own key and secret, put HTTPS in front of its signaling port, and open the media ports. Follow [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server).
-
-    Then open **Settings → Channels → Voice** (the Settings pages stay open during Setup) and fill in:
-
-    | Field | What to enter |
-    |---|---|
-    | LiveKit signaling URL | `ws://localhost:7880` for the laptop try-out, or `wss://<your-domain>` on a server |
-    | LiveKit API key | `devkey`, or your own key on a server |
-    | LiveKit API secret | `secret`, or your own secret on a server |
-
-    Voice has no `.env` fallback: these live in the vault too. Then go back to the **Voice** step and click **Save and continue**; the channel turns on once every key is there.
+  <Step title="If the step asks for LiveKit's keys: turn voice on for this install">
+    If the step says **Voice also needs LiveKit's keys, which come with Curia's install; this install doesn't have them yet**, the install was most likely made before LiveKit came with Curia, and re-running the installer won't add it. Follow [Turn voice on for an existing install](/channels/voice-setup#turn-voice-on-for-an-existing-install), then go back to the **Voice** step and click **Save and continue**.
   </Step>
 
   <Step title="For a Signal call: add Signal too">
@@ -104,6 +84,17 @@ This page covers the **Voice** step on the [Setup page](/get-started/check-your-
 </Steps>
 
 ## Check it works
+
+The **Voice** step asks LiveKit itself whether it answers, using the saved keys. Until it does, the step's status line says what's wrong:
+
+| Status line | What to do |
+|---|---|
+| **LiveKit isn't running. On the server, run: docker compose up -d livekit** | Run that command in the install directory. |
+| **LiveKit rejected the saved keys. They must match LIVEKIT_KEYS in the install's .env.** | The key and secret under **Settings → Channels → Voice** differ from the pair in `.env`. Make them the same, then restart. |
+| **Curia can't reach LiveKit at** *address* | `channels.voice.livekit_management_url` in Curia's config points somewhere LiveKit isn't. See [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server). |
+| **LiveKit's keys aren't saved.** | See the LiveKit step above. |
+
+Then:
 
 1. Open `/api/health` on your Curia address. `checks.voice` should read `ok`. It reads `fail` if Curia can't reach LiveKit, and `skipped` if voice didn't start.
 2. Open the console **Chat**. A **Voice** button (with a phone icon) appears once voice is running. If it's missing, see [The Voice button doesn't appear](/channels/voice-setup#troubleshooting).

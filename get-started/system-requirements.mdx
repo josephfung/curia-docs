@@ -23,15 +23,16 @@ A 2 GB server is too small. Curia's containers alone use about 1.5 GB of memory 
 
 ## What runs on the machine
 
-A stock install, as `install.sh` starts it, runs three containers:
+A stock install, as `install.sh` starts it, runs four containers:
 
 | Container | What it does |
 |---|---|
 | `curia` | Curia itself: the console, channels, agents and tools. |
 | `postgres` | Postgres 16 with pgvector: memory, contacts, tasks and the audit log. |
 | `browser` | Chrome for the `web-browser` tool, sandboxed in its own container without Curia's secrets. See [Web browser](/integrations/web-browser). |
+| `livekit` | LiveKit, which carries call audio. See [Voice](/get-started/voice). |
 
-Voice adds a fourth, `livekit`, when you turn it on. See [Voice](/get-started/voice).
+The default HTTPS install adds `caddy`, which holds the certificate. Installs made before LiveKit came with Curia run it only once [voice is turned on](/channels/voice-setup#turn-voice-on-for-an-existing-install).
 
 The language models don't run on this machine. Curia calls the provider you configure (Anthropic by default) over the internet, so the server needs no GPU. If you run a local model or your own embedding server instead, that server has its own requirements on top of these.
 
@@ -61,7 +62,7 @@ Postgres grows with use: mail, documents, memory and the audit log. 20 GB is com
 - **A domain name** with a DNS `A` record pointing at the server, for the default HTTPS install. Let's Encrypt issues the certificate.
 - **Inbound ports 80 and 443** open to the internet, for HTTPS and certificate renewal. Postgres binds to `127.0.0.1`, and so does Curia's port 3000 on the default HTTPS and local installs. If you run your own proxy in front of Curia, keep port 3000 off the public internet. See [Deployment](/get-started/deployment).
 - **Outbound HTTPS** to your model provider and to every service you connect (Nylas, Signal, Telnyx, Slack, Google).
-- **Voice** adds two ports for call audio (`7881/tcp` and `7882/udp`) and an HTTPS route to LiveKit's signaling port. See [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server).
+- **Ports `7881/tcp` and `7882/udp`** open to the internet, for call audio. Call signaling goes over HTTPS with everything else. See [Ports to open](/get-started/deployment#ports-to-open).
 
 ## Software
 

@@ -39,85 +39,101 @@ Spoken turns run on the fast tier's model (Claude Haiku 5.5 by default) with thi
 
 ## LiveKit
 
-The install's `docker-compose.yml` includes a `livekit` service behind the Compose `voice` profile. The installer doesn't start it, and neither does a plain `docker compose up`, so installs without voice boot normally. Start it from the install directory:
+Every fresh install runs LiveKit. The installer generates a key and secret, starts the `livekit` service with the rest of the stack, and saves LiveKit's address and keys in the [vault](/get-started/secrets-vault) for Curia. You don't enter them, and the Setup page doesn't ask for them. It writes three values to `.env`:
 
-```bash
-docker compose --profile voice up -d livekit
-```
+| Variable | What the installer sets |
+|---|---|
+| `COMPOSE_PROFILES` | `voice`, so `docker compose up` (and every later `docker compose` command in the install directory) includes LiveKit |
+| `LIVEKIT_KEYS` | The generated pair, as `"<key>: <secret>"`. LiveKit reads it; the vault holds the same pair for Curia |
+| `LIVEKIT_COMMAND` | `--config /etc/livekit.yaml` on options 1 and 2, or `--config /etc/livekit.local.yaml --node-ip 127.0.0.1` when only this computer reaches Curia (option 3, or option 2 kept on `localhost`) |
 
-To have `docker compose up` (and re-runs of the installer) start LiveKit along with the rest of the stack, add `COMPOSE_PROFILES=voice` to `.env`.
+The two configs, `docker/livekit.yaml` and `docker/livekit.local.yaml`, come with the install. The local one stops LiveKit advertising the network's public address, so calls on the same machine get audio.
 
-LiveKit uses three ports. Open the two media ports on the host firewall and forward them through NAT if Curia sits behind a router:
+The URL saved for the browser depends on [how people reach Curia](/get-started/deployment#how-people-reach-it): `wss://<your-domain>` on option 1, `wss://<host>` from the address you gave on option 2 (`ws://` for an `http://` address), and `ws://localhost:7880` otherwise. It's a base address: the LiveKit client adds `/rtc` itself, so don't append it. Curia's own end of a call doesn't use it; it joins over the Compose network.
+
+The installer never overwrites values already in the vault or settings you set yourself: a `LIVEKIT_KEYS` or `LIVEKIT_COMMAND` already in your shell or `.env` is kept, and the vault is seeded to match it. Re-running the installer on a finished install never changes LiveKit at all.
+
+LiveKit uses three ports:
 
 | Purpose | Port | Notes |
 |---|---|---|
-| HTTP/WebSocket signaling | `7880/tcp` | Published on `127.0.0.1` only by default. A server routes it through Caddy (below). To expose it directly, set `LIVEKIT_HTTP_BIND` in `.env` |
+| HTTP/WebSocket signaling | `7880/tcp` | Published on `127.0.0.1` only by default. On option 1, Caddy routes `/rtc*` to it. Behind your own proxy, forward `/rtc*` to `127.0.0.1:7880`. To publish it directly, for example to a proxy on another machine, set `LIVEKIT_HTTP_BIND` in `.env` |
 | WebRTC TCP fallback | `7881/tcp` | Needs direct exposure |
 | WebRTC UDP media | `7882/udp` | Needs direct exposure. Cloud firewalls often allow TCP but silently drop UDP |
 
-By default the service runs `livekit-server --dev`, which uses the well-known credentials `devkey` / `secret`. That is fine on a laptop at `localhost`.
+A compose stack started without the installer, with no `LIVEKIT_COMMAND`, runs `livekit-server --dev`, which uses the well-known credentials `devkey` / `secret`. That is fine on a laptop at `localhost`, and the installer never sets it.
 
 <Warning>
-  **Never expose `--dev` on a public interface.** Anyone who can reach the ports could mint LiveKit tokens without Curia's auth. On a server, use your own key and secret as below.
+  **Never expose `--dev` on a public interface.** Anyone who can reach the ports could mint LiveKit tokens without Curia's auth. The installer refuses to finish an install on option 1, or option 2 with a public address, while `LIVEKIT_COMMAND` runs `--dev`.
 </Warning>
 
 ### Run LiveKit on a server
 
-The install doesn't configure LiveKit for a server yet, so these steps are by hand. Run them in the install directory.
+On a server installed with option 1 or 2, two things carry a call:
+
+- **Signaling** goes over HTTPS on your domain. The bundled Caddyfile routes `/rtc*` to LiveKit and everything else to Curia, so LiveKit's admin API isn't reachable from outside. Behind your own proxy, add the forwarding rules in [How people reach it](/get-started/deployment#how-people-reach-it).
+- **Media** goes straight to LiveKit. Open `7881/tcp` and `7882/udp` to the internet on the host and any cloud firewall, and forward them through NAT if Curia sits behind a router. Media can't go through the proxy.
+
+Curia talks to LiveKit's admin API over the Compose network at `channels.voice.livekit_management_url` (default `http://livekit:7880`). Don't point it at the public signaling URL: there, `/twirp` reaches Curia, not LiveKit.
+
+### Turn voice on for an existing install
+
+Installs made before LiveKit came with Curia don't run it, and an update never turns it on. `install.sh` says so when you re-run it. Run these steps in the install directory.
 
 <Steps>
-  <Step title="Create a LiveKit config with your own key">
-    Download [`docker/livekit.yaml`](https://github.com/josephfung/curia/blob/main/docker/livekit.yaml) from the Curia repository into a `docker/` folder in the install directory. It isn't part of the install bundle. Generate a key and secret, for example with `openssl rand -hex 16` and `openssl rand -base64 32`, and replace the placeholder line under `keys:` with `<key>: <secret>`. You'll enter the same pair in the console.
+  <Step title="Fetch the newer files">
+    Download these assets from the release you run (`https://github.com/josephfung/curia/releases/download/<version>/<asset>`) and save them as shown:
+
+    | Release asset | Save as |
+    |---|---|
+    | `docker-compose.yml` | `docker-compose.yml` |
+    | `Caddyfile` | `deploy/Caddyfile` (adds the `/rtc*` route; skip it if you don't use the bundled Caddy) |
+    | `livekit.yaml` | `docker/livekit.yaml` |
+    | `livekit.local.yaml` | `docker/livekit.local.yaml` |
+
+    Fetch both LiveKit files, even on a server: the compose file mounts both, and Docker creates an empty directory in place of a missing one. The installer never replaces your `docker-compose.yml` or `Caddyfile`, so carry over any changes you made to the old ones.
   </Step>
 
-  <Step title="Mount the config and point LiveKit at it">
-    Create `docker-compose.voice.yml` next to `docker-compose.yml`:
+  <Step title="Generate a key and secret, and set them in .env">
+    The key is `API` plus 12 letters or digits; the secret is 32 random bytes in hex:
 
-    ```yaml
-    services:
-      livekit:
-        volumes:
-          - ./docker/livekit.yaml:/etc/livekit.yaml:ro
+    ```bash
+    echo "API$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 12)"
+    openssl rand -hex 32
     ```
 
-    Then, in `.env`, add the file to `COMPOSE_FILE` and set the LiveKit command:
+    Add to `.env`:
 
     ```env
-    COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml:docker-compose.voice.yml
-    LIVEKIT_COMMAND=--config /etc/livekit.yaml
     COMPOSE_PROFILES=voice
+    LIVEKIT_KEYS="<api-key>: <api-secret>"
+    # Options 1 and 2 (a domain):
+    LIVEKIT_COMMAND="--config /etc/livekit.yaml"
+    # Just this computer, instead:
+    # LIVEKIT_COMMAND="--config /etc/livekit.local.yaml --node-ip 127.0.0.1"
     ```
 
-    Keep whatever `COMPOSE_FILE` already lists (the domain install adds `docker-compose.tls.yml`) and append the new file. Then run `docker compose up -d`.
+    Never use `--dev` here.
   </Step>
 
-  <Step title="Serve signaling over HTTPS">
-    A console served over HTTPS can only reach LiveKit over `wss://`. The bundled Caddy proxies only Curia, not LiveKit. One way is to route LiveKit's `/rtc` path on your domain to LiveKit, by adding a `handle` block to `deploy/Caddyfile`:
-
+  <Step title="Start it">
+    ```bash
+    docker compose up -d
     ```
-    {$DOMAIN} {
-    	handle /rtc* {
-    		reverse_proxy livekit:7880
-    	}
-    	handle {
-    		reverse_proxy curia:3000
-    	}
-    }
-    ```
+  </Step>
 
-    Restart Caddy (`docker compose restart caddy`). The signaling URL is then `wss://<your-domain>`. The installer won't overwrite an existing `Caddyfile` when you re-run it.
+  <Step title="Enter LiveKit's values for Curia">
+    In **Settings → Channels → Voice**, enter the LiveKit signaling URL (`wss://<your-domain>`, or `ws://localhost:7880` on just this computer), and the same API key and secret you put in `LIVEKIT_KEYS`. Add the Deepgram and Cartesia values if they aren't there yet ([Voice](/get-started/voice)), then restart Curia.
   </Step>
 
   <Step title="Open the media ports">
-    Open `7881/tcp` and `7882/udp` to the internet on the host and any cloud firewall. Media can't go through the proxy.
+    On a server, open `7881/tcp` and `7882/udp`, as in [Run LiveKit on a server](#run-livekit-on-a-server).
   </Step>
 </Steps>
 
-Curia talks to LiveKit's admin API over the Compose network at `channels.voice.livekit_management_url` (default `http://livekit:7880`). Don't point it at the public signaling URL.
-
 ## Credentials
 
-Enter these in **Settings → Channels → Voice**. They are stored in the [vault](/get-started/secrets-vault) and have **no environment-variable fallback**: voice credentials must live in the vault.
+Voice's settings are stored in the [vault](/get-started/secrets-vault) and have **no environment-variable fallback**: voice credentials must live in the vault. The installer saves the three LiveKit values; you enter the Deepgram and Cartesia ones on the Setup page's [Voice step](/get-started/voice). To change any of them later, use **Settings → Channels → Voice**.
 
 | Console field | Vault key |
 |---|---|
@@ -129,7 +145,7 @@ Enter these in **Settings → Channels → Voice**. They are stored in the [vaul
 | Cartesia voice ID | `channel.voice.cartesia_voice_id` |
 
 <Note>
-  The **LiveKit signaling URL** is the *browser-reachable* signaling endpoint, not LiveKit's internal address: `ws://localhost:7880` for a laptop try-out, or `wss://<your-domain>` behind a TLS proxy. The key and secret must match your LiveKit server's exactly (with `--dev`, that's `devkey` / `secret`).
+  The **LiveKit signaling URL** is the *browser-reachable* signaling base address, not LiveKit's internal one, and without `/rtc`: `wss://<your-domain>` on a server, or `ws://localhost:7880` on just this computer. See [LiveKit](#livekit) for what the installer saves. The key and secret must match `LIVEKIT_KEYS` in `.env` exactly (with `--dev`, that's `devkey` / `secret`).
 </Note>
 
 The **Cartesia voice ID** is the voice Curia speaks in: a UUID copied from [play.cartesia.ai](https://play.cartesia.ai). It is required. Cartesia can't synthesize a reply without it, so the channel stays disabled until it's set.
@@ -283,7 +299,7 @@ Signal calls fail in a way messaging does not: the JSON-RPC socket can be perfec
   </Accordion>
 
   <Accordion title="Token or session creation fails">
-    Verify `channel.voice.livekit_url`, `channel.voice.livekit_api_key`, and `channel.voice.livekit_api_secret` match the LiveKit server exactly. A `--dev` server expects `devkey` / `secret`.
+    Verify `channel.voice.livekit_url`, `channel.voice.livekit_api_key`, and `channel.voice.livekit_api_secret` match the LiveKit server exactly: the key and secret must be the pair in `LIVEKIT_KEYS`. A `--dev` server expects `devkey` / `secret`. The Setup page's Voice step also checks this: see [Check it works](/get-started/voice#check-it-works).
   </Accordion>
 
   <Accordion title="The browser connects but there's no audio">
@@ -291,7 +307,7 @@ Signal calls fail in a way messaging does not: the JSON-RPC socket can be perfec
   </Accordion>
 
   <Accordion title="Works on localhost but fails remotely">
-    Run LiveKit with `rtc.use_external_ip: true`, set a browser-reachable LiveKit URL, and confirm NAT forwards the RTC ports (`7881/tcp`, `7882/udp`).
+    Run LiveKit with `--config /etc/livekit.yaml` (`rtc.use_external_ip: true`), not the local config, set a browser-reachable LiveKit URL, and confirm NAT forwards the RTC ports (`7881/tcp`, `7882/udp`).
   </Accordion>
 
   <Accordion title="The browser blocks the microphone or WebSocket">

@@ -19,7 +19,8 @@ When you're done, Curia is running and you can sign in to its console. It can't 
 - **A host with Docker and the Compose plugin.** Docker 20.10 or later: [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI. Check the [system requirements](/get-started/system-requirements) for the machine to run Curia on.
 - **curl**, to download the installer.
 - **An Anthropic API key** (it starts with `sk-ant-`). The installer asks for it and won't continue without one. Get one at [console.anthropic.com](https://console.anthropic.com); usage is billed by Anthropic. OpenRouter and Amazon Bedrock also work, but only with configuration changes after install (see the [configuration reference](/references/configuration)).
-- **A domain pointing at the host,** with ports 80 and 443 open. Create a DNS A record for it before you start. If you already terminate TLS at your own proxy or load balancer, you can use that instead.
+- **A domain pointing at the host,** with ports 80 and 443 open. Create a DNS A record for it before you start. If you already run HTTPS on the host (nginx, Traefik, Cloudflare Tunnel or similar), Curia can sit behind it instead.
+- **Two more ports for calls,** `7881/tcp` and `7882/udp`, open on the host. Voice comes with every install, and call audio can't go through a proxy. See [Ports to open](/get-started/deployment#ports-to-open).
 
 You don't need Node, pnpm or openssl on the host. Migrations, secret generation and vault seeding all run inside the image.
 
@@ -35,7 +36,7 @@ Run Curia on its own domain with HTTPS unless you're only trying it out:
 - SMS needs a public HTTPS address for the Telnyx webhook.
 - The [phone app](/channels/phone-app) installs on a home screen and sends notifications only from an HTTPS address.
 
-A local install on `http://localhost:3000` is fine for a try-out on your own machine. It isn't a setup you can hand to a principal.
+A local install on `http://localhost:3000` is fine for a try-out on your own machine. It has no phone app, so onboarding then needs Signal or SMS. It isn't a setup you can hand to a principal.
 
 ## Steps
 
@@ -67,45 +68,56 @@ A local install on `http://localhost:3000` is fine for a try-out on your own mac
     The installer:
 
     - checks that Docker, the Compose plugin and curl are available;
-    - fetches the compose files, the `.env` template, the Caddyfile and the browser container's seccomp profile (`docker/seccomp-chrome.json`) next to the script;
+    - downloads the release's `setup-common.sh` and checks it against the release's `SHA256SUMS`, stopping on a mismatch;
+    - fetches the compose files, the `.env` template, the Caddyfile, the browser container's seccomp profile (`docker/seccomp-chrome.json`) and LiveKit's configs (`docker/livekit.yaml` and `docker/livekit.local.yaml`) next to the script;
     - generates the database password and the vault master key (`SECRET_ENCRYPTION_KEY`) and writes them to `.env`;
     - asks for your Anthropic API key;
     - asks how you'll reach Curia (next step);
-    - pulls the images, starts Postgres, runs migrations and seeds the encrypted vault;
-    - starts Curia and its [browser container](/integrations/web-browser), and waits for Curia to report healthy.
+    - generates a key and secret for LiveKit, the server that carries call audio, and turns it on in `.env`;
+    - pulls the images, starts Postgres, runs migrations and seeds the encrypted vault, including LiveKit's address and keys;
+    - starts Curia, its [browser container](/integrations/web-browser) and LiveKit, and waits for Curia to report healthy.
 
-    Secrets go into the [encrypted vault](/get-started/secrets-vault). Only the four bootstrap values needed to reach and unlock it stay in `.env`.
+    Secrets go into the [encrypted vault](/get-started/secrets-vault). Only the four bootstrap values needed to reach and unlock it stay in `.env`, plus LiveKit's own key pair, which LiveKit reads from there. You never enter LiveKit's settings yourself: see [Voice](/get-started/voice).
   </Step>
 
   <Step title="Choose how you'll reach Curia">
-    The installer offers three options. Its default is **1**, but for a real setup choose **2**:
+    The installer asks **How will people reach Curia?** and offers three options. If you're not sure, choose **1**, the default (press Enter):
 
-    - **2 — Public domain + HTTPS.** Recommended. A bundled Caddy proxy gets a Let's Encrypt certificate automatically. Enter your domain when asked.
-    - **3 — Public IP / my own proxy.** Plain HTTP on port 3000, for when your own proxy or load balancer handles TLS.
-    - **1 — Local / evaluation.** `http://localhost:3000`, no TLS. For a try-out on your own machine only.
+    - **1 — My domain, with HTTPS set up for me (recommended).** Curia gets its own certificate from Let's Encrypt, through a bundled Caddy proxy. Enter your domain when asked. It needs the domain pointing at the server and ports 80 and 443 open. If something on the server already uses port 80 or 443, the installer warns you and suggests option 2.
+    - **2 — My domain, behind HTTPS I already run.** For servers that already have nginx, Traefik, Cloudflare Tunnel or similar in front. Curia listens on port 3000 behind it. The installer asks for the public address your proxy serves Curia on, such as `https://curia.example.com`; press Enter to keep `localhost` for testing. An `http://` address works, with a warning, but the phone app needs `https`. Your proxy then needs two forwarding rules: see [How people reach it](/get-started/deployment#how-people-reach-it).
+    - **3 — Just this computer, to try it out.** `http://localhost:3000`. No phone app, so onboarding then needs Signal or SMS.
 
-    Re-running the installer won't ask this again. To change topology later, see [Deployment and self-hosting](/get-started/deployment).
+    Re-running the installer won't ask this again. For what each option sets up, or to change it later, see [Deployment](/get-started/deployment#how-people-reach-it).
   </Step>
 
   <Step title="Save your bootstrap secret">
-    When the installer finishes, it prints your console address and a **bootstrap secret**:
+    When the installer finishes, it prints the address of the Setup page and a **bootstrap secret**:
 
     ```
     ╔══════════════════════════════════════════════════════════════════════╗
     ║   Curia is running.                                                    ║
-    ║   Open:    https://curia.example.com                                   ║
+    ║   Open:    https://curia.example.com/setup                             ║
     ║   Bootstrap secret (save this to a password manager):                  ║
     ║   a1b2c3d4...                                                          ║
+    ║   Enter it on the login page to create your account.                   ║
+    ║   You won't be shown it again here.                                    ║
     ╚══════════════════════════════════════════════════════════════════════╝
+    Finish setting up Curia in your browser at the address above.
+    Guide: https://docs.meetcuria.com/get-started/check-your-setup
+    When every step is done, choose Start onboarding.
+
+    Open these ports for calls: 7881/tcp, 7882/udp
     ```
 
     Save the bootstrap secret in a password manager now. It's how you sign in, and the installer won't show it again.
+
+    On option 3 the address is `http://localhost:3000/setup`, and there are no ports to open. On option 2 with a public address, the installer also prints what your proxy must forward.
   </Step>
 
   <Step title="Sign in and open the Setup page">
     Open the address from the summary and paste the bootstrap secret into the **Access key** field.
 
-    On a new install, the console opens on the **Setup page** at `/setup`. It walks you through every step, from who Curia is for to **Start onboarding**, and takes every key on the step itself. The setup guide, Curia's own chat, opens beside it the first time, to answer questions as you go.
+    The console opens on the **Setup page** at `/setup`. It walks you through every step, from who Curia is for to **Start onboarding**, and takes every key on the step itself. The setup guide, Curia's own chat, opens beside it the first time, to answer questions as you go.
 
     See [The Setup page](/get-started/check-your-setup) for the steps and what each needs.
 
@@ -121,6 +133,7 @@ A local install on `http://localhost:3000` is fine for a try-out on your own mac
   - **No secrets are regenerated.** Your database credentials and vault master key are kept, so existing encrypted secrets stay readable.
   - **Migrations are re-applied safely.** Already-applied migrations are skipped.
   - **The vault is checked, not re-seeded.** The installer confirms the required secrets are present and fails loudly if any are missing, rather than overwriting them.
+  - **Voice is left as it is.** LiveKit's settings in `.env` and its values in the vault are never changed. If voice is off, as on installs made before LiveKit came with Curia, the installer says so: see [Turn voice on for an existing install](/channels/voice-setup#turn-voice-on-for-an-existing-install).
 
   Re-running is the normal way to upgrade or restart the stack.
 </Accordion>
@@ -160,7 +173,7 @@ Nothing yet. Curia has no email, messaging or voice connected, so it can't conta
   </Accordion>
 
   <Accordion title="Let's Encrypt certificate isn't issued (HTTPS option)">
-    Caddy requests a certificate on first start. It needs a DNS A record for your domain pointing at the host, ports 80 and 443 reachable from the internet, and the right `DOMAIN` value in `.env`. Check the proxy logs for the result:
+    Caddy requests a certificate on first start. It needs a DNS A record for your domain pointing at the host, ports 80 and 443 reachable from the internet and free for Caddy, and the right `DOMAIN` value in `.env`. If the installer warned that something already uses port 80 or 443, another web server is in the way: stop it, or put Curia behind it as in [How people reach it](/get-started/deployment#how-people-reach-it). Check the proxy logs for the result:
 
     ```bash
     docker compose logs caddy
