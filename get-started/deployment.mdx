@@ -21,12 +21,12 @@ Curia is single-tenant and self-hosted: one instance per principal, on a server 
 
 | Container | Image | What runs in it | Reaches |
 |---|---|---|---|
-| **caddy** | `caddy` (upstream) | Caddy, terminating HTTPS with a Let's Encrypt certificate | curia, and livekit for call signaling (`/rtc`) |
+| **caddy** | `caddy` (upstream) | Caddy, terminating HTTPS with a Let's Encrypt certificate | curia, and livekit for call signaling (`/rtc*`) |
 | **curia** | `curia` | Curia's runtime (agents, channels, scheduler), the console and phone app, **workspace-mcp** (the Google Workspace MCP server, run as a subprocess) and the **all-MiniLM-L6-v2** embedding model, run in-process | Every other container, and every outside service |
 | **postgres** | `curia-postgres` | PostgreSQL 16 with pgvector and pgAudit. Holds memory, the encrypted vault and the audit log | Nothing |
 | **speech** | `curia-speech` | Curia's speech service, running Parakeet (speech to text), Pocket TTS (text to speech) and Silero (detecting when someone is speaking) | Nothing: it has no internet access |
 | **browser** | `curia-browser` | Chromium, run headful on Xvfb, behind Curia's egress guard, which refuses private and local addresses | The open web only |
-| **livekit** | `livekit-server` (upstream) | LiveKit, the real-time server that carries call audio | Curia's voice agent |
+| **livekit** | `livekit-server` (upstream) | LiveKit, the real-time server that carries call audio. The installer starts it with keys it generates | Curia's voice agent |
 
 Images named `curia-*` are built and published with each Curia release, from the same commit and under the same tag. Updating Curia updates them. `caddy` and `livekit-server` come from their projects unchanged. The Curia image runs as a non-root `curia` user; see the [security overview](/security/overview) for the container security model.
 
@@ -42,15 +42,22 @@ The speech container has no internet access once its models are downloaded.
 
 ## How people reach it
 
-The installer asks once, on a fresh install, how you'll reach Curia. Your answer decides whether Curia gets HTTPS.
+The installer asks once, on a fresh install, **How will people reach Curia?** Your answer decides who provides HTTPS, and where calls connect. Every option starts LiveKit for calls.
 
 | Option | What the installer sets up | Use it when |
 |---|---|---|
-| **Public domain + HTTPS** (recommended) | The bundled Caddy on ports 80 and 443, with a Let's Encrypt certificate it renews itself. It sets `DOMAIN`, adds `docker-compose.tls.yml` to `COMPOSE_FILE` and sets `APP_ORIGIN=https://<your-domain>` in `.env`. | Curia runs on a server with a domain. You need a DNS A record pointing at the host, and ports 80 and 443 open, before you start. |
-| **Public IP / my own proxy** | No Caddy. Curia serves plain HTTP on port `3000`. | You already terminate TLS at a load balancer or reverse proxy in front of the host. |
-| **Local / evaluation** | The same, at `http://localhost:3000`. | A try-out on your own machine. The phone app and calls from other devices need HTTPS, so they won't work. |
+| **1. My domain, with HTTPS set up for me** (recommended, the default) | The bundled Caddy on ports 80 and 443, with a Let's Encrypt certificate it renews itself. Caddy sends call signaling (`/rtc*`) to LiveKit and everything else to Curia. It sets `DOMAIN`, adds `docker-compose.tls.yml` to `COMPOSE_FILE` and sets `APP_ORIGIN=https://<your-domain>` in `.env`. Calls connect to `wss://<your-domain>`. | Curia runs on a server with a domain. You need a DNS A record pointing at the host, and ports 80 and 443 open, before you start. The installer warns if something already uses port 80 or 443. |
+| **2. My domain, behind HTTPS I already run** | No Caddy. Curia serves plain HTTP on port `3000` for your proxy. The installer asks for the public address your proxy serves Curia on, sets `APP_ORIGIN` to it, and points calls at the same host (`wss://<host>`). Press Enter instead to keep `localhost`, for testing. | nginx, Traefik, Cloudflare Tunnel or similar already handles HTTPS in front of the host. |
+| **3. Just this computer, to try it out** | No Caddy, at `http://localhost:3000`. Calls connect to `ws://localhost:7880`. | A try-out on your own machine. There's no phone app, so onboarding then needs Signal or SMS. |
 
-To move an existing install to the domain option, set `DOMAIN=<your domain>`, `COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml` and `APP_ORIGIN=https://<your domain>` in `.env`, then run `docker compose up -d`. Behind your own proxy, set `APP_ORIGIN` to the URL people use to reach Curia, and route `/rtc` to LiveKit for calls (see [Run LiveKit on a server](/channels/voice-setup#run-livekit-on-a-server)). Re-running the installer on a finished install doesn't ask the question again.
+On option 2, your proxy must forward:
+
+- `/` to port `3000` on the Curia host;
+- `/rtc*` to `127.0.0.1:7880` on the Curia host, for call signaling. A proxy on another machine can't reach that address: set `LIVEKIT_HTTP_BIND` in `.env` so LiveKit listens on an interface it can reach.
+
+An `http://` address is accepted with a warning: the browser works, but the phone app needs `https`.
+
+To move an existing install to option 1, set `DOMAIN=<your domain>`, `COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml` and `APP_ORIGIN=https://<your domain>` in `.env`, then run `docker compose up -d`. Behind your own proxy, set `APP_ORIGIN` to the address people use to reach Curia and add the forwarding rules above. Either way, change the LiveKit URL under **Settings → Channels → Voice** to match (see [Voice credentials](/channels/voice-setup#credentials)), and if the install was made for just this computer, set `LIVEKIT_COMMAND="--config /etc/livekit.yaml"` in `.env` so LiveKit advertises the server's public address. Re-running the installer on a finished install doesn't ask the question again.
 
 With `APP_ORIGIN` set to an `https://` address, session cookies are marked `Secure` and the API accepts browser requests from that origin alone. Open the console at `https://<your-domain>`, not `http://<server>:3000`.
 
@@ -58,8 +65,8 @@ With `APP_ORIGIN` set to an `https://` address, session cookies are marked `Secu
 
 | Port | Container | Why |
 |---|---|---|
-| `80`, `443` | caddy | The console, the phone app, call signaling and SMS webhooks from Telnyx, over HTTPS |
-| `7881/tcp`, `7882/udp` | livekit | Call audio over WebRTC. Without these, calls connect with no sound |
+| `80`, `443` | caddy | The console, the phone app, call signaling and SMS webhooks from Telnyx, over HTTPS. Behind your own proxy, that proxy holds these instead |
+| `7881/tcp`, `7882/udp` | livekit | Call audio over WebRTC, on options 1 and 2. Without these, calls connect with no sound |
 
 Docker's published ports bypass host firewalls such as UFW, so open these in your cloud provider's firewall. Nothing else is published on a public interface:
 
@@ -94,7 +101,7 @@ Most channels don't need an open port: Curia connects out to them. Turning one o
 | `google_workspace_tokens` | Curia's Google Workspace sign-in | Sign Curia in to Google again |
 | `caddy-data` | Caddy's certificates | Caddy requests new ones |
 
-Back up `pgdata` together with `.env`, and keep `.env` out of version control. `.env` holds only bootstrap values (`DB_USER`, `DB_PASSWORD`, `DATABASE_URL` and `SECRET_ENCRYPTION_KEY`); every other credential is in the vault. Keep a separate copy of `SECRET_ENCRYPTION_KEY` somewhere off the server, such as a password manager. Without it the vault can't be decrypted, and every stored secret has to be entered again.
+Back up `pgdata` together with `.env`, and keep `.env` out of version control. `.env` holds only bootstrap values (`DB_USER`, `DB_PASSWORD`, `DATABASE_URL` and `SECRET_ENCRYPTION_KEY`) and LiveKit's own key pair (`LIVEKIT_KEYS`); every other credential is in the vault. Keep a separate copy of `SECRET_ENCRYPTION_KEY` somewhere off the server, such as a password manager. Without it the vault can't be decrypted, and every stored secret has to be entered again.
 
 ## Outside services
 
