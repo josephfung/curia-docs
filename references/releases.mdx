@@ -25,6 +25,14 @@ Each version is published as a GitHub Release with condensed release notes:
 
 Updating Curia pulls new images and runs migrations on startup (see [Updating Curia](/get-started/installation#updating-curia)). Some releases also need a change that an update never makes for you, because `install.sh` never edits an existing `docker-compose.yml`. Those changes are listed here, newest first.
 
+### Upgrading to edge/v0.46
+
+Fresh installs now default to HTTPS and turn voice on. An update changes neither for an install you already have. Work through this list if you run voice, or want to.
+
+1. **Turn voice on, if you want calls.** An update leaves LiveKit off, and `install.sh` says so when you re-run it. Follow [Turn voice on for an existing install](/channels/voice-setup#turn-voice-on-for-an-existing-install): fetch the new compose file, Caddyfile and both LiveKit configs, generate keys into `.env`, and enter the same values in **Settings → Channels → Voice**.
+2. **Set real keys before using the new HTTPS compose file.** With the new `docker-compose.tls.yml`, LiveKit no longer falls back to `--dev` when `LIVEKIT_COMMAND` is unset. It refuses to start until `LIVEKIT_KEYS` holds a real key pair. If you run voice on an HTTPS install that relied on that fallback, set `LIVEKIT_KEYS` and `LIVEKIT_COMMAND="--config /etc/livekit.yaml"` in `.env` first, and enter the same key pair in **Settings → Channels → Voice**.
+3. **Running Curia outside Docker?** Curia now joins its own end of each call over `ws://livekit:7880` on the compose network. Installs where Curia runs in Docker need no change. If Curia runs directly on the host, set `LIVEKIT_INTERNAL_URL` (for example `ws://localhost:7880`) in its environment.
+
 ### Upgrading to v0.45
 
 Back up the database first. Then work through this list.
