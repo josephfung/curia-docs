@@ -68,7 +68,6 @@ A local install on `http://localhost:3000` is fine for a try-out on your own mac
     The installer:
 
     - checks that Docker, the Compose plugin and curl are available;
-    - downloads the release's `setup-common.sh` and checks it against the release's `SHA256SUMS`, stopping on a mismatch;
     - fetches the compose files, the `.env` template, the Caddyfile, the browser container's seccomp profile (`docker/seccomp-chrome.json`) and LiveKit's configs (`docker/livekit.yaml` and `docker/livekit.local.yaml`) next to the script;
     - generates the database password and the vault master key (`SECRET_ENCRYPTION_KEY`) and writes them to `.env`;
     - asks for your Anthropic API key;
