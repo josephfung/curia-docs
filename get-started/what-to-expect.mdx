@@ -30,7 +30,7 @@ Estimates as of 2026-11-25. They haven't yet been checked against a timed run-th
 Gather these before you start. You don't need them all at once: each Setup page lists what it needs.
 
 - **A machine with Docker and Docker Compose.** A small server works: 2 vCPU and 4 GB of memory plus swap. See [System requirements](/get-started/system-requirements).
-- **An Anthropic API key.** It's required: the installer asks for one and won't continue without it. Other model providers (OpenRouter, Amazon Bedrock) can be added after install with config changes. See the [configuration reference](/references/configuration).
+- **A model provider account.** The installer asks which to use: Anthropic (an API key; the default), OpenRouter (an API key) or Amazon Bedrock (an AWS access key and region). With Bedrock, voice calls don't work yet. See [Model providers](/get-started/installation#model-providers).
 - **A domain, or another HTTPS route to the server.** Telnyx needs a public URL to deliver texts, and browsers only allow the microphone for voice calls over HTTPS (or on the server itself). The installer offers a local option, but use it only to try Curia out.
 - **A dedicated mailbox for Curia and a Nylas account.** Curia sends and receives email from its own address, through Nylas.
 - **A way for Curia to message the principal.** The Curia app needs no number. Otherwise, a number registered with Signal (you run `signal-cli` yourself), a Telnyx number for text messages, or a Slack app in the principal's workspace.
@@ -45,7 +45,7 @@ Prices for the third-party services Curia uses, checked on the vendors' sites on
 
 | Service | What it's for | Price (checked 2026-11-01) |
 |---|---|---|
-| Anthropic | The language model | Pay as you go. Depends on how much Curia does. |
+| Anthropic, OpenRouter or Amazon Bedrock | The language model | Pay as you go. Depends on how much Curia does, and on the models you choose. |
 | Nylas | Curia's mailbox, and access to the principal's | Free: $0 for 5 accounts, described as "for proving it works" (production use isn't stated). Essentials: $15/month for 10 accounts. |
 | Signal | Messaging the principal | Free |
 | Telnyx | Messaging the principal by SMS (instead of Signal) | $0.004 per message part, plus carrier fees. Number and 10DLC registration fees vary. |

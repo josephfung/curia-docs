@@ -472,6 +472,20 @@ The `ModelRouter` validates at startup that every configured model exists in the
   The `provider` field was removed from tier config. The model registry infers the provider from the model name — you only need to specify the `model`.
 </Note>
 
+### Installing with OpenRouter or Bedrock
+
+When you choose OpenRouter or Amazon Bedrock at install, the installer writes the tier and judge models you picked to `config/local.yaml`, between a `# >>> models chosen at install` line and a `# <<< models chosen at install` line. Re-running the installer replaces only that block. On an image install, `docker-compose.yml` mounts `config/local.yaml` into the container, and Curia won't start if the file is missing. To change a model later, edit the block and run `docker compose restart curia`.
+
+Some things work differently from an Anthropic install:
+
+- **Prompt caching.** Curia marks prompt-cache checkpoints only on Anthropic's own API, so Claude models reached through OpenRouter run uncached and cost more per turn than through Anthropic. GPT, Gemini and DeepSeek models cache on their own.
+- **Reasoning effort.** The installer sets none, so each model uses its own default. The Claude models through OpenRouter, GPT-4o and the Bedrock models don't take `reasoning.effort`, and startup fails if you set one on their tier.
+- **Cost estimates.** OpenRouter estimates use OpenRouter's list prices, and the endpoint it routes a request to can charge differently. Bedrock bills Claude models through AWS Marketplace.
+- **Voice.** Voice calls run on the fast tier unless `channels.voice.model` is set, and need a provider that streams. Bedrock doesn't, so a Bedrock install leaves voice off.
+- **Gemini on the fast tier.** `google/gemini-3.1-flash-lite` rejects one of Curia's tool schemas, which stalls the contacts agent's scheduled jobs. That's why GPT-4o is the recommended OpenRouter fast tier. Gemini works well as a judge.
+
+(Choosing a provider at install is newer than v0.45.0. On v0.45.0, an image install has no `config/local.yaml` mount.)
+
 ### Reasoning watchdog
 
 A model can spend a long time reasoning without acting. When that happens, Curia stops the attempt and makes one more, asking the model to act on what it has already worked out. This bounds how long a single model call can stall a reply. Each occurrence is recorded on the `llm.call` audit event as `reasoningWatchdog`. Providers without streaming, currently AWS Bedrock, are not watched.

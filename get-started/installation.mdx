@@ -18,7 +18,7 @@ When you're done, Curia is running and you can sign in to its console. It can't 
 
 - **A host with Docker and the Compose plugin.** Docker 20.10 or later: [Docker Desktop](https://www.docker.com/products/docker-desktop/) or the standalone CLI. Check the [system requirements](/get-started/system-requirements) for the machine to run Curia on.
 - **curl**, to download the installer.
-- **An Anthropic API key** (it starts with `sk-ant-`). The installer asks for it and won't continue without one. Get one at [console.anthropic.com](https://console.anthropic.com); usage is billed by Anthropic. OpenRouter and Amazon Bedrock also work, but only with configuration changes after install (see the [configuration reference](/references/configuration)).
+- **Credentials for one model provider:** Anthropic (the default), OpenRouter or Amazon Bedrock. The installer asks which to use. See [Model providers](#model-providers).
 - **A domain pointing at the host,** with ports 80 and 443 open. Create a DNS A record for it before you start. If you already run HTTPS on the host (nginx, Traefik, Cloudflare Tunnel or similar), Curia can sit behind it instead.
 - **Two more ports for calls,** `7881/tcp` and `7882/udp`, open on the host. Voice comes with every install, and call audio can't go through a proxy. See [Ports to open](/get-started/deployment#ports-to-open).
 
@@ -27,6 +27,18 @@ You don't need Node, pnpm or openssl on the host. Migrations, secret generation 
 You don't need an embedding key either. Curia's memory runs on an embedding model bundled in the image, so the knowledge graph works from the first boot. See [Embedding models](/integrations/embeddings-endpoint) to use a different one. (The bundled model is newer than v0.45.0; on that release, memory needs an OpenAI key or your own embedding server, as [Search and memory](/get-started/search-and-memory) explains.)
 
 **Time:** a few minutes once the host and DNS record are ready. Connecting everything else takes an hour or two, at your own pace. See [What to expect](/get-started/what-to-expect).
+
+### Model providers
+
+Curia's agents run on a language model provider that you pay directly. The installer asks which one to use and prompts for its credentials:
+
+- **Anthropic** (the default): an API key starting `sk-ant-`, from [console.anthropic.com](https://console.anthropic.com).
+- **OpenRouter**: an API key starting `sk-or-`, from [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys). One key reaches Claude, GPT, Gemini and DeepSeek models.
+- **Amazon Bedrock**: an IAM access key (ID and secret) whose user may call `bedrock:InvokeModel`, with access to Anthropic's Claude models turned on in the [Bedrock console](https://console.aws.amazon.com/bedrock/), and the region you turned it on in. Voice calls don't work with Bedrock yet.
+
+Not sure? Use Anthropic. For OpenRouter or Bedrock, the installer also asks which models to use; see the step [below](#steps).
+
+(Choosing a provider is newer than v0.45.0. On that release the installer asks for an Anthropic key only.)
 
 ### Why HTTPS by default
 
@@ -70,13 +82,34 @@ A local install on `http://localhost:3000` is fine for a try-out on your own mac
     - checks that Docker, the Compose plugin and curl are available;
     - fetches the compose files, the `.env` template, the Caddyfile, the browser container's seccomp profile (`docker/seccomp-chrome.json`) and LiveKit's configs (`docker/livekit.yaml` and `docker/livekit.local.yaml`) next to the script;
     - generates the database password and the vault master key (`SECRET_ENCRYPTION_KEY`) and writes them to `.env`;
-    - asks for your Anthropic API key;
-    - asks how you'll reach Curia (next step);
+    - asks which model provider to use and for its credentials, and for OpenRouter or Bedrock which models to use (next step);
+    - asks how you'll reach Curia (the step after);
     - generates a key and secret for LiveKit, the server that carries call audio, and turns it on in `.env`;
     - pulls the images, starts Postgres, runs migrations and seeds the encrypted vault, including LiveKit's address and keys;
     - starts Curia, its [browser container](/integrations/web-browser) and LiveKit, and waits for Curia to report healthy.
 
     Secrets go into the [encrypted vault](/get-started/secrets-vault). Only the four bootstrap values needed to reach and unlock it stay in `.env`, plus LiveKit's own key pair, which LiveKit reads from there. You never enter LiveKit's settings yourself: see [Voice](/get-started/voice).
+  </Step>
+
+  <Step title="Choose a model provider">
+    The installer asks **Which model provider should Curia use?** If you're not sure, choose **1**, the default (press Enter):
+
+    - **1 — Anthropic (recommended).** Paste your Anthropic API key. Curia uses Claude models, as set in `config/default.yaml`.
+    - **2 — OpenRouter.** Paste your OpenRouter API key. Through OpenRouter, Curia can use Claude, GPT, Gemini and DeepSeek models.
+    - **3 — Amazon Bedrock.** Enter your access key ID, its secret, and the region (such as `us-east-1`). Curia uses Claude models hosted on Bedrock. Bedrock can't stream replies, which voice calls need, so the installer leaves voice off.
+
+    Each key is checked for the right format, and you get three tries. Keys go straight into the encrypted vault, never into `.env`. Bedrock's region is not a secret and goes into `.env` as `AWS_REGION`.
+
+    For OpenRouter or Bedrock, the installer then shows its recommended model for each job and asks **Use these?** Press Enter to accept them, or answer `n` to pick each one from a short list with prices:
+
+    - **fast tier:** short tasks such as classifying messages, extracting facts and, with OpenRouter, voice calls;
+    - **standard tier:** most conversations and specialist work;
+    - **powerful tier:** the hardest tasks;
+    - **judges:** the checks that review outbound messages before they're sent.
+
+    Bedrock offers each Claude model with global routing, and, for a region in the US or the EU, kept inside that geography.
+
+    The installer writes your choices to `config/local.yaml` in the install directory, which Curia reads at startup. To change models later, edit that file and run `docker compose restart curia`. See [LLM routing](/references/configuration#model-routing) for what else differs between providers, such as prompt caching.
   </Step>
 
   <Step title="Choose how you'll reach Curia">
