@@ -12,7 +12,7 @@ Your principal can connect **more than one account**, for example a personal Gma
 
 These are your **principal's** mailboxes, not Curia's. Curia's own address is set up in the **Email** step: [Curia's own email](/get-started/curia-email). Don't add the principal's mailboxes there: email accounts in that list are mailboxes Curia owns and answers from.
 
-On the [Setup page](/get-started/check-your-setup), the **Email & calendar** step gets Google sign-in ready for your principal's accounts: the Nylas region, Curia's sign-in callback and, for a production Nylas application, the Google connector. That's all the step needs to pass. Connecting a mailbox isn't required to finish Setup: you can connect your principal's accounts with them during Setup, or they can connect them in their first conversation.
+On the [Setup page](/get-started/check-your-setup), the **Email & calendar** step gets Google sign-in ready for your principal's accounts: the Nylas region, Curia's sign-in callback and, for a production Nylas application, the Google connector. That's all the step needs to pass. Connecting a mailbox isn't required to finish Setup: you can connect your principal's accounts with them during Setup, or Curia sends them a sign-in link in their first conversation. Once a mailbox is connected, Curia reads about 90 days of it once and drafts three documents for your principal to review: see [Reviewing what Curia learned](/onboarding/reviewing-what-curia-learned).
 
 Only **Google** accounts (Gmail or Google Workspace) are supported for the principal today. The inbox tools use Gmail's search syntax and labels.
 
@@ -73,7 +73,9 @@ Only **Google** accounts (Gmail or Google Workspace) are supported for the princ
   <Step title="Let your principal choose Email triage">
     Inbox triage is the **Email triage** capability: the `ceo-inbox` agent, the `ceo-inbox` tools, and the learning tools that let Curia learn from what your principal actually sends. It's off on a new install. Because it acts on your principal's own inbox, the Setup page leaves it for them to choose: its switch there is locked.
 
-    After Setup, turn it on under **Settings → Behaviour → Capabilities → Email triage**, once your principal has agreed. See [Capabilities](/get-started/check-your-setup#capabilities).
+    **Start onboarding** switches it on for you, but holds it: Curia doesn't touch your principal's inbox until it has told them what it will do, in their first conversation, and they've chosen how. Meanwhile its switch under **Settings → Behaviour → Capabilities** reads **Held until** your principal hears what to expect. Switching it on there releases the hold straight away, so leave it unless your principal has agreed. See [Capabilities](/get-started/check-your-setup#capabilities).
+
+    If you choose **Not right now** instead, Email triage stays off until you turn it on there, or start onboarding.
   </Step>
 
   <Step title="Restart Curia">
