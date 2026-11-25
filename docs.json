@@ -100,7 +100,10 @@
           {
             "group": "For your principal",
             "pages": [
-              "onboarding/connecting-your-email"
+              "onboarding/first-conversation",
+              "onboarding/connecting-your-email",
+              "onboarding/reviewing-what-curia-learned",
+              "onboarding/check-ins-and-weekly-session"
             ]
           }
         ]

@@ -51,6 +51,13 @@ After Start onboarding, the step list shows three **Optional extras**. They neve
 | **Higher search limit** | A Tavily API key | [Tavily web search](/integrations/tavily) |
 | **Capabilities** | Switches for what Curia does | [Below](#capabilities) |
 
+The setup guide checks two more optional items that aren't steps on the page. Ask it "what's left to set up?" to see them:
+
+| Item | What it is | Details |
+|---|---|---|
+| **Principal mailboxes and calendars** | Your principal's own Google accounts, connected with **Connect with Google**. Your principal can also connect them in their first conversation | [Your principal's email and calendar](/get-started/principal-email-calendar) |
+| **Web browser** | The `browser` container, for pages that need JavaScript, sign-ins or forms. It needs no key | [Web browser](/integrations/web-browser) |
+
 <Tip>
   **Google sign-in needs a restart first.** **Connect with Google** works only once Curia has restarted with the Nylas API key saved. On a new install: paste the key in **Email**, then click **Apply & restart**. Open **Email & calendar**, which detects your Nylas region and registers Curia's sign-in callback by itself. Then go back to **Email** and connect Curia's mailbox. Curia restarts itself after that sign-in; apply and restart once more at the end to start the email channel. Pasting a grant ID instead of signing in skips the first restart.
 </Tip>
@@ -83,11 +90,30 @@ Click **Apply and restart**, then **Continue** once it says **Restarted**. You c
 
 ### Start onboarding
 
-Locked until steps 1–7 pass. While it's locked, the step says which steps are left.
+Locked until steps 1–7 pass. While it's locked, the step says which steps are left. It has two buttons, and both end Setup:
 
-Click **Start onboarding** to end Setup. The console leaves the Setup page and loads its home page. Console chat starts a fresh conversation, so your principal never sees the Setup chat. If a check stopped passing since the page loaded, the step says so and locks again.
+- **Start onboarding** ends Setup and starts your principal's onboarding.
+- **Not right now** ends Setup without starting it. It asks you to confirm first: onboarding is required before Curia acts for your principal, and Curia won't contact them until it starts. The console's home page then shows **Onboarding hasn't started.** with a **Start onboarding** button, until it runs.
 
-Before you click, read [Check it all works](#check-it-all-works) and [Handing over to your principal](#handing-over-to-your-principal).
+When you click **Start onboarding**, Curia:
+
+1. **Switches on Email triage, but holds it.** Curia doesn't touch your principal's inbox until it has told them what to expect, in their first conversation. If this needs a restart, the step waits for Curia to come back, as **Apply & restart** does.
+2. **Does its homework.** It looks up your principal's public professional footprint (company, role, public bio, recent news; never family, home or personal accounts) so it can open with what it found and ask what it got wrong. Nothing from it is remembered until your principal confirms it.
+3. **Starts a fresh console chat,** so your principal never sees the Setup chat.
+4. **Reaches your principal** on the messaging route you chose:
+   - **The Curia app:** the step shows an **invitation link**, with a message to send your principal (or, if Curia is for you, a link to open on your phone). The link installs Curia on their phone and signs them in. It works once and lasts 48 hours, and Curia says hello once they're in. **The link is shown only once:** copy it before you leave the page. If you lose it, create a new one under **Settings → System → Devices**.
+   - **Signal, text message or Slack:** the step says **Curia has said hello**. Curia sends the greeting itself.
+
+If the step can't start onboarding, it says why:
+
+- **Curia already looks in use.** Email triage is already on, or your principal already has tasks or conversations with Curia. The step asks you to confirm, then starts.
+- **Curia can't reach your principal yet.** Check that the channel is on in **Settings → Channels**, and that your principal's number or ID is on their contact.
+- **Memory is off.** Onboarding keeps its progress in Curia's memory, so it needs it on. See [Check it all works](#check-it-all-works).
+- **Onboarding has already started.** There's nothing more to do here.
+
+Then click **Open the console**. The console leaves the Setup page and loads its home page.
+
+Before you click Start onboarding, read [Check it all works](#check-it-all-works) and [Handing over to your principal](#handing-over-to-your-principal).
 
 ## Optional extras
 
@@ -226,7 +252,7 @@ The marks on the Setup page are live checks: a channel's step reads **Done.** on
     Once the principal has connected a mailbox, `nylas_calendar` in `/api/health` reads `ok`. `skipped` means no principal mailbox is connected yet. In console chat, ask "What's on my calendar tomorrow?" and check the answer. Details: [Your principal's email and calendar](/get-started/principal-email-calendar).
   </Step>
 
-  <Step title="Optional: Google Docs works">
+  <Step title="Google Docs works">
     In `/api/health`, `mcp.google_workspace` reads `ok`. Then, in console chat, ask Curia: "List the five newest files in your Google Drive." A list (even an empty one) means it works. Details: [Google Docs](/get-started/google-docs).
   </Step>
 
@@ -237,17 +263,29 @@ The marks on the Setup page are live checks: a channel's step reads **Done.** on
 
 ## Handing over to your principal
 
-If you set Curia up for yourself, you're done. Start using it.
+**Start onboarding** is the hand-over: Curia invites your principal to a first conversation and takes it from there. If you set Curia up for yourself, open the invitation on your phone (or answer Curia's hello) and you're done.
 
-If you set it up for someone else, tell your principal:
+If you set it up for someone else:
 
-- **How to open the console:** its address and the access key.
-- **How to get Curia on their phone:** create an invitation link under **Settings → System → Devices → Invite your principal** and send it to them yourself. It works once and lasts 48 hours. See [Invite someone else's phone](/channels/phone-app#invite-someone-elses-phone).
-- **Curia's email address,** so they can forward mail and write to Curia.
-- **How to message Curia:** Curia's Signal or text-message number to save as a contact, or Curia in Slack, depending on the route you chose.
-- **How to call Curia:** open console chat or the phone app and click **Voice**, or call Curia's Signal number if you chose Signal calls.
-- **How to connect their email and calendar:** they sign in with Google. [Connecting your email](/onboarding/connecting-your-email) is a short page you can send them.
+- **Send the invitation,** if you chose the Curia app. Copy the message from the Start onboarding step and send it to your principal in a text or a message. It works once and lasts 48 hours.
+- **Tell your principal to expect Curia,** and roughly what happens next. [Your first conversation with Curia](/onboarding/first-conversation) is a short page you can send them.
+- **Give them Curia's email address,** so they can forward mail and write to Curia, and Curia's Signal or text-message number to save as a contact, if you chose one of those.
+- **Leave the rest to Curia.** It asks your principal to connect their email and calendar during the first conversation, and explains what that means. [Connecting your email](/onboarding/connecting-your-email) covers it for them.
 - **Where to save passwords and cards:** they can hand Curia a website password or a payment card through the one-time link it sends, or add one under **Memory → Secrets**. See [Secrets vault](/get-started/secrets-vault).
+
+### When Curia emails you
+
+If you entered your own name and email in **Who it's for**, Curia emails you, not your principal, when onboarding needs a hand:
+
+| You'll hear when | What to do |
+|---|---|
+| Your principal hasn't answered the greeting after two follow-ups, 48 hours apart | Check in with them, or check that the route still works |
+| The invitation link expired unused | Create a new one under **Settings → System → Devices**, and send it |
+| Your principal's Google sign-in was blocked by their Workspace admin | Ask the admin to mark the Google client ID in the email **Trusted** |
+| Curia's web search failed during its homework | Nothing urgent: Curia starts with open questions instead. Check [Tavily web search](/integrations/tavily) |
+| Curia couldn't finish reading your principal's mailbox, or couldn't deliver its drafts | Check `/api/health`. Curia carries on, and the review uses what it has |
+
+These emails never include your principal's messages, addresses or plans. If you didn't enter an operator, they go to your principal. Change the operator later under **Settings → System → Operator**.
 
 ### After hand-over, use Settings, not chat
 

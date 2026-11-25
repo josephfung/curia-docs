@@ -19,15 +19,18 @@ The Setup pages are written to the operator. They say whose mailbox or phone num
 
 ## How long it takes
 
+Estimates as of 2026-11-25. They haven't yet been checked against a timed run-through, so treat them as rough.
+
 - **Install: about 5 minutes.** One script, run on a machine with Docker.
 - **Connect Curia: about 1–2 hours.** Work through it at your own pace. It can stretch over a few days if you're waiting on an account, a phone number or someone else's sign-off.
+- **Onboarding: about half an hour of your principal's time** for the first conversation, then a review session once Curia has read their mailbox, and short check-ins after that.
 
 ## What you'll need
 
 Gather these before you start. You don't need them all at once: each Setup page lists what it needs.
 
 - **A machine with Docker and Docker Compose.** A small server works: 2 vCPU and 4 GB of memory plus swap. See [System requirements](/get-started/system-requirements).
-- **An Anthropic API key.** The installer asks for one. Other model providers (OpenRouter, Amazon Bedrock) need config changes after install. See the [configuration reference](/references/configuration).
+- **An Anthropic API key.** It's required: the installer asks for one and won't continue without it. Other model providers (OpenRouter, Amazon Bedrock) can be added after install with config changes. See the [configuration reference](/references/configuration).
 - **A domain, or another HTTPS route to the server.** Telnyx needs a public URL to deliver texts, and browsers only allow the microphone for voice calls over HTTPS (or on the server itself). The installer offers a local option, but use it only to try Curia out.
 - **A dedicated mailbox for Curia and a Nylas account.** Curia sends and receives email from its own address, through Nylas.
 - **A way for Curia to message the principal.** The Curia app needs no number. Otherwise, a number registered with Signal (you run `signal-cli` yourself), a Telnyx number for text messages, or a Slack app in the principal's workspace.
@@ -86,15 +89,15 @@ After install, the console opens on the Setup page, which lists every step in or
 
 ## What your principal experiences
 
-Here's what the principal's first days look like today:
+1. **Setup.** After install, the console opens on the Setup page. It asks who Curia is for: yourself, or someone else. If it's someone else, you add your own name and email as the operator, then the principal's details. The rest of Setup is about Curia's accounts and keys. Your principal sees none of it.
+2. **Start onboarding.** When the required steps pass, **Start onboarding** ends Setup. Curia does some homework on your principal's public professional profile, then invites them: with an invitation link you send them for the Curia app, or a hello on Signal, text message or Slack.
+3. **The first conversation.** About half an hour, by chat or voice, whenever suits them. Curia asks how they like to work: how it should sound, how independent it should be, when to interrupt them. It applies each choice as they make it. It also asks them to connect their email and calendar, and tells them exactly what it will do in their inbox before it does anything there. See [Your first conversation with Curia](/onboarding/first-conversation).
+4. **The review.** Once their mailbox is connected, Curia reads about 90 days of it once and drafts three short documents: its working rules, where their time goes, and how they write. Nothing in them takes effect until your principal confirms it. See [Reviewing what Curia learned](/onboarding/reviewing-what-curia-learned).
+5. **Check-ins, then a rhythm.** Curia books each next session with them, one at a time, then proposes a regular rhythm, such as a weekly session. See [Check-ins and your weekly session](/onboarding/check-ins-and-weekly-session).
 
-1. **Setup.** After install, the console opens on the Setup page. It asks who Curia is for: yourself, or someone else. If it's someone else, you add your own name and email as the operator, then the principal's details. The rest of Setup is about Curia's accounts and keys. You can pick a starting tone and level of independence, but the principal is offered both in their first conversation and can change them.
-2. **Start onboarding.** When the required steps pass, **Start onboarding** ends Setup and hands Curia over. The principal's chat starts fresh: they never see the Setup chat.
-3. **Using Curia.** From then on, the principal messages Curia in the Curia app, on Signal, by text message or on Slack, emails it, or talks to it. Voice calls happen in console chat or the phone app. The console installs on the principal's phone as an app, paired from your computer or by an invitation link you send them, and Curia can send them notifications there. See [Use Curia on your phone](/channels/phone-app).
+From the first conversation on, the principal messages Curia in the Curia app, on Signal, by text message or on Slack, emails it, or talks to it. Voice calls happen in console chat or the phone app. See [Use Curia on your phone](/channels/phone-app).
 
-<Note>
-  **Coming soon.** A guided onboarding, where Curia invites the principal to a first conversation by voice or chat and takes it from there.
-</Note>
+The Onboarding tab has a page for each part, written to your principal. You can send them [Your first conversation with Curia](/onboarding/first-conversation) when you start onboarding.
 
 ## How you'll know you're done
 
