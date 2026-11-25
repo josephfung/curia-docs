@@ -106,9 +106,11 @@ Each agent declares a capability tier (`fast`, `standard`, `powerful`) rather th
 
 | Provider | Models | Use case |
 |---|---|---|
-| **Anthropic** | Claude Opus, Sonnet, Haiku | The default, and required to install: the installer won't continue without an Anthropic API key. The default tiers use Claude models. |
-| **OpenRouter** | Models from many vendors, such as DeepSeek, Gemini and GPT | One API key for many models. Remap the tiers to OpenRouter models in your configuration. |
-| **AWS Bedrock** | Claude on Bedrock | Opt-in, for running Claude through your AWS account. |
+| **Anthropic** | Claude Opus, Sonnet, Haiku | The installer's default. The default tiers use Claude models. |
+| **OpenRouter** | Models from many vendors, such as Claude, DeepSeek, Gemini and GPT | One API key for many models. Choose it at install, and pick a model for each tier from a list. |
+| **AWS Bedrock** | Claude on Bedrock | Claude through your AWS account. Choose it at install. Voice calls don't work with it yet. |
+
+The installer asks which provider to use (see [Model providers](/get-started/installation#model-providers)). You can mix providers later by remapping tiers.
 
 Each tier maps to a single model. If your primary provider is unavailable, change the tier mapping to a different model or provider — no agent files need to change. See [Model routing](/references/configuration#model-routing).
 

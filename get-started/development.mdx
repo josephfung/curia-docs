@@ -5,7 +5,7 @@ description: "Clone the repository and run Curia from source with hot reload —
 
 If you just want to run Curia, the [image-based install](/get-started/installation) is faster and needs no toolchain. This page is for developers who want to **change** Curia: contribute upstream, add a custom agent, tool, or skill, or hack on their own instance. It clones the repository and builds from source, so your edits hot-reload into the running stack.
 
-The flow is the same in spirit as the image install — one command, an Anthropic key, a bootstrap secret — but it runs against a local checkout using the development compose overlay instead of the published image.
+The flow is the same in spirit as the image install — one command, a model provider key, a bootstrap secret — but it runs against a local checkout using the development compose overlay instead of the published image.
 
 ## Prerequisites
 
@@ -38,12 +38,12 @@ Before you start, install the following:
 
     - Checks that Docker, Node, and pnpm are available
     - Generates the database password and the vault master key (`SECRET_ENCRYPTION_KEY`) and writes them to `.env`
-    - Prompts you for an Anthropic API key — get one at [console.anthropic.com](https://console.anthropic.com)
+    - Asks which model provider to use — Anthropic (the default), OpenRouter or Amazon Bedrock — and prompts for its credentials, as the [image install](/get-started/installation#model-providers) does. For OpenRouter or Bedrock it writes the models you choose to `config/local.yaml`; if that file already has your own settings, setup stops and prints the block for you to merge.
     - Starts Postgres, waits for it to be healthy, and runs database migrations
-    - Seeds the encrypted vault with the generated API token, the login secret, and your Anthropic key (these are never written to `.env`)
+    - Seeds the encrypted vault with the generated API token, the login secret, and your provider credentials (these are never written to `.env`)
     - Builds and starts the full Curia stack with the development compose overlay (`docker-compose.dev.yml`), which builds from your local checkout and hot-reloads changes
 
-    The Anthropic key is the only value you supply. Everything else is generated for you. Secrets land in the [encrypted vault](/get-started/secrets-vault); only the four bootstrap values needed to reach and unlock it stay in `.env`.
+    Your provider credentials, and for OpenRouter or Bedrock the model choices, are the only values you supply. Everything else is generated for you. Secrets land in the [encrypted vault](/get-started/secrets-vault); only the four bootstrap values needed to reach and unlock it stay in `.env`.
   </Step>
 
   <Step title="Save your bootstrap secret">
